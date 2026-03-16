@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-03-16T23:46:56.939070",
+  "base_url": "https://milestone-tracker-68.preview.emergentagent.com",
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 8,
+    "success_rate": 1.0
+  },
+  "results": [
+    {
+      "test": "Health endpoint",
+      "passed": true,
+      "message": "Status: {'status': 'ok', 'version': '2.0'}",
+      "response_data": null
+    },
+    {
+      "test": "Root API endpoint",
+      "passed": true,
+      "message": "Data: {'message': '100Cr Engine API', 'version': '2.0'}",
+      "response_data": null
+    },
+    {
+      "test": "Projection calculation",
+      "passed": true,
+      "message": "Returned 4 milestones, slug: b63c3fee",
+      "response_data": null
+    },
+    {
+      "test": "Benchmark data (pre-seed)",
+      "passed": true,
+      "message": "Median: 0.08, P75: 0.14",
+      "response_data": null
+    },
+    {
+      "test": "Benchmark data (seed)",
+      "passed": true,
+      "message": "Median: 0.06, P75: 0.1",
+      "response_data": null
+    },
+    {
+      "test": "Benchmark data (series-a)",
+      "passed": true,
+      "message": "Median: 0.04, P75: 0.07",
+      "response_data": null
+    },
+    {
+      "test": "Benchmark comparison",
+      "passed": true,
+      "message": "Percentile: 50%, Status: average",
+      "response_data": null
+    },
+    {
+      "test": "Input validation",
+      "passed": true,
+      "message": "Correctly rejected invalid inputs",
+      "response_data": null
+    }
+  ]
+}
