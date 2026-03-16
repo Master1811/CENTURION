@@ -1,0 +1,176 @@
+{
+  "identity": {
+    "name": "Project Centurion - The 100Cr Architect",
+    "tone": "Patient Teacher, Precision Engineer, Minimalist",
+    "core_philosophy": "Function is Beauty. Data is Art. Zero Fluff.",
+    "aesthetics": {
+      "theme": "Strictly Light/Neutral (Monochromatic)",
+      "visuals": "Diagonal line shaders, Dot grid backgrounds, Sharp borders",
+      "no_go": "Gradients, Colorful Accents, Rounded 'SaaS' corners, Emojis"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "clamp(2.5rem, 5vw, 4.5rem)",
+      "h2": "clamp(2rem, 4vw, 3.5rem)",
+      "h3": "clamp(1.75rem, 3vw, 2.5rem)",
+      "body": "1rem",
+      "small": "0.875rem",
+      "tiny": "0.75rem"
+    },
+    "weights": {
+      "headings": "600 (SemiBold) or 800 (ExtraBold)",
+      "body": "400 (Regular)",
+      "strong": "500 (Medium)"
+    },
+    "features": {
+      "numeric": "tabular-nums",
+      "tracking": {
+        "headings": "-0.02em",
+        "labels": "0.05em"
+      }
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#FFFFFF",
+      "surface": "#FDFDFD",
+      "surface_highlight": "#F4F4F5",
+      "border": "#E4E4E7",
+      "border_strong": "#18181B",
+      "text_primary": "#09090B",
+      "text_secondary": "#71717A",
+      "text_tertiary": "#A1A1AA",
+      "primary": "#09090B",
+      "primary_foreground": "#FAFAFA",
+      "inverse": "#18181B"
+    },
+    "functional": {
+      "success": "#18181B",
+      "error": "#EF4444",
+      "warning": "#F59E0B",
+      "info": "#71717A"
+    },
+    "gradients": "NONE. Strictly forbidden."
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "layer_1": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      "layer_2": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+      "layer_3": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
+    },
+    "textures": {
+      "dot_grid": "radial-gradient(#E4E4E7 1px, transparent 1px) [background-size:24px_24px]",
+      "diagonal_lines": "repeating-linear-gradient(45deg, #F4F4F5 0px, #F4F4F5 1px, transparent 1px, transparent 10px)"
+    },
+    "borders": {
+      "default": "1px solid #E4E4E7",
+      "focus": "2px solid #09090B"
+    },
+    "radius": {
+      "default": "0px",
+      "sm": "0px",
+      "md": "4px",
+      "lg": "8px",
+      "pill": "9999px"
+    }
+  },
+  "components": {
+    "Button": {
+      "variants": {
+        "primary": "bg-primary text-primary-foreground hover:bg-neutral-800 rounded-md shadow-sm h-10 px-6 font-medium text-sm transition-transform active:scale-95",
+        "secondary": "bg-white border border-input hover:bg-neutral-50 hover:text-neutral-900 h-10 px-6 font-medium text-sm shadow-sm",
+        "ghost": "hover:bg-neutral-100 hover:text-neutral-900 h-10 px-4 font-medium text-sm",
+        "link": "text-primary underline-offset-4 hover:underline"
+      },
+      "default_props": {
+        "className": "rounded-md"
+      }
+    },
+    "Card": {
+      "style": "bg-white border border-border shadow-sm rounded-lg relative overflow-hidden",
+      "hover": "hover:shadow-md transition-shadow duration-200",
+      "content_padding": "p-6 md:p-8"
+    },
+    "Input": {
+      "style": "h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono tabular-nums"
+    },
+    "Badge": {
+      "style": "inline-flex items-center rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-neutral-950 shadow-[0_1px_1px_rgba(0,0,0,0.05)]"
+    }
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "grid": "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8",
+      "padding": "px-4 md:px-8 max-w-7xl mx-auto",
+      "spacing_vertical": "py-20 md:py-32"
+    },
+    "dashboard": {
+      "grid": "grid grid-cols-1 md:grid-cols-4 gap-6",
+      "padding": "p-6 md:p-8",
+      "sidebar_width": "w-64"
+    }
+  },
+  "motion": {
+    "principles": "Fast, Direct, Mechanical. No bounce.",
+    "transitions": "transition-all duration-200 ease-out",
+    "scroll": "Lenis smooth scrolling mandatory for landing page"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "stroke-width: 1.5px; width: 20px; height: 20px; color: currentColor;",
+    "instructions": "Use Lucide icons but ensure they mimic the thin, sharp look of Tabler icons. Prefer 'square' variants where possible (e.g. square-user instead of circle-user)."
+  },
+  "image_urls": {
+    "testimonials": [
+      {
+        "url": "https://images.unsplash.com/photo-1765486599857-610a91ea1459?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwyfHxpbmRpYW4lMjBzdGFydHVwJTIwZm91bmRlciUyMHByb2Zlc3Npb25hbCUyMG1lZXRpbmd8ZW58MHx8fHwxNzczNzA0MTQ2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Founder Portrait 1 (Male)",
+        "category": "people"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1698502593855-6f4ed5b332e6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHw0fHxpbmRpYW4lMjBzdGFydHVwJTIwZm91bmRlciUyMHByb2Zlc3Npb25hbCUyMG1lZXRpbmd8ZW58MHx8fHwxNzczNzA0MTQ2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Founder Portrait 2 (Male)",
+        "category": "people"
+      }
+    ],
+    "backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1765267323203-5f85bbe53eb5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA0MTJ8MHwxfHNlYXJjaHw0fHxtaW5pbWFsaXN0JTIwb2ZmaWNlJTIwYXJjaGl0ZWN0dXJlJTIwY29uY3JldGV8ZW58MHx8fHwxNzczNzA0MTQ1fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract Minimalist Concrete Pattern",
+        "category": "abstract"
+      }
+    ],
+    "logos": [
+      "https://logo.clearbit.com/stripe.com",
+      "https://logo.clearbit.com/shopify.com",
+      "https://logo.clearbit.com/razorpay.com",
+      "https://logo.clearbit.com/zerodha.com",
+      "https://logo.clearbit.com/freshworks.com"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "INSTALL PACKAGES: yarn add lucide-react clsx tailwind-merge recharts framer-motion @radix-ui/react-slot @radix-ui/react-accordion @radix-ui/react-dialog @radix-ui/react-popover @radix-ui/react-tooltip @radix-ui/react-slider",
+    "THEME: Ensure 'dark' mode is DISABLED or set to force 'light'. The brand is strictly light mode.",
+    "FONTS: Import 'Manrope', 'Inter', and 'JetBrains Mono' from Google Fonts in index.css.",
+    "NUMBERS: Apply 'font-mono' and 'tabular-nums' to ALL financial figures (revenue, growth rates, currency).",
+    "SHADOWS: Add the custom shadow utility classes to tailwind.config.js.",
+    "NO GRADIENTS: Do not use gradient text. Use solid #09090B for headings.",
+    "DOT GRID: Create a global CSS class .bg-dot-grid using the texture definition above.",
+    "ACCESSIBILITY: Ensure all text inputs have aria-labels and contrast ratios > 4.5:1.",
+    "CHARTS: Use Recharts. Style Tooltips to have black background and white text (inverted contrast).",
+    "COPY: Use '₹' symbol for currency. Format numbers as '1,00,000' (Indian numbering system) if possible, or standard '100,000'."
+  ],
+  "universal_guidelines": [
+    "Don't make generic centered layouts.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Every interaction needs micro-animations.",
+    "Use data-testid for all interactive elements."
+  ]
+}
