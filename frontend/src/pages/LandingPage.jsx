@@ -14,8 +14,8 @@ import { FounderDNAQuiz } from '@/components/landing/FounderDNAQuiz';
 export const LandingPage = () => {
   return (
     <div className="min-h-screen" data-testid="landing-page">
-      <AnnouncementBar />
       <Navbar />
+      <AnnouncementBar />
       <main>
         <HeroSection />
         <LogoCarousel />

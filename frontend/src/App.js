@@ -28,6 +28,17 @@ import InvestorRelations from "@/pages/dashboard/InvestorRelations";
 import Connectors from "@/pages/dashboard/Connectors";
 import Settings from "@/pages/dashboard/Settings";
 
+// Preview Pages (for screenshots - no auth)
+import {
+  PreviewCommandCentre,
+  PreviewRevenue,
+  PreviewForecasting,
+  PreviewCoach,
+  PreviewReports,
+  PreviewBenchmarks,
+  PreviewConnectors,
+} from "@/pages/preview/PreviewPages";
+
 function App() {
   return (
     <div className="App">
@@ -45,6 +56,15 @@ function App() {
             <Route path="/tools/arr-calculator" element={<ARRCalculator />} />
             <Route path="/tools/runway-calculator" element={<RunwayCalculator />} />
             <Route path="/tools/growth-calculator" element={<GrowthCalculator />} />
+            
+            {/* Preview routes (for screenshots - no auth) */}
+            <Route path="/preview/command-centre" element={<PreviewCommandCentre />} />
+            <Route path="/preview/revenue" element={<PreviewRevenue />} />
+            <Route path="/preview/forecasting" element={<PreviewForecasting />} />
+            <Route path="/preview/coach" element={<PreviewCoach />} />
+            <Route path="/preview/reports" element={<PreviewReports />} />
+            <Route path="/preview/benchmarks" element={<PreviewBenchmarks />} />
+            <Route path="/preview/connectors" element={<PreviewConnectors />} />
             
             {/* Dashboard (Protected - Requires Authentication) */}
             <Route path="/dashboard" element={

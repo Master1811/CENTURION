@@ -1,7 +1,7 @@
-// AnnouncementBar - dismissible top bar
+// AnnouncementBar - dismissible bar below navbar
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 
@@ -23,33 +23,35 @@ export const AnnouncementBar = () => {
   return (
     <div
       className={cn(
-        'relative h-9 flex items-center justify-center',
-        'bg-gradient-to-r from-transparent via-[rgba(0,0,0,0.04)] to-transparent',
-        'border-b border-[rgba(0,0,0,0.05)]'
+        'fixed top-[72px] left-0 right-0 z-40',
+        'h-10 flex items-center justify-center',
+        'bg-[#09090B] text-white',
+        'shadow-[0_2px_8px_rgba(0,0,0,0.15)]'
       )}
       data-testid="announcement-bar"
     >
       <Link
-        to="/tools/100cr-calculator"
-        className="flex items-center gap-2 text-sm text-[#52525B] hover:text-[#09090B] transition-colors"
+        to="/pricing"
+        className="flex items-center gap-2 text-sm hover:opacity-90 transition-opacity"
       >
-        {/* Pulsing dot */}
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#09090B] opacity-30" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#09090B]" />
-        </span>
+        {/* Sparkle icon */}
+        <Sparkles className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
         
-        <span>{copy.announcement.text}</span>
+        <span className="text-white/90">Limited offer: Get Founder Plan at</span>
         
-        <span className="flex items-center gap-1 font-medium text-[#09090B]">
-          {copy.announcement.cta}
-          <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+        <span className="font-bold text-white">₹899/year</span>
+        
+        <span className="text-white/70">→</span>
+        
+        <span className="font-medium text-amber-400 flex items-center gap-1">
+          Claim Now
+          <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
         </span>
       </Link>
 
       <button
         onClick={handleDismiss}
-        className="absolute right-4 p-1 text-[#A1A1AA] hover:text-[#52525B] transition-colors"
+        className="absolute right-4 p-1 text-white/50 hover:text-white transition-colors"
         aria-label="Dismiss announcement"
         data-testid="dismiss-announcement"
       >
