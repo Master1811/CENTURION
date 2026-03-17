@@ -9,6 +9,7 @@ import { FeatureStorySection } from '@/components/landing/FeatureStorySection';
 import { MetricsSection } from '@/components/landing/MetricsSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { CTASection } from '@/components/landing/CTASection';
+import { FounderDNAQuiz } from '@/components/landing/FounderDNAQuiz';
 
 export const LandingPage = () => {
   return (
@@ -18,6 +19,7 @@ export const LandingPage = () => {
       <main>
         <HeroSection />
         <LogoCarousel />
+        <FounderDNAQuiz />
         <FeatureStorySection />
         <MetricsSection />
         <PricingSection />

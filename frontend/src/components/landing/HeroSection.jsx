@@ -21,6 +21,46 @@ const sampleChartData = [
   { month: 'Jul 28', arr: 125000000, benchmark: 45000000 },
 ];
 
+// Animation variants for staggered text
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+// Animated word component for headline
+const AnimatedWord = ({ children, delay = 0 }) => (
+  <motion.span
+    initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+    transition={{ 
+      duration: 0.7, 
+      delay,
+      ease: [0.16, 1, 0.3, 1],
+    }}
+    className="inline-block"
+  >
+    {children}
+  </motion.span>
+);
+
 export const HeroSection = () => {
   const navigate = useNavigate();
 
@@ -38,45 +78,75 @@ export const HeroSection = () => {
       data-testid="hero-section"
     >
       <div className="max-w-6xl mx-auto px-4 md:px-8">
-        {/* Text Content - renders instantly, no animation */}
-        <div className="text-center max-w-[780px] mx-auto mb-16">
+        {/* Text Content - with staggered animations */}
+        <motion.div 
+          className="text-center max-w-[780px] mx-auto mb-16"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Eyebrow */}
-          <p className="type-label text-[#A1A1AA] mb-6" data-testid="hero-eyebrow">
+          <motion.p 
+            className="type-label text-[#A1A1AA] mb-6" 
+            data-testid="hero-eyebrow"
+            variants={itemVariants}
+          >
             {copy.hero.eyebrow}
-          </p>
+          </motion.p>
 
-          {/* Headline */}
+          {/* Animated Headline */}
           <h1 className="type-display text-[#09090B] mb-6" data-testid="hero-headline">
-            {copy.hero.headline}
+            <AnimatedWord delay={0.1}>Know</AnimatedWord>{' '}
+            <AnimatedWord delay={0.2}>exactly</AnimatedWord>{' '}
+            <AnimatedWord delay={0.3}>when</AnimatedWord>
             <br />
-            {copy.hero.headlineLine2}
+            <AnimatedWord delay={0.4}>you'll</AnimatedWord>{' '}
+            <AnimatedWord delay={0.5}>reach</AnimatedWord>{' '}
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ 
+                duration: 0.8, 
+                delay: 0.6,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="inline-block bg-gradient-to-r from-[#09090B] to-[#52525B] bg-clip-text"
+            >
+              ₹100 Crore.
+            </motion.span>
           </h1>
 
           {/* Subheadline */}
-          <p
+          <motion.p
             className="type-small text-[#A1A1AA] max-w-[460px] mx-auto mb-10"
             data-testid="hero-subhead"
+            variants={itemVariants}
           >
             {copy.hero.subhead}
-          </p>
+          </motion.p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-            <button
+          <motion.div 
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6"
+            variants={itemVariants}
+          >
+            <motion.button
               onClick={() => navigate('/tools/100cr-calculator')}
               className={cn(
                 'flex items-center gap-2',
                 'h-12 px-7 rounded-full',
                 'bg-[#09090B] text-white text-sm font-medium',
                 'shadow-[0_0_0_1px_rgba(0,0,0,0.15),0_4px_16px_rgba(0,0,0,0.12)]',
-                'hover:bg-[#18181B] hover:-translate-y-0.5',
+                'hover:bg-[#18181B]',
                 'transition-all duration-150'
               )}
+              whileHover={{ y: -2, boxShadow: '0 0 0 1px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.18)' }}
+              whileTap={{ scale: 0.98 }}
               data-testid="hero-cta-primary"
             >
               {copy.hero.ctaPrimary}
               <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
-            </button>
+            </motion.button>
 
             <button
               onClick={scrollToFeatures}
@@ -84,21 +154,30 @@ export const HeroSection = () => {
               data-testid="hero-cta-secondary"
             >
               {copy.hero.ctaSecondary}
-              <ArrowDown className="w-4 h-4" strokeWidth={1.5} />
+              <motion.div
+                animate={{ y: [0, 4, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <ArrowDown className="w-4 h-4" strokeWidth={1.5} />
+              </motion.div>
             </button>
-          </div>
+          </motion.div>
 
           {/* Trust line */}
-          <p className="text-xs text-[rgba(0,0,0,0.2)]" data-testid="hero-trust">
+          <motion.p 
+            className="text-xs text-[rgba(0,0,0,0.2)]" 
+            data-testid="hero-trust"
+            variants={itemVariants}
+          >
             {copy.hero.trustLine}
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Product Preview Card - animated on mount */}
         <motion.div
           initial={{ opacity: 0, y: 48, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
           className="max-w-4xl mx-auto"
         >
           <CenturionCard className="bg-[#F4F4F5]">

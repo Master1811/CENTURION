@@ -1,5 +1,5 @@
 // Command Centre - Dashboard Overview
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -12,14 +12,19 @@ import {
   AlertCircle,
   Clock,
   Zap,
+  Plus,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
 import { formatCrore, formatDate, CRORE } from '@/lib/engine/constants';
+import { useAuth } from '@/context/AuthContext';
+import { fetchDashboardOverview } from '@/lib/api/dashboard';
+import { CheckInModal } from '@/components/dashboard/CheckInModal';
 
-// Mock data for MVP
-const mockData = {
+// Fallback mock data
+const fallbackData = {
   companyName: 'Your Startup',
   currentMRR: 420000,
   growthRate: 0.12,
@@ -50,16 +55,83 @@ const HealthSignal = ({ status }) => (
 );
 
 export const CommandCentre = () => {
+  const { getAccessToken } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showCheckIn, setShowCheckIn] = useState(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = getAccessToken();
+        if (token) {
+          const result = await fetchDashboardOverview(token);
+          setData(result);
+        } else {
+          setData(fallbackData);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+        setData(fallbackData); // Use fallback on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [getAccessToken]);
+
+  const handleCheckInSuccess = (result) => {
+    // Refresh dashboard data after check-in
+    setData(prev => ({
+      ...prev,
+      currentMRR: result.actual_revenue || prev.currentMRR,
+      streak: (prev.streak || 0) + 1,
+    }));
+  };
+
+  const handleActionClick = (action) => {
+    if (action.type === 'checkin') {
+      setShowCheckIn(true);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-[#71717A]" strokeWidth={1.5} />
+      </div>
+    );
+  }
+
+  const displayData = data || fallbackData;
+
   return (
     <div className="space-y-6" data-testid="command-centre">
       {/* Header */}
-      <div>
-        <h1 className="type-title text-[#09090B] mb-1">
-          {copy.dashboard.commandCentre.title}
-        </h1>
-        <p className="type-body text-[#52525B]">
-          {copy.dashboard.commandCentre.subtitle}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="type-title text-[#09090B] mb-1">
+            {copy.dashboard.commandCentre.title}
+          </h1>
+          <p className="type-body text-[#52525B]">
+            {copy.dashboard.commandCentre.subtitle}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCheckIn(true)}
+          className={cn(
+            'flex items-center gap-2',
+            'h-10 px-4 rounded-lg',
+            'bg-[#09090B] text-white text-sm font-medium',
+            'hover:bg-[#18181B] transition-colors'
+          )}
+          data-testid="checkin-button"
+        >
+          <Plus className="w-4 h-4" strokeWidth={1.5} />
+          Monthly Check-in
+        </button>
       </div>
 
       {/* Top Row - Key Metrics */}
@@ -73,12 +145,12 @@ export const CommandCentre = () => {
                   {copy.dashboard.commandCentre.milestoneCountdown}
                 </p>
                 <p className="text-3xl font-bold text-white font-mono tabular-nums">
-                  {mockData.nextMilestone.label}
+                  {displayData.nextMilestone.label}
                 </p>
               </div>
               <div className="text-right">
                 <p className="font-mono text-2xl font-semibold text-white tabular-nums">
-                  {mockData.nextMilestone.monthsAway}
+                  {displayData.nextMilestone.monthsAway}
                 </p>
                 <p className="text-xs text-white/50">months away</p>
               </div>
@@ -87,15 +159,17 @@ export const CommandCentre = () => {
               <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '42%' }}
+                  animate={{ width: `${Math.min((displayData.currentMRR * 12) / displayData.nextMilestone.value * 100, 100)}%` }}
                   transition={{ duration: 1, delay: 0.3 }}
                   className="h-full bg-white rounded-full"
                 />
               </div>
-              <span className="text-sm text-white/70 font-mono tabular-nums">42%</span>
+              <span className="text-sm text-white/70 font-mono tabular-nums">
+                {Math.round((displayData.currentMRR * 12) / displayData.nextMilestone.value * 100)}%
+              </span>
             </div>
             <p className="text-sm text-white/60 mt-4">
-              Currently at {formatCrore(mockData.currentMRR * 12)} ARR → Target {formatCrore(mockData.nextMilestone.value)}
+              Currently at {formatCrore(displayData.currentMRR * 12)} ARR → Target {formatCrore(displayData.nextMilestone.value)}
             </p>
           </CenturionCardContent>
         </CenturionCard>
@@ -115,29 +189,29 @@ export const CommandCentre = () => {
                     strokeLinecap="round"
                     strokeDasharray={175.9}
                     initial={{ strokeDashoffset: 175.9 }}
-                    animate={{ strokeDashoffset: 175.9 * (1 - mockData.healthScore / 100) }}
+                    animate={{ strokeDashoffset: 175.9 * (1 - displayData.healthScore / 100) }}
                     transition={{ duration: 1, delay: 0.2 }}
                   />
                 </svg>
                 <span className="absolute inset-0 flex items-center justify-center font-mono text-lg font-bold">
-                  {mockData.healthScore}
+                  {displayData.healthScore}
                 </span>
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={mockData.healthSignals.growth} />
+                  <HealthSignal status={displayData.healthSignals.growth} />
                   <span className="text-[#52525B]">Growth</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={mockData.healthSignals.retention} />
+                  <HealthSignal status={displayData.healthSignals.retention} />
                   <span className="text-[#52525B]">Retention</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={mockData.healthSignals.runway} />
+                  <HealthSignal status={displayData.healthSignals.runway} />
                   <span className="text-[#52525B]">Runway</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={mockData.healthSignals.engagement} />
+                  <HealthSignal status={displayData.healthSignals.engagement} />
                   <span className="text-[#52525B]">Check-ins</span>
                 </div>
               </div>
@@ -158,7 +232,7 @@ export const CommandCentre = () => {
                 {copy.dashboard.commandCentre.aiPriority}
               </p>
               <p className="text-sm text-[#09090B] leading-relaxed">
-                {mockData.aiPriority}
+                {displayData.aiPriority}
               </p>
             </div>
           </div>
@@ -174,12 +248,13 @@ export const CommandCentre = () => {
               <p className="text-xs uppercase tracking-wider text-[#A1A1AA]">
                 {copy.dashboard.commandCentre.actionQueue}
               </p>
-              <span className="text-xs text-[#52525B]">{mockData.actionQueue.length} items</span>
+              <span className="text-xs text-[#52525B]">{displayData.actionQueue.length} items</span>
             </div>
             <div className="space-y-3">
-              {mockData.actionQueue.map((action) => (
+              {displayData.actionQueue.map((action) => (
                 <div
                   key={action.id}
+                  onClick={() => handleActionClick(action)}
                   className={cn(
                     'flex items-center gap-3 p-3 rounded-lg',
                     'border border-[rgba(0,0,0,0.06)]',
@@ -205,7 +280,7 @@ export const CommandCentre = () => {
             <CenturionCardContent className="p-5 text-center">
               <TrendingUp className="w-5 h-5 mx-auto mb-2 text-emerald-500" strokeWidth={1.5} />
               <p className="font-mono text-2xl font-bold text-[#09090B] tabular-nums">
-                {(mockData.growthRate * 100).toFixed(0)}%
+                {(displayData.growthRate * 100).toFixed(0)}%
               </p>
               <p className="text-xs text-[#71717A] mt-1">Growth Rate</p>
             </CenturionCardContent>
@@ -215,7 +290,7 @@ export const CommandCentre = () => {
             <CenturionCardContent className="p-5 text-center">
               <Calendar className="w-5 h-5 mx-auto mb-2 text-[#71717A]" strokeWidth={1.5} />
               <p className="font-mono text-2xl font-bold text-[#09090B] tabular-nums">
-                {mockData.streak}
+                {displayData.streak}
               </p>
               <p className="text-xs text-[#71717A] mt-1">Month Streak</p>
             </CenturionCardContent>
@@ -227,7 +302,7 @@ export const CommandCentre = () => {
                 <div>
                   <p className="text-xs text-[#71717A] mb-1">Current MRR</p>
                   <p className="font-mono text-xl font-bold text-[#09090B] tabular-nums">
-                    {formatCrore(mockData.currentMRR)}
+                    {formatCrore(displayData.currentMRR)}
                   </p>
                 </div>
                 <Link
@@ -242,6 +317,13 @@ export const CommandCentre = () => {
           </CenturionCard>
         </div>
       </div>
+
+      {/* Check-in Modal */}
+      <CheckInModal
+        isOpen={showCheckIn}
+        onClose={() => setShowCheckIn(false)}
+        onSuccess={handleCheckInSuccess}
+      />
     </div>
   );
 };
