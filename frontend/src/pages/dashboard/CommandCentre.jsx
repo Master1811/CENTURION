@@ -1,5 +1,5 @@
 // Command Centre - Dashboard Overview
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,6 +14,7 @@ import {
   Zap,
   Plus,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
@@ -22,6 +23,8 @@ import { formatCrore, formatDate, CRORE } from '@/lib/engine/constants';
 import { useAuth } from '@/context/AuthContext';
 import { fetchDashboardOverview } from '@/lib/api/dashboard';
 import { CheckInModal } from '@/components/dashboard/CheckInModal';
+import { SyncStatus, RefreshButton } from '@/components/ui/SyncIndicator';
+import { UpgradeModal, useUpgradeModal } from '@/components/upgrade/UpgradeModal';
 
 // Fallback mock data
 const fallbackData = {
@@ -60,27 +63,51 @@ export const CommandCentre = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [lastSynced, setLastSynced] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { isOpen: showUpgrade, modalProps, showUpgradeModal, hideUpgradeModal } = useUpgradeModal();
+
+  const loadData = useCallback(async () => {
+    try {
+      const token = getAccessToken();
+      if (token) {
+        const result = await fetchDashboardOverview(token);
+        setData(result);
+        setLastSynced(new Date().toISOString());
+        setError(null);
+      } else {
+        setData(fallbackData);
+        setLastSynced(new Date().toISOString());
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+      setError(err.message);
+      
+      // Check if it's a rate limit error
+      if (err.status === 429) {
+        showUpgradeModal({
+          reason: 'RATE_LIMIT',
+          featureName: 'Dashboard Views',
+          currentUsage: 50,
+          limit: 50,
+        });
+      }
+      
+      setData(fallbackData); // Use fallback on error
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [getAccessToken, showUpgradeModal]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = getAccessToken();
-        if (token) {
-          const result = await fetchDashboardOverview(token);
-          setData(result);
-        } else {
-          setData(fallbackData);
-        }
-      } catch (err) {
-        console.error('Failed to load dashboard:', err);
-        setData(fallbackData); // Use fallback on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
-  }, [getAccessToken]);
+  }, [loadData]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadData();
+  };
 
   const handleCheckInSuccess = (result) => {
     // Refresh dashboard data after check-in
@@ -109,7 +136,7 @@ export const CommandCentre = () => {
 
   return (
     <div className="space-y-6" data-testid="command-centre">
-      {/* Header */}
+      {/* Header with Sync Indicator */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title text-[#09090B] mb-1">
@@ -119,19 +146,31 @@ export const CommandCentre = () => {
             {copy.dashboard.commandCentre.subtitle}
           </p>
         </div>
-        <button
-          onClick={() => setShowCheckIn(true)}
-          className={cn(
-            'flex items-center gap-2',
-            'h-10 px-4 rounded-lg',
-            'bg-[#09090B] text-white text-sm font-medium',
-            'hover:bg-[#18181B] transition-colors'
-          )}
-          data-testid="checkin-button"
-        >
-          <Plus className="w-4 h-4" strokeWidth={1.5} />
-          Monthly Check-in
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Sync Status */}
+          <SyncStatus 
+            lastSynced={lastSynced} 
+            isLoading={isRefreshing} 
+            isError={!!error}
+          />
+          <RefreshButton 
+            onClick={handleRefresh} 
+            isLoading={isRefreshing}
+          />
+          <button
+            onClick={() => setShowCheckIn(true)}
+            className={cn(
+              'flex items-center gap-2',
+              'h-10 px-4 rounded-lg',
+              'bg-[#09090B] text-white text-sm font-medium',
+              'hover:bg-[#18181B] transition-colors'
+            )}
+            data-testid="checkin-button"
+          >
+            <Plus className="w-4 h-4" strokeWidth={1.5} />
+            Monthly Check-in
+          </button>
+        </div>
       </div>
 
       {/* Top Row - Key Metrics */}
@@ -323,6 +362,13 @@ export const CommandCentre = () => {
         isOpen={showCheckIn}
         onClose={() => setShowCheckIn(false)}
         onSuccess={handleCheckInSuccess}
+      />
+      
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={hideUpgradeModal}
+        {...modalProps}
       />
     </div>
   );

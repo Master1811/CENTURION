@@ -1,5 +1,5 @@
 // Revenue Intelligence Dashboard
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Users, Zap, AlertTriangle, Loader2 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCa
 import { formatCrore, CRORE, LAKH } from '@/lib/engine/constants';
 import { useAuth } from '@/context/AuthContext';
 import { fetchRevenueIntelligence } from '@/lib/api/dashboard';
+import { SyncStatus, RefreshButton } from '@/components/ui/SyncIndicator';
 
 // Fallback mock data
 const fallbackRevenueData = [
@@ -35,25 +36,35 @@ export const RevenueIntelligence = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastSynced, setLastSynced] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const token = getAccessToken();
+      if (token) {
+        const result = await fetchRevenueIntelligence(token);
+        setData(result);
+        setLastSynced(new Date().toISOString());
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Failed to load revenue data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [getAccessToken]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = getAccessToken();
-        if (token) {
-          const result = await fetchRevenueIntelligence(token);
-          setData(result);
-        }
-      } catch (err) {
-        console.error('Failed to load revenue data:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
-  }, [getAccessToken]);
+  }, [loadData]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadData();
+  };
 
   // Use API data or fallback
   const revenueData = data?.revenue_data?.length > 0 ? data.revenue_data : fallbackRevenueData;
@@ -88,14 +99,27 @@ export const RevenueIntelligence = () => {
 
   return (
     <div className="space-y-6" data-testid="revenue-intelligence">
-      {/* Header */}
-      <div>
-        <h1 className="type-title text-[#09090B] mb-1">
-          {copy.dashboard.revenueIntelligence.title}
-        </h1>
-        <p className="type-body text-[#52525B]">
-          {copy.dashboard.revenueIntelligence.subtitle}
-        </p>
+      {/* Header with Sync */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="type-title text-[#09090B] mb-1">
+            {copy.dashboard.revenueIntelligence.title}
+          </h1>
+          <p className="type-body text-[#52525B]">
+            {copy.dashboard.revenueIntelligence.subtitle}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <SyncStatus 
+            lastSynced={lastSynced} 
+            isLoading={isRefreshing} 
+            isError={!!error}
+          />
+          <RefreshButton 
+            onClick={handleRefresh} 
+            isLoading={isRefreshing}
+          />
+        </div>
       </div>
 
       {/* Key Metrics */}
