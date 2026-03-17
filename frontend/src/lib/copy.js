@@ -8,6 +8,127 @@ export const copy = {
     domain: '100crengine.in',
   },
 
+  tools: {
+    dropdown: 'Free Tools',
+    hundredCr: {
+      name: '100Cr Calculator',
+      description: 'When will you reach ₹100 Crore?',
+    },
+    arr: {
+      name: 'ARR Calculator',
+      description: 'Calculate your Annual Recurring Revenue',
+    },
+    runway: {
+      name: 'Runway Calculator',
+      description: 'How long until you run out of money?',
+    },
+    revenueGrowth: {
+      name: 'Growth Rate Calculator',
+      description: 'Calculate your month-over-month growth',
+    },
+  },
+
+  dashboard: {
+    welcome: 'Welcome back',
+    commandCentre: {
+      title: 'Command Centre',
+      subtitle: 'Your startup at a glance',
+      healthScore: 'Health Score',
+      aiPriority: 'Top Priority',
+      actionQueue: 'Action Queue',
+      milestoneCountdown: 'Next Milestone',
+    },
+    revenueIntelligence: {
+      title: 'Revenue Intelligence',
+      subtitle: 'Track your revenue performance',
+      vsBaseline: 'vs Baseline',
+      vsBenchmark: 'vs Benchmark',
+      qualityScore: 'Revenue Quality Score',
+      cohortTracking: 'Cohort Tracking',
+    },
+    forecasting: {
+      title: 'Forecasting Engine',
+      subtitle: 'Model your future scenarios',
+      scenarioBranching: 'Scenario Branching',
+      sensitivityMatrix: 'Sensitivity Matrix',
+      runwayTimeline: 'Runway Timeline',
+      whatIf: 'What-If Analysis',
+    },
+    benchmarks: {
+      title: 'Benchmark Intelligence',
+      subtitle: 'See where you stand',
+      peerComparison: 'Peer Comparison',
+      transitionReadiness: 'Stage Transition Readiness',
+      fundraisingBrief: 'Fundraising Brief',
+    },
+    reporting: {
+      title: 'Reporting Engine',
+      subtitle: 'Generate professional reports',
+      boardReport: 'Monthly Board Report',
+      investorUpdate: 'Investor Update',
+      strategyBrief: 'Growth Strategy Brief',
+      dataRoom: 'Data Room Snapshot',
+      annualReview: 'Annual Business Review',
+    },
+    aiCoach: {
+      title: 'AI Growth Coach',
+      subtitle: 'Your personal startup advisor',
+      dailyPulse: 'Daily Pulse',
+      weeklyQuestion: 'Strategic Question',
+      deviationAlerts: 'Deviation Alerts',
+      coachingSummary: 'Monthly Summary',
+    },
+    goals: {
+      title: 'Goal Architecture',
+      subtitle: 'Set and track your milestones',
+      milestoneLadder: 'Milestone Ladder',
+      quarterlyGoals: 'Quarterly Goals',
+      commitmentTracker: 'Commitment Tracker',
+    },
+    investorRelations: {
+      title: 'Investor Relations',
+      subtitle: 'Prepare for fundraising',
+      projectionPack: 'Projection Pack',
+      fundingTimeline: 'Funding Timeline',
+      dilutionModeller: 'Dilution Modeller',
+    },
+    connectors: {
+      title: 'API Connectors',
+      subtitle: 'Connect your data sources',
+      trustHeader: 'We request read-only access. We cannot make payments, create orders, or modify any data in your account.',
+      tier1: {
+        title: 'API Key Integrations',
+        description: 'Instant setup with your API key',
+      },
+      tier2: {
+        title: 'OAuth Integrations',
+        description: 'Authorize with one click',
+      },
+      tier3: {
+        title: 'CSV Upload',
+        description: 'Upload your data exports',
+      },
+      syncConfirm: 'Is this accurate? Confirm →',
+    },
+  },
+
+  connectorProviders: {
+    razorpay: { name: 'Razorpay', description: 'Payments, settlements, subscription MRR' },
+    stripe: { name: 'Stripe', description: 'Charges, invoices, subscription revenue' },
+    cashfree: { name: 'Cashfree', description: 'Orders, settlements, refunds' },
+    chargebee: { name: 'Chargebee', description: 'Real MRR, churn events, plan revenue' },
+    woocommerce: { name: 'WooCommerce', description: 'Orders, GMV, AOV' },
+    googleAnalytics: { name: 'Google Analytics 4', description: 'Purchase revenue, conversions' },
+    zohoBooks: { name: 'Zoho Books', description: 'Invoices, P&L, payments received' },
+    quickbooks: { name: 'QuickBooks', description: 'P&L report, invoice list' },
+    googleAds: { name: 'Google Ads', description: 'Spend, ROAS, CAC calculation' },
+    metaAds: { name: 'Meta Ads', description: 'Ad spend, conversions, CAC' },
+    tally: { name: 'Tally / Excel', description: 'Upload your Tally export' },
+    amazonSeller: { name: 'Amazon Seller', description: 'Seller Central reports' },
+    flipkart: { name: 'Flipkart Seller', description: 'Seller Hub exports' },
+    swiggyZomato: { name: 'Swiggy / Zomato', description: 'Payout reports' },
+  },
+
   hero: {
     eyebrow: 'REVENUE MILESTONE PREDICTION',
     headline: 'Know exactly when',
