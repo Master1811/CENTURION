@@ -136,6 +136,28 @@ Tables defined in `/docs/supabase_schema.sql`:
   - `DataCardHeader` - Reusable header with sync built-in
   - `useSyncState` hook for managing sync state
 
+### Phase 8 - Comprehensive Settings Module (Complete - March 2026)
+- **Profile Settings Tab**:
+  - Personal Information (name, email w/ verified badge, phone, timezone)
+  - Company Information (company name, funding stage, website)
+  - Save Changes button with loading/success states
+- **Billing & Subscription Tab**:
+  - Current Plan Overview with animated `BackgroundPaths` component
+  - Feature limits display (Projections, AI Coach, Board Reports, Connectors)
+  - "Upgrade to Founder Plan" CTA
+  - Usage This Month with animated progress bars
+  - Payment Method management
+  - Invoice history with download links
+- **Support & Help Center Tab**:
+  - Contact Support section (Email, Live Chat buttons)
+  - FAQ accordion with 5 questions (expandable with animations)
+  - Resources section (Getting Started, API Docs, Video Tutorials)
+  - Report Bug section
+- **Danger Zone**: Delete Account option always visible
+- **New UI Components**:
+  - `BackgroundPaths.jsx` - Animated SVG paths (36 paths with varying opacity)
+  - `GlassAccountSettingsCard.jsx` - Premium glassmorphism settings card
+
 ### API Endpoints Summary
 | Endpoint | Auth | Description |
 |----------|------|-------------|
