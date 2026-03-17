@@ -37,6 +37,7 @@ import {
   PreviewReports,
   PreviewBenchmarks,
   PreviewConnectors,
+  PreviewSettings,
 } from "@/pages/preview/PreviewPages";
 
 function App() {
@@ -65,6 +66,7 @@ function App() {
             <Route path="/preview/reports" element={<PreviewReports />} />
             <Route path="/preview/benchmarks" element={<PreviewBenchmarks />} />
             <Route path="/preview/connectors" element={<PreviewConnectors />} />
+            <Route path="/preview/settings" element={<PreviewSettings />} />
             
             {/* Dashboard (Protected - Requires Authentication) */}
             <Route path="/dashboard" element={

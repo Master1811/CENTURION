@@ -12,6 +12,7 @@ import AIGrowthCoach from '@/pages/dashboard/AIGrowthCoach';
 import ReportingEngine from '@/pages/dashboard/ReportingEngine';
 import BenchmarkIntelligence from '@/pages/dashboard/BenchmarkIntelligence';
 import Connectors from '@/pages/dashboard/Connectors';
+import Settings from '@/pages/dashboard/Settings';
 
 const PreviewLayout = ({ children }) => (
   <div className="min-h-screen bg-[#FAFAFA]">
@@ -50,4 +51,8 @@ export const PreviewBenchmarks = () => (
 
 export const PreviewConnectors = () => (
   <PreviewLayout><Connectors /></PreviewLayout>
+);
+
+export const PreviewSettings = () => (
+  <PreviewLayout><Settings /></PreviewLayout>
 );
