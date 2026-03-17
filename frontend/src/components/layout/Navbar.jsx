@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent } from 'lucide-react';
+import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
+import { useAuth } from '@/context/AuthContext';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 const toolsItems = [
   { 
@@ -39,8 +41,12 @@ export const Navbar = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user, signOut, loading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,14 +69,36 @@ export const Navbar = () => {
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => setToolsOpen(false);
-    if (toolsOpen) {
+    const handleClickOutside = () => {
+      setToolsOpen(false);
+      setUserMenuOpen(false);
+    };
+    if (toolsOpen || userMenuOpen) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [toolsOpen]);
+  }, [toolsOpen, userMenuOpen]);
 
-  const isLoggedIn = localStorage.getItem('auth_token');
+  // Check for auth required redirect
+  useEffect(() => {
+    if (location.state?.authRequired && !isAuthenticated && !loading) {
+      setAuthModalOpen(true);
+    }
+  }, [location.state, isAuthenticated, loading]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setUserMenuOpen(false);
+    navigate('/');
+  };
+
+  const handleCTAClick = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
 
   return (
     <>
@@ -194,21 +222,109 @@ export const Navbar = () => {
           </Link>
         </div>
 
-        {/* Desktop CTA */}
-        <button
-          onClick={() => navigate(isLoggedIn ? '/dashboard' : '/tools/100cr-calculator')}
-          className={cn(
-            'hidden md:flex items-center gap-2',
-            'h-10 px-5 ml-2 rounded-full',
-            'bg-[#09090B] text-white text-sm font-medium',
-            'shadow-[0_2px_8px_rgba(0,0,0,0.2)]',
-            'hover:bg-[#18181B] hover:shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
-            'transition-all duration-200'
-          )}
-          data-testid="navbar-cta"
-        >
-          {isLoggedIn ? copy.nav.dashboard : copy.nav.getStarted}
-        </button>
+        {/* Desktop CTA / User Menu */}
+        {isAuthenticated ? (
+          <div className="hidden md:block relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setUserMenuOpen(!userMenuOpen);
+              }}
+              className={cn(
+                'flex items-center gap-2',
+                'h-10 px-4 ml-2 rounded-full',
+                'bg-[#F4F4F5] text-[#09090B] text-sm font-medium',
+                'hover:bg-[#E4E4E7]',
+                'transition-all duration-200'
+              )}
+              data-testid="user-menu-trigger"
+            >
+              <User className="w-4 h-4" strokeWidth={1.5} />
+              <span className="max-w-[120px] truncate">{user?.email?.split('@')[0] || 'Account'}</span>
+              <ChevronDown className={cn('w-4 h-4 transition-transform', userMenuOpen && 'rotate-180')} strokeWidth={1.5} />
+            </button>
+
+            <AnimatePresence>
+              {userMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    'absolute top-full right-0 mt-2',
+                    'w-56 p-2',
+                    'bg-white/90 backdrop-blur-xl',
+                    'rounded-2xl border border-[rgba(0,0,0,0.08)]',
+                    'shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid="user-menu-dropdown"
+                >
+                  <div className="px-3 py-2 border-b border-[rgba(0,0,0,0.06)] mb-2">
+                    <p className="text-sm font-medium text-[#09090B] truncate">{user?.email}</p>
+                    <p className="text-xs text-[#71717A]">Founder Plan</p>
+                  </div>
+                  
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setUserMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                      'text-sm text-[#52525B]',
+                      'hover:bg-[rgba(0,0,0,0.04)] transition-colors'
+                    )}
+                    data-testid="user-menu-dashboard"
+                  >
+                    <TrendingUp className="w-4 h-4" strokeWidth={1.5} />
+                    Dashboard
+                  </Link>
+                  
+                  <Link
+                    to="/dashboard/settings"
+                    onClick={() => setUserMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                      'text-sm text-[#52525B]',
+                      'hover:bg-[rgba(0,0,0,0.04)] transition-colors'
+                    )}
+                  >
+                    <User className="w-4 h-4" strokeWidth={1.5} />
+                    Settings
+                  </Link>
+                  
+                  <button
+                    onClick={handleSignOut}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                      'text-sm text-red-600',
+                      'hover:bg-red-50 transition-colors'
+                    )}
+                    data-testid="user-menu-signout"
+                  >
+                    <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                    Sign Out
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <button
+            onClick={handleCTAClick}
+            className={cn(
+              'hidden md:flex items-center gap-2',
+              'h-10 px-5 ml-2 rounded-full',
+              'bg-[#09090B] text-white text-sm font-medium',
+              'shadow-[0_2px_8px_rgba(0,0,0,0.2)]',
+              'hover:bg-[#18181B] hover:shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
+              'transition-all duration-200'
+            )}
+            data-testid="navbar-cta"
+          >
+            {copy.nav.getStarted}
+          </button>
+        )}
 
         {/* Mobile Menu Toggle */}
         <button
@@ -274,7 +390,11 @@ export const Navbar = () => {
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                navigate(isLoggedIn ? '/dashboard' : '/tools/100cr-calculator');
+                if (isAuthenticated) {
+                  navigate('/dashboard');
+                } else {
+                  setAuthModalOpen(true);
+                }
               }}
               className={cn(
                 'mt-3 w-full h-11 rounded-full',
@@ -283,11 +403,34 @@ export const Navbar = () => {
                 'transition-colors'
               )}
             >
-              {isLoggedIn ? copy.nav.dashboard : copy.nav.getStarted}
+              {isAuthenticated ? copy.nav.dashboard : copy.nav.getStarted}
             </button>
+            
+            {isAuthenticated && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignOut();
+                }}
+                className={cn(
+                  'mt-2 w-full h-11 rounded-full',
+                  'bg-transparent text-red-600 text-sm font-medium border border-red-200',
+                  'hover:bg-red-50',
+                  'transition-colors'
+                )}
+              >
+                Sign Out
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+      />
     </>
   );
 };
