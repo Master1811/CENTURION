@@ -4,10 +4,13 @@ AI Router
 AI-powered features using Claude via Emergent LLM Key.
 
 All endpoints require paid subscription.
+Some endpoints require STUDIO tier or higher.
+
+CRITICAL: Plan tier is validated BEFORE any expensive operations.
 
 Endpoints:
-- POST /ai/board-report - Generate monthly board report
-- POST /ai/strategy-brief - Generate quarterly strategy brief
+- POST /ai/board-report - Generate monthly board report (STUDIO+)
+- POST /ai/strategy-brief - Generate quarterly strategy brief (STUDIO+)
 - GET /ai/daily-pulse - Get daily insights
 - GET /ai/weekly-question - Get weekly reflection question
 - POST /ai/deviation - Analyze revenue deviation
@@ -31,11 +34,17 @@ from models.ai import (
     DeviationAnalysisResponse,
     AIUsageStats,
 )
-from services.auth import require_paid_subscription
+from services.auth import (
+    require_paid_subscription,
+    PlanTier,
+    get_user_plan_tier,
+    validate_feature_access,
+)
 from services.anthropic import ai_service
 from services.context import context_builder
 from services.rate_limiter import rate_limiter
 from services.supabase import supabase_service
+from services.ai_cost_control import ai_cost_controller
 
 logger = logging.getLogger("100cr_engine.ai")
 
@@ -117,6 +126,10 @@ async def generate_board_report(
     """
     Generate an AI-powered monthly board report.
     
+    REQUIRES: STUDIO or VC_PORTFOLIO plan tier.
+    
+    Plan tier is validated BEFORE any expensive operations.
+    
     Includes:
     - Executive summary
     - Key metrics with MoM changes
@@ -127,8 +140,27 @@ async def generate_board_report(
     """
     user_id = user['id']
     
+    # CRITICAL: Validate plan tier BEFORE any expensive operations
+    plan_tier = await get_user_plan_tier(user_id)
+    if plan_tier not in [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                'error': 'plan_upgrade_required',
+                'message': 'Board reports require STUDIO or VC_PORTFOLIO plan.',
+                'current_tier': plan_tier.value,
+                'required_tiers': ['STUDIO', 'VC_PORTFOLIO'],
+                'upgrade_url': '/upgrade'
+            }
+        )
+    
     # Check rate limit
     await check_ai_rate_limit(user_id, 'board_report')
+    
+    # Get model to use (with cost control)
+    model_id, is_overflow = await ai_cost_controller.get_model_for_feature(
+        user_id, 'board_report'
+    )
     
     # Build context
     context = await context_builder.build(user_id, user.get('email', ''))
@@ -139,7 +171,7 @@ async def generate_board_report(
     # Log usage
     await log_ai_usage(user_id, 'board_report')
     
-    logger.info(f"Board report generated for user {user_id}")
+    logger.info(f"Board report generated for user {user_id} using {model_id}")
     
     return BoardReportResponse(**report)
 
@@ -152,6 +184,10 @@ async def generate_strategy_brief(
     """
     Generate a quarterly growth strategy brief.
     
+    REQUIRES: STUDIO or VC_PORTFOLIO plan tier.
+    
+    Plan tier is validated BEFORE any expensive operations.
+    
     Includes:
     - Situation analysis
     - Growth opportunities
@@ -163,14 +199,33 @@ async def generate_strategy_brief(
     """
     user_id = user['id']
     
+    # CRITICAL: Validate plan tier BEFORE any expensive operations
+    plan_tier = await get_user_plan_tier(user_id)
+    if plan_tier not in [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                'error': 'plan_upgrade_required',
+                'message': 'Strategy briefs require STUDIO or VC_PORTFOLIO plan.',
+                'current_tier': plan_tier.value,
+                'required_tiers': ['STUDIO', 'VC_PORTFOLIO'],
+                'upgrade_url': '/upgrade'
+            }
+        )
+    
     await check_ai_rate_limit(user_id, 'strategy_brief')
+    
+    # Get model with cost control
+    model_id, is_overflow = await ai_cost_controller.get_model_for_feature(
+        user_id, 'strategy_brief'
+    )
     
     context = await context_builder.build(user_id, user.get('email', ''))
     brief = await ai_service.generate_strategy_brief(context.to_dict())
     
     await log_ai_usage(user_id, 'strategy_brief')
     
-    logger.info(f"Strategy brief generated for user {user_id}")
+    logger.info(f"Strategy brief generated for user {user_id} using {model_id}")
     
     return StrategyBriefResponse(**brief)
 

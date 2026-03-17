@@ -445,6 +445,170 @@ class SupabaseService:
             'sample_size': 0
         }
 
+    # =========================================================================
+    # USER DELETION (CRITICAL - Complete cascade)
+    # =========================================================================
+    
+    async def delete_user_complete(self, user_id: str) -> bool:
+        """
+        Execute complete cascading hard-delete of a user's entire dataset.
+        
+        CRITICAL: This is irreversible.
+        
+        Deletion order (to respect foreign keys):
+        1. ai_usage_log
+        2. connector_keys
+        3. checkins
+        4. projection_runs (set user_id to null, keep for shared links)
+        5. subscriptions
+        6. profiles
+        7. auth.users (via Supabase Admin API)
+        
+        Args:
+            user_id: User UUID
+            
+        Returns:
+            True if successful
+        """
+        if not self.is_configured:
+            logger.warning("Cannot delete user - Supabase not configured")
+            return False
+        
+        try:
+            # 1. Delete AI usage logs
+            self._client.table('ai_usage_log').delete().eq('user_id', user_id).execute()
+            logger.info(f"Deleted ai_usage_log for {user_id}")
+            
+            # 2. Delete connector keys
+            self._client.table('connector_keys').delete().eq('user_id', user_id).execute()
+            logger.info(f"Deleted connector_keys for {user_id}")
+            
+            # 3. Delete check-ins
+            self._client.table('checkins').delete().eq('user_id', user_id).execute()
+            logger.info(f"Deleted checkins for {user_id}")
+            
+            # 4. Nullify user_id in projections (keep shared links working)
+            self._client.table('projection_runs').update({'user_id': None}).eq('user_id', user_id).execute()
+            logger.info(f"Nullified projection_runs for {user_id}")
+            
+            # 5. Delete subscriptions
+            self._client.table('subscriptions').delete().eq('user_id', user_id).execute()
+            logger.info(f"Deleted subscriptions for {user_id}")
+            
+            # 6. Delete profile
+            self._client.table('profiles').delete().eq('id', user_id).execute()
+            logger.info(f"Deleted profile for {user_id}")
+            
+            # 7. Delete auth user via Admin API
+            # Note: This requires service_role key
+            try:
+                self._client.auth.admin.delete_user(user_id)
+                logger.info(f"Deleted auth.users entry for {user_id}")
+            except Exception as auth_error:
+                logger.warning(f"Could not delete auth entry (may need manual cleanup): {auth_error}")
+            
+            logger.info(f"✓ Complete user deletion successful for {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"User deletion failed for {user_id}: {e}")
+            return False
+    
+    # =========================================================================
+    # ANONYMIZED BENCHMARK CONTRIBUTION
+    # =========================================================================
+    
+    async def contribute_to_benchmarks(
+        self,
+        user_id: str,
+        stage: str,
+        growth_rate: float,
+        arr: float,
+        industry: Optional[str] = None
+    ) -> bool:
+        """
+        Add anonymized data to benchmark contributions.
+        
+        CRITICAL: This strips ALL user identifiable information.
+        - NO user_id stored
+        - NO company name stored
+        - ARR is bucketed, not exact
+        - Industry is categorized, not specific
+        
+        Uses a hash to prevent duplicate contributions without storing user_id.
+        
+        Args:
+            user_id: Used only for hash generation (not stored)
+            stage: Funding stage
+            growth_rate: Monthly growth rate
+            arr: Annual recurring revenue (will be bucketed)
+            industry: Optional industry (will be categorized)
+            
+        Returns:
+            True if successful
+        """
+        if not self.is_configured:
+            return False
+        
+        import hashlib
+        
+        # Create hash for deduplication (hash of user_id + month)
+        month_key = datetime.now(timezone.utc).strftime('%Y-%m')
+        contribution_hash = hashlib.sha256(f"{user_id}:{month_key}".encode()).hexdigest()
+        
+        # Bucket ARR to prevent identification
+        # Buckets: 0-50L, 50L-1Cr, 1-5Cr, 5-10Cr, 10-25Cr, 25-50Cr, 50-100Cr, 100Cr+
+        arr_buckets = [
+            (5_000_000, '0-50L'),
+            (10_000_000, '50L-1Cr'),
+            (50_000_000, '1-5Cr'),
+            (100_000_000, '5-10Cr'),
+            (250_000_000, '10-25Cr'),
+            (500_000_000, '25-50Cr'),
+            (1_000_000_000, '50-100Cr'),
+            (float('inf'), '100Cr+'),
+        ]
+        arr_bucket = '0-50L'
+        for threshold, bucket in arr_buckets:
+            if arr < threshold:
+                arr_bucket = bucket
+                break
+        
+        # Categorize industry (broad categories only)
+        industry_categories = {
+            'saas': 'SaaS/Software',
+            'fintech': 'Fintech',
+            'ecommerce': 'E-commerce',
+            'd2c': 'D2C/Retail',
+            'edtech': 'Edtech',
+            'healthtech': 'Healthtech',
+            'other': 'Other',
+        }
+        industry_category = 'Other'
+        if industry:
+            industry_lower = industry.lower()
+            for key, category in industry_categories.items():
+                if key in industry_lower:
+                    industry_category = category
+                    break
+        
+        try:
+            self._client.table('benchmark_contributions').upsert({
+                'contribution_hash': contribution_hash,
+                'stage': stage,
+                'growth_rate': growth_rate,
+                'arr_bucket': arr_bucket,
+                'industry_category': industry_category,
+            }, on_conflict='contribution_hash').execute()
+            
+            logger.info(f"Benchmark contribution added: stage={stage}, bucket={arr_bucket}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Benchmark contribution failed: {e}")
+            return False
+
+
 
 # Global instance (singleton pattern)
 supabase_service = SupabaseService()

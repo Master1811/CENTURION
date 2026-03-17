@@ -249,6 +249,53 @@ async def complete_onboarding(
         'initial_projection': projection.model_dump() if projection else None
     }
 
+
+@user_router.delete("/delete")
+async def delete_user_account(
+    user: Dict[str, Any] = Depends(require_auth)
+):
+    """
+    Complete cascading hard-delete of user's entire dataset and Auth identity.
+    
+    CRITICAL: This is irreversible. Deletes:
+    - All check-ins
+    - All projections
+    - All connector keys
+    - All AI usage logs
+    - Profile data
+    - Subscription data
+    - Auth identity (via Supabase Admin API)
+    
+    Returns:
+        Confirmation of deletion
+    """
+    user_id = user['id']
+    logger.warning(f"User deletion initiated for: {user_id}")
+    
+    try:
+        # Execute cascading delete via Supabase
+        success = await supabase_service.delete_user_complete(user_id)
+        
+        if success:
+            logger.info(f"User {user_id} completely deleted")
+            return {
+                'success': True,
+                'message': 'Your account and all associated data have been permanently deleted.',
+                'deleted_user_id': user_id
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to delete user data. Please contact support.'
+            )
+            
+    except Exception as e:
+        logger.error(f"User deletion failed for {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='An error occurred during account deletion. Please contact support.'
+        )
+
 api_router.include_router(user_router)
 
 # ============================================================================

@@ -30,33 +30,42 @@ class RateLimitConfig:
     Rate limit configuration for different features.
     
     Structure: {feature_name: {limit: int, window: str}}
-    Window options: 'minute', 'hour', 'day', 'month'
+    Window options: 'minute', 'hour', 'day', 'month', 'none' (-1 = unlimited)
     """
     
-    # Free tier limits (per IP)
+    # Free tier limits (per IP) - useful but clearly limited
     FREE_LIMITS = {
-        'projection': {'limit': 10, 'window': 'day'},
-        'scenario': {'limit': 3, 'window': 'day'},
-        'pdf_export': {'limit': 1, 'window': 'day'},
-        'benchmark': {'limit': 50, 'window': 'day'},
+        'projection':  {'limit': 10,  'window': 'day'},
+        'scenario':    {'limit': 3,   'window': 'day'},
+        'pdf_export':  {'limit': 0,   'window': 'day'},   # Not available for free
+        'benchmark':   {'limit': 5,   'window': 'day'},
+        'checkin':     {'limit': 0,   'window': 'day'},   # Not available for free
     }
     
-    # Paid tier limits (per user) - much more generous
+    # Paid tier limits (per user_id) - generous but controlled
     PAID_LIMITS = {
-        'projection': {'limit': 1000, 'window': 'day'},
-        'scenario': {'limit': 100, 'window': 'day'},
-        'pdf_export': {'limit': 50, 'window': 'day'},
-        'checkin': {'limit': 100, 'window': 'day'},
-        'benchmark': {'limit': 500, 'window': 'day'},
+        'projection':       {'limit': 500,  'window': 'day'},
+        'scenario':         {'limit': 50,   'window': 'day'},
+        'pdf_export':       {'limit': 5,    'window': 'day'},
+        'checkin':          {'limit': 3,    'window': 'day'},
+        'benchmark':        {'limit': 100,  'window': 'day'},
     }
     
-    # AI feature limits (expensive operations)
+    # AI feature limits (monthly caps for paid users)
     AI_LIMITS = {
-        'board_report': {'limit': 2, 'window': 'month'},
-        'strategy_brief': {'limit': 1, 'window': 'month'},
-        'investor_update': {'limit': 5, 'window': 'month'},
-        'ai_insight': {'limit': 50, 'window': 'day'},
-        'daily_pulse': {'limit': 30, 'window': 'month'},
+        'board_report':      {'limit': 2,   'window': 'month'},
+        'strategy_brief':    {'limit': 1,   'window': 'month'},
+        'investor_narrator': {'limit': 2,   'window': 'month'},
+        'what_if_story':     {'limit': 20,  'window': 'month'},
+        'checkin_interpret': {'limit': 3,   'window': 'month'},
+        'daily_pulse':       {'limit': -1,  'window': 'none'},   # Unlimited
+        'weekly_question':   {'limit': -1,  'window': 'none'},   # Unlimited
+    }
+    
+    # Connector limits (paid users only)
+    CONNECTOR_LIMITS = {
+        'connector_sync':   {'limit': 10,  'window': 'day'},
+        'csv_upload':       {'limit': 5,   'window': 'day'},
     }
 
 
@@ -234,15 +243,25 @@ class RateLimiter:
     
     def _get_limit_config(self, feature: str, is_paid: bool) -> Dict[str, Any]:
         """Get rate limit configuration for a feature."""
-        # Check AI limits first (applies to both free and paid)
+        # Check AI limits first (applies to paid users only for AI features)
         if feature in RateLimitConfig.AI_LIMITS:
-            return RateLimitConfig.AI_LIMITS[feature]
+            config = RateLimitConfig.AI_LIMITS[feature]
+            # Unlimited features return high limit
+            if config['limit'] == -1:
+                return {'limit': 999999, 'window': 'day'}
+            return config
+        
+        # Check connector limits (paid only)
+        if feature in RateLimitConfig.CONNECTOR_LIMITS:
+            if not is_paid:
+                return {'limit': 0, 'window': 'day'}
+            return RateLimitConfig.CONNECTOR_LIMITS[feature]
         
         # Then check tier-specific limits
         if is_paid:
             return RateLimitConfig.PAID_LIMITS.get(feature, {'limit': 100, 'window': 'day'})
         
-        return RateLimitConfig.FREE_LIMITS.get(feature, {'limit': 10, 'window': 'day'})
+        return RateLimitConfig.FREE_LIMITS.get(feature, {'limit': 5, 'window': 'day'})
     
     def _build_key(self, identifier: str, feature: str, window: str) -> str:
         """Build a unique cache key for rate limiting."""

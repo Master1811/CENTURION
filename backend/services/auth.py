@@ -6,22 +6,23 @@ Handles Supabase JWT verification and user authorization.
 Security Model:
 - Supabase handles all authentication (Magic Link)
 - Backend verifies JWTs on every protected request
-- Subscription status determines feature access
+- Plan tier determines feature access
+- Subscription status determines premium features
 
-JWT Claims from Supabase:
-- sub: User UUID
-- email: User's email address  
-- role: 'authenticated' for logged-in users
-- aud: 'authenticated' (audience claim)
-- exp: Token expiration timestamp
+Plan Tiers:
+- FREE: Basic calculator access
+- PRO: Dashboard, check-ins, basic AI
+- STUDIO: Board reports, data room
+- VC_PORTFOLIO: Multi-company management
 
 Author: 100Cr Engine Team
 """
 
 import os
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
+from enum import Enum
 
 import jwt
 from fastapi import HTTPException, Depends, status
@@ -34,6 +35,61 @@ logger = logging.getLogger("100cr_engine.auth")
 # HTTP Bearer token extractor
 security = HTTPBearer(auto_error=False)
 security_required = HTTPBearer(auto_error=True)
+
+
+class PlanTier(str, Enum):
+    """User plan tiers."""
+    FREE = 'FREE'
+    PRO = 'PRO'
+    STUDIO = 'STUDIO'
+    VC_PORTFOLIO = 'VC_PORTFOLIO'
+
+
+# Features available per plan tier
+PLAN_FEATURES = {
+    PlanTier.FREE: [
+        'projection',
+        'benchmark_view',
+        'quiz',
+    ],
+    PlanTier.PRO: [
+        'projection',
+        'benchmark_view',
+        'quiz',
+        'checkin',
+        'dashboard',
+        'revenue_intelligence',
+        'forecasting',
+        'benchmark_compare',
+        'connectors',
+        'daily_pulse',
+        'weekly_question',
+    ],
+    PlanTier.STUDIO: [
+        # All PRO features plus:
+        'board_report',
+        'strategy_brief',
+        'investor_narrator',
+        'data_room',
+        'pdf_export',
+        'what_if_story',
+    ],
+    PlanTier.VC_PORTFOLIO: [
+        # All STUDIO features plus:
+        'multi_company',
+        'portfolio_analytics',
+        'aggregate_reports',
+    ],
+}
+
+# Routes that require specific plan tiers
+PREMIUM_ROUTES = {
+    '/api/dashboard/board-reports': [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+    '/api/dashboard/data-room': [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+    '/api/ai/board-report': [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+    '/api/ai/strategy-brief': [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+    '/api/ai/investor-narrator': [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+}
 
 
 class AuthConfig:
@@ -310,3 +366,129 @@ def get_client_identifier(request) -> str:
         return f"ip:{forwarded.split(',')[0].strip()}"
     
     return f"ip:{request.client.host}"
+
+
+
+async def get_user_plan_tier(user_id: str) -> PlanTier:
+    """
+    Get user's plan tier from database.
+    
+    Args:
+        user_id: User UUID
+        
+    Returns:
+        PlanTier enum value
+    """
+    profile = await supabase_service.get_profile(user_id)
+    if not profile:
+        return PlanTier.FREE
+    
+    tier_str = profile.get('plan_tier', 'FREE')
+    try:
+        return PlanTier(tier_str)
+    except ValueError:
+        return PlanTier.FREE
+
+
+def has_feature_access(plan_tier: PlanTier, feature: str) -> bool:
+    """
+    Check if a plan tier has access to a specific feature.
+    
+    Args:
+        plan_tier: User's plan tier
+        feature: Feature to check
+        
+    Returns:
+        True if access granted
+    """
+    # Get all features for this tier and higher tiers
+    tier_order = [PlanTier.FREE, PlanTier.PRO, PlanTier.STUDIO, PlanTier.VC_PORTFOLIO]
+    tier_index = tier_order.index(plan_tier)
+    
+    # Collect features from current tier and all lower tiers
+    available_features = set()
+    for i in range(tier_index + 1):
+        available_features.update(PLAN_FEATURES.get(tier_order[i], []))
+    
+    return feature in available_features
+
+
+async def require_plan_tier(
+    required_tiers: List[PlanTier],
+    credentials: HTTPAuthorizationCredentials = Depends(security_required)
+) -> Dict[str, Any]:
+    """
+    Factory for creating plan tier requirement dependencies.
+    
+    Usage:
+        @router.get("/board-reports")
+        async def board_reports(
+            user: Dict = Depends(lambda c: require_plan_tier([PlanTier.STUDIO, PlanTier.VC_PORTFOLIO], c))
+        ):
+            ...
+    """
+    user = await require_auth(credentials)
+    plan_tier = await get_user_plan_tier(user['id'])
+    
+    if plan_tier not in required_tiers:
+        logger.warning(f"User {user['id']} with tier {plan_tier} denied access to {required_tiers}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                'error': 'plan_upgrade_required',
+                'message': f'This feature requires {" or ".join([t.value for t in required_tiers])} plan.',
+                'current_tier': plan_tier.value,
+                'required_tiers': [t.value for t in required_tiers],
+                'upgrade_url': '/upgrade'
+            }
+        )
+    
+    user['plan_tier'] = plan_tier
+    return user
+
+
+def require_studio_or_higher():
+    """Dependency that requires STUDIO or VC_PORTFOLIO plan."""
+    async def dependency(
+        credentials: HTTPAuthorizationCredentials = Depends(security_required)
+    ) -> Dict[str, Any]:
+        return await require_plan_tier(
+            [PlanTier.STUDIO, PlanTier.VC_PORTFOLIO],
+            credentials
+        )
+    return dependency
+
+
+async def validate_feature_access(
+    user_id: str,
+    feature: str
+) -> bool:
+    """
+    Validate if user can access a specific feature.
+    
+    CRITICAL: This must be called BEFORE expensive DB queries or AI calls.
+    
+    Args:
+        user_id: User UUID
+        feature: Feature being accessed
+        
+    Returns:
+        True if access allowed
+        
+    Raises:
+        HTTPException: 403 if access denied
+    """
+    plan_tier = await get_user_plan_tier(user_id)
+    
+    if not has_feature_access(plan_tier, feature):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                'error': 'feature_not_available',
+                'message': f'The {feature} feature is not available on your plan.',
+                'current_tier': plan_tier.value,
+                'upgrade_url': '/upgrade'
+            }
+        )
+    
+    return True
