@@ -119,6 +119,23 @@ Tables defined in `/docs/supabase_schema.sql`:
   - Hero section, Calculator, Features, Quiz
   - Social proof, Premium teasers, Pricing
 
+### Phase 7 - Auth Flow, Upgrade Modal & Sync Indicators (Complete - March 2026)
+- **Auth Flow (Magic Link)**:
+  - `AuthCallback.jsx` - Handles Supabase magic link redirect
+  - `ProtectedRoute.jsx` - Redirects unauthenticated users to landing page with auth modal
+  - Auth modal auto-opens when accessing protected routes
+- **Upgrade Modal (`/components/upgrade/UpgradeModal.jsx`)**:
+  - 4 trigger variants: RATE_LIMIT, PREMIUM_FEATURE, AI_BUDGET, CONNECTOR_LIMIT
+  - Plan comparison table (Free vs Founder)
+  - Usage progress indicator for rate limits
+  - `useUpgradeModal` hook with `useCallback` (fixed infinite loop bug)
+- **Real-time Sync Indicators (`/components/ui/SyncIndicator.jsx`)**:
+  - `SyncStatus` - Pulsing green dot with "Just now" / "2m ago" timestamp
+  - `RefreshButton` - Manual refresh with loading animation
+  - `ConnectionStatus` - Online/offline indicator
+  - `DataCardHeader` - Reusable header with sync built-in
+  - `useSyncState` hook for managing sync state
+
 ### API Endpoints Summary
 | Endpoint | Auth | Description |
 |----------|------|-------------|
