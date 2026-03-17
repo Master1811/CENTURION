@@ -15,6 +15,7 @@ import {
   Plus,
   Loader2,
   RefreshCw,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
@@ -25,6 +26,7 @@ import { fetchDashboardOverview } from '@/lib/api/dashboard';
 import { CheckInModal } from '@/components/dashboard/CheckInModal';
 import { SyncStatus, RefreshButton } from '@/components/ui/SyncIndicator';
 import { UpgradeModal, useUpgradeModal } from '@/components/upgrade/UpgradeModal';
+import { OnboardingTour, useTour } from '@/components/tour/OnboardingTour';
 
 // Fallback mock data
 const fallbackData = {
@@ -124,6 +126,9 @@ export const CommandCentre = () => {
     }
   };
 
+  // Tour state
+  const { isOpen: tourOpen, endTour, resetTour } = useTour('dashboard');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -147,6 +152,14 @@ export const CommandCentre = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Tour restart button */}
+          <button
+            onClick={resetTour}
+            className="p-2 rounded-lg hover:bg-[#F4F4F5] transition-colors"
+            title="Start tour"
+          >
+            <HelpCircle className="w-4 h-4 text-[#71717A]" strokeWidth={1.5} />
+          </button>
           {/* Sync Status */}
           <SyncStatus 
             lastSynced={lastSynced} 
@@ -161,9 +174,13 @@ export const CommandCentre = () => {
             onClick={() => setShowCheckIn(true)}
             className={cn(
               'flex items-center gap-2',
-              'h-10 px-4 rounded-lg',
-              'bg-[#09090B] text-white text-sm font-medium',
-              'hover:bg-[#18181B] transition-colors'
+              'h-10 px-4 rounded-xl',
+              'bg-gradient-to-r from-[#09090B] to-[#18181B] text-white text-sm font-medium',
+              'hover:from-[#18181B] hover:to-[#27272A]',
+              'shadow-[0_4px_12px_rgba(0,0,0,0.15)]',
+              'hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]',
+              'hover:-translate-y-0.5',
+              'transition-all duration-300'
             )}
             data-testid="checkin-button"
           >
@@ -214,7 +231,7 @@ export const CommandCentre = () => {
         </CenturionCard>
 
         {/* Health Score */}
-        <CenturionCard>
+        <CenturionCard variant="premium" data-tour="health-score">
           <CenturionCardContent className="p-6">
             <p className="text-xs uppercase tracking-wider text-[#A1A1AA] mb-3">
               {copy.dashboard.commandCentre.healthScore}
@@ -279,9 +296,9 @@ export const CommandCentre = () => {
       </CenturionCard>
 
       {/* Bottom Row */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-4" data-tour="metrics">
         {/* Action Queue */}
-        <CenturionCard>
+        <CenturionCard variant="glass" data-tour="action-queue">
           <CenturionCardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs uppercase tracking-wider text-[#A1A1AA]">
@@ -369,6 +386,14 @@ export const CommandCentre = () => {
         isOpen={showUpgrade}
         onClose={hideUpgradeModal}
         {...modalProps}
+      />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        tourKey="dashboard"
+        isOpen={tourOpen}
+        onComplete={endTour}
+        onSkip={endTour}
       />
     </div>
   );

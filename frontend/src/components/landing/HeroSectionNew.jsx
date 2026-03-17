@@ -140,9 +140,11 @@ export const HeroSection = () => {
       )}
       data-testid="hero-section"
     >
-      {/* Background elements */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(0,0,0,0.02)_0%,transparent_50%)]" />
-      <div className="absolute inset-0 bg-dot-grid opacity-50" />
+      {/* Premium background with subtle gradients */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-[#FEFEFE] to-[#F8F9FC]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(212,184,150,0.08)_0%,transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(110,231,183,0.05)_0%,transparent_40%)]" />
+      <div className="absolute inset-0 bg-dot-grid opacity-30" />
       
       <motion.div 
         style={{ opacity, y, scale }}
@@ -216,20 +218,28 @@ export const HeroSection = () => {
               <motion.button
                 onClick={() => navigate('/tools/100cr-calculator')}
                 className={cn(
-                  'flex items-center gap-2',
+                  'relative flex items-center gap-2',
                   'h-14 px-8 rounded-full',
-                  'bg-[#09090B] text-white text-base font-medium',
-                  'shadow-[0_4px_24px_rgba(0,0,0,0.15)]',
-                  'hover:bg-[#18181B] hover:shadow-[0_8px_32px_rgba(0,0,0,0.25)]',
-                  'hover:-translate-y-0.5',
-                  'transition-all duration-200'
+                  'bg-gradient-to-r from-[#09090B] via-[#18181B] to-[#09090B] text-white text-base font-medium',
+                  'shadow-[0_4px_24px_rgba(0,0,0,0.2)]',
+                  'hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)]',
+                  'hover:-translate-y-1',
+                  'transition-all duration-300',
+                  'overflow-hidden',
+                  // Shimmer effect
+                  'after:content-[\'\'] after:absolute after:inset-0',
+                  'after:bg-gradient-to-r after:from-transparent after:via-white/10 after:to-transparent',
+                  'after:translate-x-[-100%] hover:after:translate-x-[100%]',
+                  'after:transition-transform after:duration-700 after:ease-out'
                 )}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 data-testid="hero-cta-primary"
               >
-                Start Free Projection
-                <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
+                <span className="relative z-10 flex items-center gap-2">
+                  Start Free Projection
+                  <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
+                </span>
               </motion.button>
 
               <button
@@ -237,7 +247,13 @@ export const HeroSection = () => {
                 className="flex items-center gap-2 text-[#52525B] hover:text-[#09090B] transition-colors group"
                 data-testid="hero-cta-secondary"
               >
-                <div className="w-10 h-10 rounded-full border border-[rgba(0,0,0,0.1)] flex items-center justify-center group-hover:border-[rgba(0,0,0,0.2)] transition-colors">
+                <div className={cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center',
+                  'border border-[rgba(0,0,0,0.1)]',
+                  'bg-gradient-to-br from-white to-[#F8F9FC]',
+                  'group-hover:border-[rgba(0,0,0,0.2)] group-hover:shadow-md',
+                  'transition-all duration-300'
+                )}>
                   <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
                 </div>
                 <span className="text-sm font-medium">See how it works</span>

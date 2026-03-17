@@ -182,3 +182,151 @@ body {
     display: contents !important;
   }
 }
+
+
+/* ============================================
+   Premium Gradient Utilities
+   ============================================ */
+
+/* Background Gradients */
+.bg-gradient-gold {
+  background: var(--gradient-gold);
+}
+.bg-gradient-gold-subtle {
+  background: var(--gradient-gold-subtle);
+}
+.bg-gradient-platinum {
+  background: var(--gradient-platinum);
+}
+.bg-gradient-obsidian {
+  background: var(--gradient-obsidian);
+}
+.bg-gradient-pearl {
+  background: var(--gradient-pearl);
+}
+.bg-gradient-onyx {
+  background: var(--gradient-onyx);
+}
+.bg-gradient-emerald {
+  background: var(--gradient-emerald);
+}
+.bg-gradient-sapphire {
+  background: var(--gradient-sapphire);
+}
+.bg-gradient-amethyst {
+  background: var(--gradient-amethyst);
+}
+.bg-gradient-amber {
+  background: var(--gradient-amber);
+}
+.bg-gradient-glass {
+  background: var(--gradient-glass-light);
+  backdrop-filter: blur(12px);
+}
+.bg-gradient-glass-frost {
+  background: var(--gradient-glass-frost);
+  backdrop-filter: blur(16px);
+}
+
+/* Premium Card Styles */
+.card-premium {
+  background: var(--gradient-glass-light);
+  border: 1px solid rgba(255,255,255,0.8);
+  box-shadow: var(--shadow-premium);
+  backdrop-filter: blur(12px);
+}
+.card-premium-dark {
+  background: var(--gradient-glass-dark);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-premium);
+  backdrop-filter: blur(12px);
+}
+
+/* Shimmer Animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-gold {
+  background: linear-gradient(90deg, transparent 0%, rgba(212,184,150,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+.shimmer-silver {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Gradient Text */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #C9A961 0%, #D4B896 50%, #A8824D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-premium {
+  background: linear-gradient(135deg, #09090B 0%, #52525B 50%, #09090B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Premium Glow Effects */
+.glow-gold {
+  box-shadow: var(--shadow-glow-gold);
+}
+.glow-emerald {
+  box-shadow: var(--shadow-glow-emerald);
+}
+
+/* Premium Border Gradient */
+.border-gradient-gold {
+  border: 1px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #D4B896, #E8D4B8, #D4B896) border-box;
+}
+
+/* Luxury Button Styles */
+.btn-luxury {
+  background: var(--gradient-onyx);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s var(--ease-luxury);
+}
+.btn-luxury::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.6s ease;
+}
+.btn-luxury:hover::before {
+  left: 100%;
+}
+.btn-luxury:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+
+/* Tour/Tooltip Styles */
+.tour-spotlight {
+  position: relative;
+  z-index: 1000;
+}
+.tour-spotlight::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  background: rgba(212,184,150,0.2);
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
