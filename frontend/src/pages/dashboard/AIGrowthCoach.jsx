@@ -1,26 +1,28 @@
 // AI Growth Coach Dashboard
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Sun, Calendar, AlertTriangle, MessageSquare, Brain, ArrowRight } from 'lucide-react';
+import { Sparkles, Sun, Calendar, AlertTriangle, MessageSquare, Brain, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
+import { useAuth } from '@/context/AuthContext';
+import { getDailyPulse, getWeeklyQuestion } from '@/lib/api/dashboard';
 
-// Mock AI data
-const dailyPulse = {
+// Fallback mock data
+const fallbackDailyPulse = {
   greeting: "Good morning! Here's your startup pulse for today.",
   highlights: [
     { type: 'positive', text: 'Revenue is tracking 15% ahead of baseline' },
     { type: 'neutral', text: '3 new signups yesterday, 1 churned customer' },
     { type: 'action', text: 'Consider reaching out to high-value customers for testimonials' },
   ],
-  timestamp: '8:30 AM IST',
+  timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' IST',
 };
 
-const weeklyQuestion = {
+const fallbackWeeklyQuestion = {
   question: "What's the biggest obstacle preventing you from doubling your growth rate this quarter?",
   hint: "Think about: sales cycle length, marketing channels, pricing, product gaps, or team capacity.",
-  date: 'Monday, Feb 3',
+  date: new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' }),
 };
 
 const deviationAlerts = [
@@ -42,7 +44,59 @@ const coachingHistory = [
 ];
 
 export const AIGrowthCoach = () => {
+  const { getAccessToken } = useAuth();
   const [expandedAlert, setExpandedAlert] = useState(null);
+  const [dailyPulse, setDailyPulse] = useState(fallbackDailyPulse);
+  const [weeklyQuestion, setWeeklyQuestion] = useState(fallbackWeeklyQuestion);
+  const [loadingPulse, setLoadingPulse] = useState(false);
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
+  const [reflection, setReflection] = useState('');
+
+  const loadDailyPulse = async () => {
+    try {
+      setLoadingPulse(true);
+      const token = getAccessToken();
+      if (token) {
+        const result = await getDailyPulse(token);
+        setDailyPulse({
+          greeting: result.greeting || fallbackDailyPulse.greeting,
+          highlights: result.insights?.map((text, i) => ({
+            type: i === 0 ? 'positive' : i === result.insights.length - 1 ? 'action' : 'neutral',
+            text
+          })) || fallbackDailyPulse.highlights,
+          timestamp: result.generated_at || fallbackDailyPulse.timestamp,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load daily pulse:', err);
+    } finally {
+      setLoadingPulse(false);
+    }
+  };
+
+  const loadWeeklyQuestion = async () => {
+    try {
+      setLoadingQuestion(true);
+      const token = getAccessToken();
+      if (token) {
+        const result = await getWeeklyQuestion(token);
+        setWeeklyQuestion({
+          question: result.question || fallbackWeeklyQuestion.question,
+          hint: result.hint || fallbackWeeklyQuestion.hint,
+          date: result.week_of || fallbackWeeklyQuestion.date,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load weekly question:', err);
+    } finally {
+      setLoadingQuestion(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDailyPulse();
+    loadWeeklyQuestion();
+  }, []);
 
   return (
     <div className="space-y-6" data-testid="ai-growth-coach">
@@ -66,30 +120,47 @@ export const AIGrowthCoach = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-medium text-[#09090B]">{copy.dashboard.aiCoach.dailyPulse}</h3>
-                <span className="text-xs text-[#A1A1AA]">{dailyPulse.timestamp}</span>
-              </div>
-              <p className="text-sm text-[#52525B] mb-4">{dailyPulse.greeting}</p>
-              <div className="space-y-2">
-                {dailyPulse.highlights.map((item, i) => (
-                  <div 
-                    key={i}
-                    className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg',
-                      item.type === 'positive' && 'bg-emerald-50',
-                      item.type === 'neutral' && 'bg-[#F4F4F5]',
-                      item.type === 'action' && 'bg-blue-50'
-                    )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#A1A1AA]">{dailyPulse.timestamp}</span>
+                  <button 
+                    onClick={loadDailyPulse}
+                    disabled={loadingPulse}
+                    className="p-1 hover:bg-[#F4F4F5] rounded transition-colors"
                   >
-                    <div className={cn(
-                      'w-1.5 h-1.5 rounded-full mt-2',
-                      item.type === 'positive' && 'bg-emerald-500',
-                      item.type === 'neutral' && 'bg-[#71717A]',
-                      item.type === 'action' && 'bg-blue-500'
-                    )} />
-                    <span className="text-sm text-[#09090B]">{item.text}</span>
-                  </div>
-                ))}
+                    <RefreshCw className={cn("w-3.5 h-3.5 text-[#71717A]", loadingPulse && "animate-spin")} strokeWidth={1.5} />
+                  </button>
+                </div>
               </div>
+              {loadingPulse ? (
+                <div className="flex items-center justify-center h-24">
+                  <Loader2 className="w-5 h-5 animate-spin text-amber-500" strokeWidth={1.5} />
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-[#52525B] mb-4">{dailyPulse.greeting}</p>
+                  <div className="space-y-2">
+                    {dailyPulse.highlights.map((item, i) => (
+                      <div 
+                        key={i}
+                        className={cn(
+                          'flex items-start gap-3 p-3 rounded-lg',
+                          item.type === 'positive' && 'bg-emerald-50',
+                          item.type === 'neutral' && 'bg-[#F4F4F5]',
+                          item.type === 'action' && 'bg-blue-50'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-1.5 h-1.5 rounded-full mt-2',
+                          item.type === 'positive' && 'bg-emerald-500',
+                          item.type === 'neutral' && 'bg-[#71717A]',
+                          item.type === 'action' && 'bg-blue-500'
+                        )} />
+                        <span className="text-sm text-[#09090B]">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </CenturionCardContent>
@@ -107,17 +178,30 @@ export const AIGrowthCoach = () => {
                 <h3 className="font-medium text-white">{copy.dashboard.aiCoach.weeklyQuestion}</h3>
                 <span className="text-xs text-white/50">{weeklyQuestion.date}</span>
               </div>
-              <p className="text-lg text-white mb-3">{weeklyQuestion.question}</p>
-              <p className="text-sm text-white/60 mb-6">{weeklyQuestion.hint}</p>
-              <div className="flex gap-3">
-                <textarea
-                  placeholder="Share your thoughts..."
-                  className="flex-1 h-24 p-3 rounded-lg bg-white/10 text-white placeholder:text-white/40 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-white/20"
-                />
-              </div>
-              <button className="mt-4 h-10 px-5 rounded-lg bg-white text-[#09090B] text-sm font-medium hover:bg-white/90 transition-colors">
-                Submit reflection
-              </button>
+              {loadingQuestion ? (
+                <div className="flex items-center justify-center h-24">
+                  <Loader2 className="w-5 h-5 animate-spin text-white/50" strokeWidth={1.5} />
+                </div>
+              ) : (
+                <>
+                  <p className="text-lg text-white mb-3">{weeklyQuestion.question}</p>
+                  <p className="text-sm text-white/60 mb-6">{weeklyQuestion.hint}</p>
+                  <div className="flex gap-3">
+                    <textarea
+                      value={reflection}
+                      onChange={(e) => setReflection(e.target.value)}
+                      placeholder="Share your thoughts..."
+                      className="flex-1 h-24 p-3 rounded-lg bg-white/10 text-white placeholder:text-white/40 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-white/20"
+                    />
+                  </div>
+                  <button 
+                    className="mt-4 h-10 px-5 rounded-lg bg-white text-[#09090B] text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50"
+                    disabled={!reflection.trim()}
+                  >
+                    Submit reflection
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </CenturionCardContent>

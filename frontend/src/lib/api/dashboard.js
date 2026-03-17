@@ -25,7 +25,11 @@ async function authFetch(endpoint, options = {}, accessToken = null) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+    const errorMessage = error.detail || `HTTP ${response.status}`;
+    const err = new Error(errorMessage);
+    err.status = response.status;
+    err.data = error;
+    throw err;
   }
 
   return response.json();
@@ -130,6 +134,54 @@ export async function disconnectProvider(accessToken, provider) {
 }
 
 // ============================================================================
+// AI Features API
+// ============================================================================
+
+export async function fetchAIUsage(accessToken) {
+  return authFetch('/api/ai/usage', {}, accessToken);
+}
+
+export async function getDailyPulse(accessToken) {
+  return authFetch('/api/ai/daily-pulse', {}, accessToken);
+}
+
+export async function getWeeklyQuestion(accessToken) {
+  return authFetch('/api/ai/weekly-question', {}, accessToken);
+}
+
+export async function generateBoardReport(accessToken, data = {}) {
+  return authFetch('/api/ai/board-report', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, accessToken);
+}
+
+export async function generateStrategyBrief(accessToken, data = {}) {
+  return authFetch('/api/ai/strategy-brief', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, accessToken);
+}
+
+export async function analyzeDeviation(accessToken, actual, projected, note = '') {
+  return authFetch('/api/ai/deviation', {
+    method: 'POST',
+    body: JSON.stringify({ actual, projected, note }),
+  }, accessToken);
+}
+
+// ============================================================================
+// Scenario Analysis API
+// ============================================================================
+
+export async function runScenarioAnalysis(accessToken, inputs) {
+  return authFetch('/api/engine/scenario', {
+    method: 'POST',
+    body: JSON.stringify(inputs),
+  }, accessToken);
+}
+
+// ============================================================================
 // Quiz API (Public - Lead Generation)
 // ============================================================================
 
@@ -156,4 +208,11 @@ export default {
   connectProvider,
   disconnectProvider,
   submitFounderQuiz,
+  fetchAIUsage,
+  getDailyPulse,
+  getWeeklyQuestion,
+  generateBoardReport,
+  generateStrategyBrief,
+  analyzeDeviation,
+  runScenarioAnalysis,
 };

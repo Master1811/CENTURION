@@ -100,6 +100,25 @@ Tables defined in `/docs/supabase_schema.sql`:
 - **Enhanced Announcement Bar**: Violet gradient, animated icons
 - **Responsive Design**: Mobile-optimized layout
 
+### Phase 6 - Dashboard API Integration + PDF Export (Complete - March 2026)
+- **Dashboard Components Connected to Live APIs**:
+  - `CommandCentre.jsx` - Fetches dashboard overview with fallback to mock data
+  - `RevenueIntelligence.jsx` - Fetches revenue data from `/api/dashboard/revenue`
+  - `AIGrowthCoach.jsx` - Connected to daily pulse and weekly question APIs
+  - `Connectors.jsx` - Live connector status from backend
+  - `ReportingEngine.jsx` - AI report generation with usage tracking
+- **API Service Layer** (`/lib/api/dashboard.js`):
+  - Added AI endpoints: `fetchAIUsage`, `getDailyPulse`, `getWeeklyQuestion`
+  - Added `generateBoardReport`, `generateStrategyBrief`
+  - Added `analyzeDeviation`, `runScenarioAnalysis`
+- **PDF Export Functionality**:
+  - Report viewer modal with print-to-PDF
+  - Structured report display (executive summary, metrics, highlights)
+  - Browser print API for PDF generation
+- **Marketing Screenshots Captured**:
+  - Hero section, Calculator, Features, Quiz
+  - Social proof, Premium teasers, Pricing
+
 ### API Endpoints Summary
 | Endpoint | Auth | Description |
 |----------|------|-------------|

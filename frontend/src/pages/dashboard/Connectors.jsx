@@ -1,5 +1,5 @@
 // API Connectors Dashboard
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plug, 
@@ -12,11 +12,14 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
+import { useAuth } from '@/context/AuthContext';
+import { fetchConnectors, connectProvider, disconnectProvider } from '@/lib/api/dashboard';
 
 // Connector providers by tier
 const tier1Connectors = [
@@ -145,28 +148,90 @@ const ConnectorCard = ({ connector, onConnect, onDisconnect, onSync }) => {
 };
 
 export const Connectors = () => {
-  const [connectors, setConnectors] = useState({
-    razorpay: tier1Connectors.find(c => c.id === 'razorpay'),
-  });
+  const { getAccessToken } = useAuth();
+  const [connectedProviders, setConnectedProviders] = useState({});
   const [syncResult, setSyncResult] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleConnect = (id, apiKey) => {
-    console.log(`Connecting ${id} with key: ${apiKey.substring(0, 5)}...`);
-    // In production, this would call the backend to encrypt and store the key
+  useEffect(() => {
+    const loadConnectors = async () => {
+      try {
+        const token = getAccessToken();
+        if (token) {
+          const result = await fetchConnectors(token);
+          // Convert array to lookup object
+          const connected = {};
+          result.forEach(c => {
+            connected[c.provider] = {
+              isActive: c.is_active,
+              lastSynced: c.last_synced_at
+            };
+          });
+          setConnectedProviders(connected);
+        }
+      } catch (err) {
+        console.error('Failed to load connectors:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConnectors();
+  }, [getAccessToken]);
+
+  const handleConnect = async (id, apiKey) => {
+    try {
+      const token = getAccessToken();
+      if (token) {
+        await connectProvider(token, id, apiKey);
+        setConnectedProviders(prev => ({
+          ...prev,
+          [id]: { isActive: true, lastSynced: 'Just now' }
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to connect ${id}:`, err);
+    }
   };
 
-  const handleDisconnect = (id) => {
-    console.log(`Disconnecting ${id}`);
+  const handleDisconnect = async (id) => {
+    try {
+      const token = getAccessToken();
+      if (token) {
+        await disconnectProvider(token, id);
+        setConnectedProviders(prev => {
+          const updated = { ...prev };
+          delete updated[id];
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to disconnect ${id}:`, err);
+    }
   };
 
   const handleSync = (id) => {
-    // Show sync result modal
     setSyncResult({
-      provider: 'Razorpay',
+      provider: id.charAt(0).toUpperCase() + id.slice(1),
       revenue: '4.23',
       month: 'January',
     });
   };
+
+  // Merge connected status with connector definitions
+  const getConnectorWithStatus = (connector) => ({
+    ...connector,
+    connected: !!connectedProviders[connector.id]?.isActive,
+    lastSync: connectedProviders[connector.id]?.lastSynced || '2 hours ago'
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-[#71717A]" strokeWidth={1.5} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="connectors">
@@ -204,7 +269,7 @@ export const Connectors = () => {
           {tier1Connectors.map((connector) => (
             <ConnectorCard
               key={connector.id}
-              connector={connector}
+              connector={getConnectorWithStatus(connector)}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onSync={handleSync}
@@ -223,7 +288,7 @@ export const Connectors = () => {
           {tier2Connectors.map((connector) => (
             <ConnectorCard
               key={connector.id}
-              connector={connector}
+              connector={getConnectorWithStatus(connector)}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onSync={handleSync}
@@ -242,7 +307,7 @@ export const Connectors = () => {
           {tier3Connectors.map((connector) => (
             <ConnectorCard
               key={connector.id}
-              connector={connector}
+              connector={getConnectorWithStatus(connector)}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onSync={handleSync}

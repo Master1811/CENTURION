@@ -1,15 +1,17 @@
 // Revenue Intelligence Dashboard
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, Users, Zap, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Users, Zap, AlertTriangle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
 import { formatCrore, CRORE, LAKH } from '@/lib/engine/constants';
+import { useAuth } from '@/context/AuthContext';
+import { fetchRevenueIntelligence } from '@/lib/api/dashboard';
 
-// Mock revenue data
-const revenueData = [
+// Fallback mock data
+const fallbackRevenueData = [
   { month: 'Aug', actual: 180000, baseline: 180000, benchmark: 180000 },
   { month: 'Sep', actual: 195000, baseline: 194400, benchmark: 190800 },
   { month: 'Oct', actual: 220000, baseline: 209952, benchmark: 202248 },
@@ -29,21 +31,60 @@ const cohortData = [
 ];
 
 export const RevenueIntelligence = () => {
+  const { getAccessToken } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = getAccessToken();
+        if (token) {
+          const result = await fetchRevenueIntelligence(token);
+          setData(result);
+        }
+      } catch (err) {
+        console.error('Failed to load revenue data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [getAccessToken]);
+
+  // Use API data or fallback
+  const revenueData = data?.revenue_data?.length > 0 ? data.revenue_data : fallbackRevenueData;
+
   const metrics = useMemo(() => {
+    if (revenueData.length === 0) {
+      return { mrr: 0, growth: 0, vsBaseline: 0, vsBenchmark: 0, qualityScore: 0 };
+    }
+
     const current = revenueData[revenueData.length - 1];
     const previous = revenueData[revenueData.length - 2];
-    const growth = (current.actual - previous.actual) / previous.actual;
-    const vsBaseline = ((current.actual - current.baseline) / current.baseline) * 100;
-    const vsBenchmark = ((current.actual - current.benchmark) / current.benchmark) * 100;
+    const growth = previous ? (current.actual - previous.actual) / previous.actual : 0;
+    const vsBaseline = current.baseline ? ((current.actual - current.baseline) / current.baseline) * 100 : 0;
+    const vsBenchmark = current.benchmark ? ((current.actual - current.benchmark) / current.benchmark) * 100 : 0;
     
     return {
       mrr: current.actual,
-      growth,
+      growth: data?.calculated_growth ?? growth,
       vsBaseline,
       vsBenchmark,
       qualityScore: 82,
     };
-  }, []);
+  }, [revenueData, data]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-[#71717A]" strokeWidth={1.5} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="revenue-intelligence">
