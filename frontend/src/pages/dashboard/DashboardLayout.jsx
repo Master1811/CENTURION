@@ -2,6 +2,7 @@
 import React from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import {
   LayoutDashboard,
@@ -26,12 +27,9 @@ const mobileNavItems = [
 
 export const DashboardLayout = () => {
   const location = useLocation();
-  
-  // For MVP, simulate logged in state
-  // In production, check Supabase auth
-  const isLoggedIn = true; // localStorage.getItem('auth_token');
-  
-  if (!isLoggedIn) {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
