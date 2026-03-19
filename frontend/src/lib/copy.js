@@ -145,6 +145,7 @@ export const copy = {
     pricing: 'Pricing',
     tools: 'Tools',
     getStarted: 'Get Started',
+    ctaButton: 'Start free',
     dashboard: 'Dashboard',
     signIn: 'Sign In',
   },

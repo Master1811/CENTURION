@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { useAuth } from '@/context/AuthContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { storeAuthIntent } from '@/lib/auth/intent';
 
 const toolsItems = [
   { 
@@ -96,6 +97,10 @@ export const Navbar = () => {
     if (isAuthenticated) {
       navigate('/dashboard');
     } else {
+      storeAuthIntent({
+        intent: 'signin',
+        redirectTo: '/dashboard',
+      });
       setAuthModalOpen(true);
     }
   };
@@ -166,7 +171,10 @@ export const Navbar = () => {
                   initial={{ opacity: 0, y: 8, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{
+                    duration: 0.2,
+                    ease: [0.22, 1, 0.36, 1] // --ease-luxury
+                  }}
                   className={cn(
                     'absolute top-full left-0 mt-2',
                     'w-72 p-2',
@@ -177,29 +185,39 @@ export const Navbar = () => {
                   onClick={(e) => e.stopPropagation()}
                   data-testid="tools-dropdown-menu"
                 >
-                  {toolsItems.map((item) => {
+                  {toolsItems.map((item, index) => {
                     const Icon = item.icon;
                     return (
-                      <Link
+                      <motion.div
                         key={item.href}
-                        to={item.href}
-                        onClick={() => setToolsOpen(false)}
-                        className={cn(
-                          'flex items-start gap-3 p-3 rounded-xl',
-                          'transition-colors duration-150',
-                          'hover:bg-[rgba(0,0,0,0.04)]',
-                          location.pathname === item.href && 'bg-[rgba(0,0,0,0.06)]'
-                        )}
-                        data-testid={`tool-link-${item.href.split('/').pop()}`}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{
+                          duration: 0.2,
+                          delay: index * 0.05,
+                          ease: [0.22, 1, 0.36, 1]
+                        }}
                       >
-                        <div className="p-2 rounded-lg bg-[rgba(0,0,0,0.04)]">
-                          <Icon className="w-4 h-4 text-[#09090B]" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#09090B]">{item.label}</p>
-                          <p className="text-xs text-[#71717A] mt-0.5">{item.description}</p>
-                        </div>
-                      </Link>
+                        <Link
+                          to={item.href}
+                          onClick={() => setToolsOpen(false)}
+                          className={cn(
+                            'flex items-start gap-3 p-3 rounded-xl',
+                            'transition-all duration-200 ease-[var(--ease-luxury)]',
+                            'hover:bg-[rgba(0,0,0,0.04)] hover:translate-x-1',
+                            location.pathname === item.href && 'bg-[rgba(0,0,0,0.06)]'
+                          )}
+                          data-testid={`tool-link-${item.href.split('/').pop()}`}
+                        >
+                          <div className="p-2 rounded-lg bg-[rgba(0,0,0,0.04)] transition-transform duration-200 group-hover:scale-110">
+                            <Icon className="w-4 h-4 text-[#09090B]" strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#09090B]">{item.label}</p>
+                            <p className="text-xs text-[#71717A] mt-0.5">{item.description}</p>
+                          </div>
+                        </Link>
+                      </motion.div>
                     );
                   })}
                 </motion.div>
@@ -322,7 +340,7 @@ export const Navbar = () => {
             )}
             data-testid="navbar-cta"
           >
-            {copy.nav.getStarted}
+            {copy.nav.ctaButton}
           </button>
         )}
 
@@ -393,6 +411,10 @@ export const Navbar = () => {
                 if (isAuthenticated) {
                   navigate('/dashboard');
                 } else {
+                  storeAuthIntent({
+                    intent: 'signin',
+                    redirectTo: '/dashboard',
+                  });
                   setAuthModalOpen(true);
                 }
               }}
@@ -403,7 +425,7 @@ export const Navbar = () => {
                 'transition-colors'
               )}
             >
-              {isAuthenticated ? copy.nav.dashboard : copy.nav.getStarted}
+              {isAuthenticated ? copy.nav.dashboard : copy.nav.ctaButton}
             </button>
             
             {isAuthenticated && (

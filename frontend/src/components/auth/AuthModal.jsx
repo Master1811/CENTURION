@@ -8,8 +8,11 @@ import { X, Mail, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { copy } from '@/lib/copy';
+import { readAuthIntent } from '@/lib/auth/intent';
 
-export const AuthModal = ({ isOpen, onClose, initialMode = 'signin' }) => {
+const DEFAULT_HEADLINE = 'Sign in to Centurion';
+
+export const AuthModal = ({ isOpen, onClose, initialMode = 'signin', headline: headlineProp }) => {
   const { signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,6 +45,10 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin' }) => {
   };
 
   if (!isOpen) return null;
+
+  const headline =
+    headlineProp ??
+    (readAuthIntent()?.intent === 'upgrade' ? 'Create your account to continue' : DEFAULT_HEADLINE);
 
   return (
     <AnimatePresence>
@@ -84,7 +91,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin' }) => {
             {!sent ? (
               <>
                 <h2 className="text-2xl font-heading font-bold text-[#09090B] mb-2">
-                  {initialMode === 'signin' ? 'Welcome back' : 'Get started for free'}
+                  {headline}
                 </h2>
                 <p className="text-sm text-[#71717A] mb-6">
                   Enter your email to receive a magic link. No password needed.
