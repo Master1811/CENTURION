@@ -70,6 +70,7 @@ from routers import (
     connectors_router,
     admin_router,
 )
+from routers.payments import router as payments_router
 from services import (
     supabase_service,
     get_current_user,
@@ -411,6 +412,10 @@ api_router.include_router(admin_router)
 
 # Add main router to app
 app.include_router(api_router)
+app.include_router(
+    payments_router,
+    prefix="/api"
+)
 
 # ============================================================================
 # MIDDLEWARE

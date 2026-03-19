@@ -178,24 +178,31 @@ class SupabaseService:
                 return None
             logger.error(f"Error fetching subscription: {e}")
             raise
-    
-    async def create_subscription(self, subscription_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a new subscription record.
-        
-        Args:
-            subscription_data: Dict with user_id, plan, status, etc.
-            
-        Returns:
-            Created subscription data
-        """
+
+    async def get_subscription_by_ref(
+        self,
+        payment_ref: str
+    ):
         if not self.is_configured:
-            return subscription_data
-            
-        subscription_data['created_at'] = datetime.now(timezone.utc).isoformat()
-        
-        response = self._client.table('subscriptions').insert(subscription_data).execute()
-        return response.data[0] if response.data else subscription_data
+            return None
+        result = self._client.table("subscriptions")\
+            .select("*")\
+            .eq("payment_ref", payment_ref)\
+            .execute()
+        return result.data[0] if result.data else None
+    
+    async def create_subscription(self, data: dict):
+        if not self.is_configured:
+            return data
+        result = self._client.table("subscriptions")\
+            .upsert({
+                "user_id": data["user_id"],
+                "plan": data["plan"],
+                "status": data["status"],
+                "payment_ref": data["payment_ref"],
+            })\
+            .execute()
+        return result.data
     
     async def update_subscription(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         """Update subscription status."""
