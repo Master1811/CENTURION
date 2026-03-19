@@ -14,6 +14,7 @@ import RunwayCalculator from "@/pages/tools/RunwayCalculator";
 import GrowthCalculator from "@/pages/tools/GrowthCalculator";
 import PricingPage from "@/pages/PricingPage";
 import AuthCallback from "@/pages/AuthCallback";
+import CheckoutPage from "@/pages/CheckoutPage";
 
 // Dashboard Pages
 import DashboardLayout from "@/pages/dashboard/DashboardLayout";
@@ -85,6 +86,13 @@ function App() {
               <Route path="connectors" element={<Connectors />} />
               <Route path="settings" element={<Settings />} />
             </Route>
+
+            {/* Checkout (Protected - auth only, not paid gate) */}
+            <Route path="/checkout" element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            } />
             
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
