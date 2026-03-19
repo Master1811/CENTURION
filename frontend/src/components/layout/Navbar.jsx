@@ -43,8 +43,9 @@ export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalHeadline, setAuthModalHeadline] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, signOut, loading } = useAuth();
@@ -86,6 +87,18 @@ export const Navbar = () => {
       setAuthModalOpen(true);
     }
   }, [location.state, isAuthenticated, loading]);
+
+  // Listen for centurion:open-auth (e.g. from ResultGate, Share button)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.headline) {
+        setAuthModalHeadline(e.detail.headline);
+      }
+      setAuthModalOpen(true);
+    };
+    window.addEventListener('centurion:open-auth', handler);
+    return () => window.removeEventListener('centurion:open-auth', handler);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -449,9 +462,13 @@ export const Navbar = () => {
       </AnimatePresence>
 
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setAuthModalHeadline(null);
+        }}
+        headline={authModalHeadline}
       />
     </>
   );

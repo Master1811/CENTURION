@@ -14,6 +14,9 @@ import {
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip as RechartsTooltip } from 'recharts';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
+import { useAuth } from '@/context/AuthContext';
+import { storeAuthIntent } from '@/lib/auth/intent';
+import { ResultGate } from '@/components/calculator/ResultGate';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
@@ -45,7 +48,13 @@ const DEFAULT_GROWTH = 0.08; // 8%
 
 export const HundredCrCalculator = () => {
   const navigate = useNavigate();
-  
+  const { isAuthenticated, getAccessToken } = useAuth();
+  const [gateDismissed, setGateDismissed] = useState(
+    () => sessionStorage.getItem('centurion_gate_dismissed') === 'true'
+  );
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+
   // State
   const [mrr, setMrr] = useState(DEFAULT_MRR);
   const [growthRate, setGrowthRate] = useState(DEFAULT_GROWTH);
@@ -325,9 +334,9 @@ export const HundredCrCalculator = () => {
                 </CenturionCardContent>
               </CenturionCard>
 
-              {/* Milestone Cards */}
+              {/* Milestone Cards — 1 visible to all; 2–4 gated for anonymous */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {projection.milestones.map((milestone, i) => (
+                {projection.milestones.slice(0, 1).map((milestone) => (
                   <CenturionCard
                     key={milestone.value}
                     hover
@@ -351,6 +360,37 @@ export const HundredCrCalculator = () => {
                     </CenturionCardContent>
                   </CenturionCard>
                 ))}
+                <div className="relative col-span-1 md:col-span-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {projection.milestones.slice(1, 4).map((milestone) => (
+                      <CenturionCard
+                        key={milestone.value}
+                        hover
+                        className={cn(
+                          milestone.reached && 'bg-[#F4F4F5]'
+                        )}
+                      >
+                        <CenturionCardContent className="text-center py-5">
+                          <p className="font-mono text-lg font-semibold text-[#09090B] tabular-nums mb-1">
+                            {milestone.label}
+                          </p>
+                          {milestone.date ? (
+                            <p className="text-xs text-[#52525B]">
+                              {formatDate(milestone.date)}
+                            </p>
+                          ) : milestone.reached ? (
+                            <p className="text-xs text-[#52525B]">Reached</p>
+                          ) : (
+                            <p className="text-xs text-[#A1A1AA]">10+ years</p>
+                          )}
+                        </CenturionCardContent>
+                      </CenturionCard>
+                    ))}
+                  </div>
+                  {!isAuthenticated && !gateDismissed && (
+                    <ResultGate onDismiss={() => setGateDismissed(true)} />
+                  )}
+                </div>
               </div>
 
               {/* Benchmark Card */}
@@ -427,18 +467,75 @@ export const HundredCrCalculator = () => {
               {/* Actions */}
               <div className="flex flex-wrap gap-3">
                 <button
+                  onClick={async () => {
+                    if (!isAuthenticated) {
+                      storeAuthIntent({
+                        intent: 'save-projection',
+                        redirectTo: '/dashboard',
+                      });
+                      window.dispatchEvent(
+                        new CustomEvent('centurion:open-auth', {
+                          detail: {
+                            headline: 'Sign in to share',
+                            subtext: 'Free account. No credit card.',
+                          }
+                        })
+                      );
+                      return;
+                    }
+                    try {
+                      setShareLoading(true);
+                      setShareSuccess(false);
+                      const token = getAccessToken();
+                      const res = await fetch(
+                        `${process.env.REACT_APP_BACKEND_URL}/api/engine/projection`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            currentMRR: mrr,
+                            growthRate,
+                          }),
+                        }
+                      );
+                      if (!res.ok) throw new Error('Share failed');
+                      const data = await res.json();
+                      if (data.slug) {
+                        const url = `${window.location.origin}/p/${data.slug}`;
+                        await navigator.clipboard.writeText(url);
+                        setShareSuccess(true);
+                        setTimeout(() => setShareSuccess(false), 3000);
+                      }
+                    } catch (err) {
+                      console.error('Share failed:', err);
+                    } finally {
+                      setShareLoading(false);
+                    }
+                  }}
+                  disabled={shareLoading}
                   className={cn(
                     'flex items-center gap-2 h-10 px-5 rounded-lg',
                     'bg-white border border-[rgba(0,0,0,0.1)]',
                     'text-sm text-[#52525B]',
-                    'hover:border-[rgba(0,0,0,0.2)] transition-colors'
+                    'hover:border-[rgba(0,0,0,0.2)] transition-colors',
+                    shareLoading && 'opacity-70 cursor-wait',
+                    shareSuccess && 'border-emerald-500 text-emerald-600'
                   )}
                   data-testid="share-button"
                 >
                   <Share2 className="w-4 h-4" strokeWidth={1.5} />
-                  Share projection
+                  {shareLoading ? 'Sharing...' : shareSuccess ? 'Link copied!' : 'Share projection'}
                 </button>
                 <button
+                  onClick={() => {
+                    alert(
+                      'PDF export coming soon. ' +
+                      'Use Share to copy a link instead.'
+                    );
+                  }}
                   className={cn(
                     'flex items-center gap-2 h-10 px-5 rounded-lg',
                     'bg-white border border-[rgba(0,0,0,0.1)]',
