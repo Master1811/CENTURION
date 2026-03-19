@@ -1,14 +1,16 @@
 // PricingSection - Free vs Founder Plan cards
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
+import { storeAuthIntent } from '@/lib/auth/intent';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const PricingSection = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <section
@@ -118,7 +120,14 @@ export const PricingSection = () => {
                 </ul>
 
                 <button
-                  onClick={() => {/* Razorpay payment link will go here */}}
+                  onClick={() => {
+                    storeAuthIntent({
+                      intent: 'upgrade',
+                      plan: 'founder',
+                      redirectTo: '/checkout',
+                    });
+                    navigate(location.pathname, { state: { authRequired: true }, replace: true });
+                  }}
                   className={cn(
                     'w-full h-11 rounded-lg',
                     'bg-[#09090B] text-white',

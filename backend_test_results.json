@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-03-16T23:46:56.939070",
-  "base_url": "https://milestone-tracker-68.preview.emergentagent.com",
+  "base_url": "https://api.your-domain.com",
   "summary": {
     "total_tests": 8,
     "passed_tests": 8,

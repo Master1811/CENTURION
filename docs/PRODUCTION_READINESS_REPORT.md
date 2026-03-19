@@ -117,11 +117,11 @@
 
 | Check | Status | Detail |
 |-------|--------|--------|
-| ANTHROPIC_API_KEY in client | PASS | Not used; backend uses EMERGENT_LLM_KEY only in backend/services/anthropic.py (server-side). |
+| ANTHROPIC_API_KEY in client | PASS | Not used client-side; backend uses ANTHROPIC_API_KEY in backend/services/anthropic.py (server-side). |
 | SUPABASE_SERVICE_ROLE_KEY in client | PASS | Only in backend (supabase.py, encryption.py fallback). Frontend uses REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY only. |
 | RAZORPAY_KEY_SECRET in client | PASS | No Razorpay secret in frontend; connectors store encrypted keys server-side. |
 | Connector API keys encrypted before storage | PASS | backend/services/encryption.py Fernet; connectors.py encrypts before supabase save. |
-| No hardcoded API keys in source | PASS | docs/comprehensive_guide.md shows example EMERGENT_LLM_KEY=sk-emergent-xxx (documentation only). |
+| No hardcoded API keys in source | PASS | docs include placeholder Anthropic key examples only. |
 | API routes that write data check auth.uid() = user_id | PASS | Profile, checkin, connectors, subscription use Depends(require_auth) or require_paid_subscription; user_id from JWT. Admin grant uses path user_id with admin check. |
 | No raw user input to DB without sanitisation | PASS | Pydantic models validate inputs; month format, revenue > 0, etc. |
 | Webhook endpoints verify signatures | **FAIL** | No webhook endpoints found for Razorpay or Stripe. If payments are taken, add webhooks and verify signatures before processing. |
@@ -145,7 +145,7 @@
 | SUPABASE_ANON_KEY | backend (main.py Config, auth.py) | Yes (for JWT verify) | '' | Auth verification fails. |
 | SUPABASE_SERVICE_ROLE_KEY | backend (supabase.py, encryption.py fallback) | Yes | '' / fallback | DB/admin operations fail; encryption fallback insecure. |
 | SUPABASE_JWT_SECRET | backend (auth.py) | Yes (or ANON_KEY) | '' then ANON_KEY | JWT verification fails. |
-| EMERGENT_LLM_KEY | backend (anthropic.py) | For AI | '' | AI features disabled; message to user. |
+| ANTHROPIC_API_KEY | backend (anthropic.py) | For AI | '' | AI features disabled; message to user. |
 | ENCRYPTION_KEY | backend (encryption.py) | Recommended | SUPABASE_SERVICE_ROLE_KEY | Use dedicated key in production. |
 | ENVIRONMENT | backend (main.py) | No | 'development' | Logging/config. |
 | CORS_ORIGINS | backend (main.py) | No | '*' | Insecure if left default. |

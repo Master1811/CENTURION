@@ -10,7 +10,7 @@ This guide provides an end-to-end understanding of the **100Cr Engine** (100cren
 **100Cr Engine** helps Indian SaaS founders answer: *“When will I reach ₹100 Crore in annual revenue?”* Users enter current monthly revenue and growth rate; the system projects milestones (₹1 Cr, ₹10 Cr, ₹50 Cr, ₹100 Cr), compares them to benchmarks, and—for paid users—offers monthly check-ins, AI coaching, and reporting.
 
 - **Frontend:** React 19, React Router 7, Tailwind CSS, Radix UI, Recharts, Framer Motion. CRA with Craco.
-- **Backend:** FastAPI (Python), Supabase (PostgreSQL + Auth), server-side JWT verification, rate limiting, encrypted connector keys, AI via Emergent/Claude.
+- **Backend:** FastAPI (Python), Supabase (PostgreSQL + Auth), server-side JWT verification, rate limiting, encrypted connector keys, AI via Anthropic/Claude.
 - **Deployment:** Backend runs as FastAPI (e.g. uvicorn); frontend builds as static SPA. Environment-driven configuration (no hardcoded secrets in code).
 
 ---
@@ -37,15 +37,15 @@ This guide provides an end-to-end understanding of the **100Cr Engine** (100cren
         ┌───────────────────────────┼───────────────────────────┐
         ▼                           ▼                           ▼
 ┌───────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│   Supabase    │         │  Emergent /      │         │  Encryption     │
+│   Supabase    │         │  Anthropic /     │         │  Encryption     │
 │   PostgreSQL  │         │  Claude (AI)     │         │  (Fernet)       │
-│   + Auth      │         │  EMERGENT_LLM_KEY│         │  Connector keys │
+│   + Auth      │         │  ANTHROPIC_API_KEY│        │  Connector keys │
 └───────────────┘         └─────────────────┘         └─────────────────┘
 ```
 
 - **Data:** Supabase holds profiles, subscriptions, projection_runs, checkins, connector_keys (encrypted), quiz_submissions, ai_usage_log. Backend uses **service role** server-side only.
 - **Auth:** Magic link via Supabase; frontend gets session; backend verifies JWT on each request and enforces optional vs required auth and paid subscription where applicable.
-- **AI:** Backend only; uses EMERGENT_LLM_KEY and optional cost control (Sonnet/Haiku overflow).
+- **AI:** Backend only; uses ANTHROPIC_API_KEY and optional cost control (Sonnet/Haiku overflow).
 
 ---
 
@@ -71,7 +71,7 @@ This guide provides an end-to-end understanding of the **100Cr Engine** (100cren
 - **auth.py** — Verifies Supabase JWT (SUPABASE_JWT_SECRET or ANON_KEY), exposes `get_current_user` (optional), `require_auth`, `require_paid_subscription`, `get_client_identifier` (user or IP), plan-tier checks for STUDIO/VC_PORTFOLIO.
 - **supabase.py** — Single Supabase client (service role). Async-style methods for profiles, subscriptions, projection_runs, checkins, connector_keys, quiz_submissions, ai_usage_log; user deletion cascade; benchmark contributions (anonymised).
 - **encryption.py** — Fernet (ENCRYPTION_KEY or fallback to service role key). Encrypts connector API keys before DB store; decrypts for sync path.
-- **anthropic.py** — Uses EMERGENT_LLM_KEY and emergentintegrations for Claude. Board report, strategy brief, daily pulse, weekly question, deviation analysis. Returns structured strings/sections.
+- **anthropic.py** — Uses ANTHROPIC_API_KEY and the official `anthropic` SDK. Board report, strategy brief, daily pulse, weekly question, deviation analysis. Returns structured strings/sections.
 - **context.py** — Builds FounderContext (profile, check-ins, subscription, benchmarks, milestones) for AI prompts.
 - **rate_limiter.py** — In-memory or Redis. Tiers: free (e.g. 10 projections/day by IP), paid (higher limits), AI (e.g. board_report 2/month).
 - **ai_cost_control.py** — Per-user Sonnet budget; overflow to Haiku when exceeded. In-memory usage cache.

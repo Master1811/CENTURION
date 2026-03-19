@@ -14,7 +14,7 @@ Features:
 - Supabase PostgreSQL for data persistence
 - Supabase Magic Link authentication
 - Rate limiting (in-memory with Redis-ready architecture)
-- AI coaching via Claude (Emergent LLM Key)
+- AI coaching via Claude (Anthropic API)
 - Encrypted API key storage for connectors
 
 Author: 100Cr Engine Team
@@ -29,7 +29,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 
-from fastapi import FastAPI, APIRouter, Request, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, Request, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
@@ -313,10 +313,26 @@ class QuizSubmission(BaseModel):
 async def submit_quiz(submission: QuizSubmission, request: Request):
     """
     Submit Founder DNA Quiz and get personalized projection.
+    Rate limited to prevent spam submissions.
     """
     from routers.engine import predict_trajectory
     from routers.benchmarks import calculate_percentile, generate_insight, INDIA_SAAS_BENCHMARKS
-    
+    from services.rate_limiter import rate_limiter
+    from services.auth import get_client_identifier
+
+    # Rate limit by IP
+    identifier = get_client_identifier(request)
+    limit_status = await rate_limiter.check(identifier, 'projection', False)
+    if not limit_status['allowed']:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                'error': 'rate_limited',
+                'message': "Too many quiz submissions. Please try again later.",
+                'reset_in': limit_status['reset_in']
+            }
+        )
+
     answers = submission.answers
     
     # Map quiz answers to projection parameters
@@ -368,6 +384,9 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
         'ip': request.client.host if request.client else None,
     })
     
+    # Increment rate limit counter
+    await rate_limiter.increment(identifier, 'projection', False)
+
     return {
         'projection': projection,
         'benchmark': {

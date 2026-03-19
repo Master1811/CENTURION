@@ -191,6 +191,16 @@ export const AuthProvider = ({ children }) => {
     return profile?.onboarding_completed ?? false;
   };
 
+  /**
+   * Refresh user profile and subscription data from backend
+   */
+  const refreshProfile = async () => {
+    const accessToken = getAccessToken();
+    if (accessToken) {
+      await fetchUserData(accessToken);
+    }
+  };
+
   // Context value
   const value = {
     // State
@@ -206,7 +216,8 @@ export const AuthProvider = ({ children }) => {
     getAccessToken,
     hasPaidSubscription,
     hasCompletedOnboarding,
-    
+    refreshProfile,
+
     // Computed
     isAuthenticated: Boolean(user),
     isPaid: hasPaidSubscription(),

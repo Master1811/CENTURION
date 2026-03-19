@@ -330,3 +330,133 @@ body {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.02); }
 }
+
+/* ============================================
+   Enhanced Motion Utilities
+   ============================================ */
+
+/* Smooth hover lift effect */
+.hover-lift {
+  transition: transform var(--duration-base) var(--ease-luxury),
+              box-shadow var(--duration-smooth) var(--ease-luxury);
+  will-change: transform;
+}
+.hover-lift:hover {
+  transform: translateY(-6px);
+}
+
+/* Subtle scale on hover */
+.hover-scale {
+  transition: transform var(--duration-base) var(--ease-luxury);
+  will-change: transform;
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Combined lift and scale */
+.hover-premium {
+  transition: transform var(--duration-base) var(--ease-luxury),
+              box-shadow var(--duration-smooth) var(--ease-luxury);
+  will-change: transform;
+}
+.hover-premium:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* 3D tilt perspective container */
+.perspective-card {
+  perspective: var(--perspective-card);
+  transform-style: preserve-3d;
+}
+
+/* Smooth fade transition */
+.fade-enter {
+  opacity: 0;
+  transform: scale(0.96);
+  filter: blur(4px);
+}
+.fade-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0px);
+  transition: opacity var(--duration-base) var(--ease-luxury),
+              transform var(--duration-base) var(--ease-luxury),
+              filter var(--duration-base) var(--ease-luxury);
+}
+
+/* Icon hover rotation */
+.icon-hover-rotate {
+  transition: transform var(--duration-base) var(--ease-luxury);
+}
+.icon-hover-rotate:hover {
+  transform: rotate(8deg);
+}
+
+/* Icon hover scale */
+.icon-hover-scale {
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+.icon-hover-scale:hover {
+  transform: scale(1.1);
+}
+
+/* Smooth button press */
+.btn-press {
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Cursor-following glow (applied via JS) */
+.cursor-glow {
+  position: relative;
+  overflow: hidden;
+}
+.cursor-glow::before {
+  content: '';
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-luxury);
+  transform: translate(-50%, -50%);
+}
+.cursor-glow:hover::before {
+  opacity: 1;
+}
+
+/* Disable animations on mobile for performance */
+@media (max-width: 768px) {
+  .hover-lift:hover,
+  .hover-scale:hover,
+  .hover-premium:hover {
+    transform: none;
+  }
+
+  .perspective-card {
+    perspective: none;
+    transform-style: flat;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift,
+  .hover-scale,
+  .hover-premium,
+  .icon-hover-rotate,
+  .icon-hover-scale,
+  .btn-press,
+  .fade-enter,
+  .fade-enter-active {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

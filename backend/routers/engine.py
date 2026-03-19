@@ -246,18 +246,32 @@ async def run_projection(
 
 
 @router.get("/projection/{slug}")
-async def get_shared_projection(slug: str):
+async def get_shared_projection(slug: str, request: Request):
     """
     Retrieve a shared projection by its unique slug.
     
     This allows users to share their projections via URL.
-    
+    Rate limited to prevent abuse.
+
     Args:
         slug: Unique 8-character projection identifier
         
     Returns:
         Stored projection data
     """
+    # Rate limit by IP for anonymous access
+    identifier = get_client_identifier(request)
+    limit_status = await rate_limiter.check(identifier, 'benchmark', False)  # Use benchmark limits
+    if not limit_status['allowed']:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                'error': 'rate_limited',
+                'message': "Too many requests. Please try again later.",
+                'reset_in': limit_status['reset_in']
+            }
+        )
+
     projection = await supabase_service.get_projection_by_slug(slug)
     
     if not projection:
@@ -266,6 +280,9 @@ async def get_shared_projection(slug: str):
             detail="Projection not found"
         )
     
+    # Increment rate limit counter
+    await rate_limiter.increment(identifier, 'benchmark', False)
+
     return projection
 
 

@@ -1,11 +1,12 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva } from "class-variance-authority";
+import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,border-color,color] duration-200 ease-[var(--ease-luxury)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 will-change-transform",
   {
     variants: {
       variant: {
@@ -34,12 +35,49 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+// Motion variants for smooth interactions
+const buttonMotionVariants = {
+  initial: { scale: 1 },
+  hover: {
+    scale: 1.02,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 25,
+    }
+  },
+  tap: {
+    scale: 0.97,
+    transition: {
+      type: 'spring',
+      stiffness: 500,
+      damping: 30,
+    }
+  },
+};
+
+const Button = React.forwardRef(({ className, variant, size, asChild = false, disableMotion = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button"
+
+  // If asChild or motion disabled, use standard button
+  if (asChild || disableMotion) {
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props} />
+    );
+  }
+
+  // Use motion button for enhanced interactions
   return (
-    <Comp
+    <motion.button
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
+      variants={buttonMotionVariants}
+      initial="initial"
+      whileHover="hover"
+      whileTap="tap"
       {...props} />
   );
 })

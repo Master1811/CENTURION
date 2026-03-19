@@ -61,15 +61,22 @@ export const DashboardSidebar = () => {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg',
-                  'text-sm font-medium transition-all duration-150',
+                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg',
+                  'text-sm font-medium',
+                  'transition-all duration-200 ease-[var(--ease-luxury)]',
                   isActive
-                    ? 'bg-[#09090B] text-white'
-                    : 'text-[#52525B] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#09090B]'
+                    ? 'bg-[#09090B] text-white shadow-sm'
+                    : 'text-[#52525B] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#09090B] hover:translate-x-1'
                 )}
                 data-testid={`sidebar-${item.href.split('/').pop()}`}
               >
-                <Icon className="w-4 h-4" strokeWidth={1.5} />
+                <Icon
+                  className={cn(
+                    'w-4 h-4 transition-transform duration-200',
+                    !isActive && 'group-hover:scale-110'
+                  )}
+                  strokeWidth={1.5}
+                />
                 {item.label}
               </Link>
             );
@@ -83,7 +90,9 @@ export const DashboardSidebar = () => {
         <div className={cn(
           'flex items-center gap-2 px-3 py-2 mb-3',
           'bg-gradient-to-r from-amber-50 to-orange-50',
-          'border border-amber-200/50 rounded-lg'
+          'border border-amber-200/50 rounded-lg',
+          'transition-all duration-300 ease-[var(--ease-luxury)]',
+          'hover:shadow-sm hover:border-amber-300/60'
         )}>
           <Crown className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
           <span className="text-sm font-medium text-amber-900">Founder Plan</span>
@@ -91,9 +100,9 @@ export const DashboardSidebar = () => {
 
         <Link
           to="/dashboard/settings"
-          className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.04)] rounded-lg transition-colors"
+          className="group flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.04)] rounded-lg transition-all duration-200 ease-[var(--ease-luxury)] hover:translate-x-1"
         >
-          <Settings className="w-4 h-4" strokeWidth={1.5} />
+          <Settings className="w-4 h-4 transition-transform duration-200 group-hover:rotate-45" strokeWidth={1.5} />
           Settings
         </Link>
 
@@ -102,9 +111,9 @@ export const DashboardSidebar = () => {
             localStorage.removeItem('auth_token');
             window.location.href = '/';
           }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="group w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 ease-[var(--ease-luxury)]"
         >
-          <LogOut className="w-4 h-4" strokeWidth={1.5} />
+          <LogOut className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" strokeWidth={1.5} />
           Sign out
         </button>
       </div>

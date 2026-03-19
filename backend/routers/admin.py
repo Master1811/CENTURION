@@ -13,6 +13,7 @@ Endpoints:
 Author: 100Cr Engine Team
 """
 
+import os
 import logging
 from typing import Dict, Any
 
@@ -53,14 +54,18 @@ async def require_admin(user: Dict[str, Any] = Depends(require_auth)) -> Dict[st
     """
     Dependency that requires admin role.
     
-    For MVP, this is a placeholder. In production, check user role.
+    Uses ADMIN_EMAILS environment variable for authorization.
     """
-    # TODO: Check admin role from database or JWT metadata
-    # For now, allow all authenticated users (NOT SECURE - MVP only)
-    
-    admin_emails = ['admin@100crengine.in']  # Would be in database
-    
-    if user.get('email') not in admin_emails:
+    # Get admin emails from environment variable (comma-separated)
+    admin_emails_env = os.environ.get('ADMIN_EMAILS', '')
+    admin_emails = [email.strip().lower() for email in admin_emails_env.split(',') if email.strip()]
+
+    # Also check database for admin role if available
+    # TODO: Check admin role from profiles table or JWT metadata
+
+    user_email = user.get('email', '').lower()
+
+    if not admin_emails or user_email not in admin_emails:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"

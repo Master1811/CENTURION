@@ -119,20 +119,32 @@ export const CTASection = () => {
           <motion.button
             onClick={() => navigate('/tools/100cr-calculator')}
             className={cn(
-              'inline-flex items-center gap-3',
+              'group relative inline-flex items-center gap-3',
               'h-16 px-10 rounded-full',
               'bg-[#09090B] text-white text-lg font-medium',
               'shadow-[0_8px_32px_rgba(0,0,0,0.2)]',
-              'hover:bg-[#18181B] hover:shadow-[0_12px_48px_rgba(0,0,0,0.3)]',
-              'hover:-translate-y-1',
-              'transition-all duration-300'
+              'overflow-hidden will-change-transform',
+              // Shimmer overlay
+              'before:absolute before:inset-0',
+              'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent',
+              'before:translate-x-[-100%] hover:before:translate-x-[100%]',
+              'before:transition-transform before:duration-700 before:ease-out'
             )}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{
+              scale: 1.02,
+              y: -4,
+              boxShadow: '0 12px 48px rgba(0,0,0,0.3)',
+            }}
             whileTap={{ scale: 0.98 }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 25,
+            }}
             data-testid="cta-button"
           >
-            Run My Free Projection
-            <ArrowRight className="w-6 h-6" strokeWidth={1.5} />
+            <span className="relative z-10">Run My Free Projection</span>
+            <ArrowRight className="relative z-10 w-6 h-6 transition-transform duration-300 group-hover:translate-x-1" strokeWidth={1.5} />
           </motion.button>
         </motion.div>
 

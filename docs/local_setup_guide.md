@@ -42,8 +42,8 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Optional: AI features (get from Emergent)
-EMERGENT_LLM_KEY=your-emergent-key
+# Optional: AI features (Anthropic)
+ANTHROPIC_API_KEY=your-anthropic-key
 
 # Optional: Rate limiting (leave empty for in-memory)
 REDIS_URL=

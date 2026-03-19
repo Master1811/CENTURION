@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { updateUserProfile } from '@/lib/api/dashboard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -654,12 +655,32 @@ const SupportSettings = () => {
 // ============================================================================
 
 export const Settings = () => {
-  const { user, profile, subscription } = useAuth();
+  const { user, profile, subscription, getAccessToken, refreshProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
 
   const handleSaveProfile = async (data) => {
-    // API call to save profile
-    console.log('Saving profile:', data);
+    // Transform frontend field names to backend expected field names
+    const profileData = {
+      name: data.fullName || data.name,
+      company: data.company,
+      stage: data.stage,
+    };
+
+    // Get access token for authenticated API call
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+
+    // Call the API to update the profile
+    const result = await updateUserProfile(accessToken, profileData);
+
+    // Refresh the profile data in context after successful update
+    if (refreshProfile) {
+      await refreshProfile();
+    }
+
+    return result;
   };
 
   const handleUpgrade = () => {

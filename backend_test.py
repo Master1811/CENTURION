@@ -238,7 +238,7 @@ class APITester:
 
 def main():
     # Use the public endpoint from frontend .env
-    BASE_URL = "https://milestone-tracker-68.preview.emergentagent.com"
+    BASE_URL = "https://api.your-domain.com"
     
     tester = APITester(BASE_URL)
     success = tester.run_all_tests()

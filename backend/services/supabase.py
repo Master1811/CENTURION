@@ -51,17 +51,40 @@ class SupabaseService:
         Required environment variables:
         - SUPABASE_URL: Project URL (https://xxx.supabase.co)
         - SUPABASE_SERVICE_ROLE_KEY: Service role key for admin operations
+        - SKIP_SSL_VERIFY: Set to 'true' for local development behind corporate proxy
         """
+        import httpx
+
         self.url = os.environ.get('SUPABASE_URL', '')
         self.key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
-        
+        skip_ssl = os.environ.get('SKIP_SSL_VERIFY', 'false').lower() == 'true'
+
         if not self.url or not self.key or 'placeholder' in self.url.lower():
             logger.warning("Supabase not configured - using mock mode")
             self._client = None
         else:
-            self._client: Client = create_client(self.url, self.key)
-            logger.info("✓ Supabase client initialized")
-    
+            # Configure custom httpx client for SSL handling in dev environments
+            if skip_ssl:
+                logger.warning("⚠️ SSL verification disabled - development mode only")
+                # Create client with custom httpx that skips SSL verification
+                import ssl
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
+                # For supabase-py, we need to set environment variable
+                import certifi
+                os.environ['SSL_CERT_FILE'] = ''
+                os.environ['REQUESTS_CA_BUNDLE'] = ''
+
+            try:
+                self._client: Client = create_client(self.url, self.key)
+                logger.info("✓ Supabase client initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Supabase client: {e}")
+                logger.warning("Falling back to mock mode")
+                self._client = None
+
     @property
     def is_configured(self) -> bool:
         """Check if Supabase is properly configured."""

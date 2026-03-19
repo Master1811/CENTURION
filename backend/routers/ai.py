@@ -1,7 +1,7 @@
 """
 AI Router
 =========
-AI-powered features using Claude via Emergent LLM Key.
+AI-powered features using Claude via the Anthropic API.
 
 All endpoints require paid subscription.
 Some endpoints require STUDIO tier or higher.

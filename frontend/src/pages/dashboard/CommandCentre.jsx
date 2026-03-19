@@ -170,23 +170,31 @@ export const CommandCentre = () => {
             onClick={handleRefresh} 
             isLoading={isRefreshing}
           />
-          <button
+          <motion.button
             onClick={() => setShowCheckIn(true)}
             className={cn(
               'flex items-center gap-2',
               'h-10 px-4 rounded-xl',
               'bg-gradient-to-r from-[#09090B] to-[#18181B] text-white text-sm font-medium',
-              'hover:from-[#18181B] hover:to-[#27272A]',
               'shadow-[0_4px_12px_rgba(0,0,0,0.15)]',
-              'hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]',
-              'hover:-translate-y-0.5',
-              'transition-all duration-300'
+              'will-change-transform'
             )}
+            whileHover={{
+              y: -2,
+              boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+              background: 'linear-gradient(to right, #18181B, #27272A)',
+            }}
+            whileTap={{ scale: 0.97 }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 25,
+            }}
             data-testid="checkin-button"
           >
             <Plus className="w-4 h-4" strokeWidth={1.5} />
             Monthly Check-in
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -307,24 +315,35 @@ export const CommandCentre = () => {
               <span className="text-xs text-[#52525B]">{displayData.actionQueue.length} items</span>
             </div>
             <div className="space-y-3">
-              {displayData.actionQueue.map((action) => (
-                <div
+              {displayData.actionQueue.map((action, index) => (
+                <motion.div
                   key={action.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: index * 0.1,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
                   onClick={() => handleActionClick(action)}
                   className={cn(
-                    'flex items-center gap-3 p-3 rounded-lg',
+                    'group flex items-center gap-3 p-3 rounded-lg',
                     'border border-[rgba(0,0,0,0.06)]',
-                    'hover:bg-[rgba(0,0,0,0.02)] transition-colors cursor-pointer'
+                    'hover:bg-[rgba(0,0,0,0.02)] hover:border-[rgba(0,0,0,0.1)]',
+                    'hover:translate-x-1 hover:shadow-sm',
+                    'transition-all duration-200 ease-[var(--ease-luxury)] cursor-pointer'
                   )}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                 >
                   {action.urgent ? (
-                    <AlertCircle className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                    <AlertCircle className="w-4 h-4 text-amber-500 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} />
                   ) : (
-                    <CheckCircle className="w-4 h-4 text-[#A1A1AA]" strokeWidth={1.5} />
+                    <CheckCircle className="w-4 h-4 text-[#A1A1AA] transition-transform duration-200 group-hover:text-[#52525B]" strokeWidth={1.5} />
                   )}
                   <span className="flex-1 text-sm text-[#09090B]">{action.label}</span>
-                  <ArrowRight className="w-4 h-4 text-[#A1A1AA]" strokeWidth={1.5} />
-                </div>
+                  <ArrowRight className="w-4 h-4 text-[#A1A1AA] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#09090B]" strokeWidth={1.5} />
+                </motion.div>
               ))}
             </div>
           </CenturionCardContent>

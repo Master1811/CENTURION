@@ -77,7 +77,7 @@ Tables defined in `/docs/supabase_schema.sql`:
 - **Supabase PostgreSQL Integration**: Full database service with graceful error handling
 - **Rate Limiting**: In-memory with Redis-ready architecture
 - **Encryption Service**: Fernet encryption for API keys
-- **AI Service**: Claude integration via Emergent LLM Key
+- **AI Service**: Claude integration via Anthropic API
 - **Founder DNA Quiz**: 5-question lead generation quiz on landing page
 - **Documentation**: 
   - `/docs/local_setup_guide.md` - Beginner-friendly setup
@@ -226,7 +226,7 @@ Tables defined in `/docs/supabase_schema.sql`:
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_ANON_KEY=xxx
 SUPABASE_SERVICE_ROLE_KEY=xxx
-EMERGENT_LLM_KEY=xxx
+ANTHROPIC_API_KEY=xxx
 CORS_ORIGINS=*
 ```
 

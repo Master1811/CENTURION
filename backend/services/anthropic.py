@@ -1,7 +1,7 @@
 """
 Anthropic AI Service Module
 ===========================
-Handles all AI-powered features using Claude via Emergent LLM Key.
+Handles AI-powered features using the official Anthropic SDK.
 
 Features:
 - Board report generation
@@ -11,8 +11,8 @@ Features:
 - Deviation analysis
 
 Integration:
-- Uses emergentintegrations library
-- Emergent LLM Key provides access to Claude
+- Uses the `anthropic` Python package
+- Requires ANTHROPIC_API_KEY
 - All prompts optimized for Indian founder context
 
 Author: 100Cr Engine Team
@@ -30,8 +30,7 @@ class AIService:
     """
     AI service for growth coaching and report generation.
     
-    Uses Claude via Emergent's universal LLM key for all AI features.
-    Includes rate limiting integration to prevent overuse.
+    Uses Claude via Anthropic API for all AI features.
     
     Usage:
         ai = AIService()
@@ -44,14 +43,14 @@ class AIService:
     """
     
     def __init__(self):
-        """Initialize AI service with Emergent LLM key."""
-        self.api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+        """Initialize AI service with Anthropic API key."""
+        self.api_key = os.environ.get('ANTHROPIC_API_KEY', '')
         self._client = None
         
         if not self.api_key:
-            logger.warning("EMERGENT_LLM_KEY not set - AI features disabled")
+            logger.warning("ANTHROPIC_API_KEY not set - AI features disabled")
         else:
-            logger.info("✓ AI service initialized with Emergent LLM key")
+            logger.info("✓ AI service initialized with Anthropic API key")
     
     @property
     def is_configured(self) -> bool:
@@ -61,13 +60,9 @@ class AIService:
     async def _get_client(self):
         """Lazy initialization of Anthropic client."""
         if self._client is None and self.is_configured:
-            try:
-                from emergentintegrations.llm.anthropic import AnthropicClient
-                self._client = AnthropicClient(self.api_key)
-                logger.info("✓ Anthropic client initialized")
-            except ImportError:
-                logger.error("emergentintegrations not installed")
-                raise
+            from anthropic import AsyncAnthropic
+            self._client = AsyncAnthropic(api_key=self.api_key)
+            logger.info("✓ Anthropic client initialized")
         return self._client
     
     async def _call_claude(
@@ -88,17 +83,23 @@ class AIService:
             Claude's response text
         """
         if not self.is_configured:
-            return "AI features are not configured. Please set EMERGENT_LLM_KEY."
+            return "AI features are not configured. Please set ANTHROPIC_API_KEY."
         
         try:
             client = await self._get_client()
-            response = await client.chat_completion(
-                messages=[{"role": "user", "content": prompt}],
+            msg = await client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=max_tokens,
-                temperature=temperature
+                temperature=temperature,
+                messages=[{"role": "user", "content": prompt}],
             )
-            return response.get('content', '')
+            # anthropic SDK returns content as a list of blocks
+            parts = []
+            for block in getattr(msg, "content", []) or []:
+                text = getattr(block, "text", None)
+                if text:
+                    parts.append(text)
+            return "\n".join(parts).strip()
         except Exception as e:
             logger.error(f"Claude API error: {e}")
             return f"Error generating AI content: {str(e)}"

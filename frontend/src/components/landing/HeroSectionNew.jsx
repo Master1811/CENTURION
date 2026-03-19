@@ -122,9 +122,19 @@ export const HeroSection = () => {
     offset: ["start start", "end start"]
   });
   
+  // Enhanced parallax transforms
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const y = useTransform(scrollYProgress, [0, 0.5], [0, 100]);
   const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
+
+  // Parallax for background layers (slower movement)
+  const bgY1 = useTransform(scrollYProgress, [0, 1], [0, 50]); // Slowest
+  const bgY2 = useTransform(scrollYProgress, [0, 1], [0, 80]); // Medium
+  const bgY3 = useTransform(scrollYProgress, [0, 1], [0, 30]); // Subtle
+
+  // Foreground moves slightly faster
+  const chartY = useTransform(scrollYProgress, [0, 0.5], [0, 120]);
+  const chartScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.92]);
 
   const scrollToFeatures = () => {
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
@@ -140,12 +150,21 @@ export const HeroSection = () => {
       )}
       data-testid="hero-section"
     >
-      {/* Premium background with subtle gradients */}
+      {/* Premium background with parallax gradients */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-[#FEFEFE] to-[#F8F9FC]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(212,184,150,0.08)_0%,transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(110,231,183,0.05)_0%,transparent_40%)]" />
-      <div className="absolute inset-0 bg-dot-grid opacity-30" />
-      
+      <motion.div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(212,184,150,0.08)_0%,transparent_50%)]"
+        style={{ y: bgY1 }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(110,231,183,0.05)_0%,transparent_40%)]"
+        style={{ y: bgY2 }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-dot-grid opacity-30"
+        style={{ y: bgY3 }}
+      />
+
       <motion.div 
         style={{ opacity, y, scale }}
         className="relative z-10 max-w-6xl mx-auto px-4 md:px-8 w-full"
@@ -155,9 +174,9 @@ export const HeroSection = () => {
           <div>
             {/* Eyebrow */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="mb-6"
             >
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F4F4F5] text-xs font-semibold text-[#52525B] tracking-wide">
@@ -172,9 +191,9 @@ export const HeroSection = () => {
               data-testid="hero-headline"
             >
               <motion.span
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
+                initial={{ opacity: 0, y: 30, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
                 className="block"
               >
                 Know exactly when
