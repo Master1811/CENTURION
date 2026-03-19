@@ -7,6 +7,8 @@ All endpoints require paid subscription.
 Some endpoints require STUDIO tier or higher.
 
 CRITICAL: Plan tier is validated BEFORE any expensive operations.
+CRITICAL: Model selection is passed to AI service.
+CRITICAL: Usage is recorded after EVERY generation.
 
 Endpoints:
 - POST /ai/board-report - Generate monthly board report (STUDIO+)
@@ -71,8 +73,8 @@ async def check_ai_rate_limit(user_id: str, feature: str) -> None:
         )
 
 
-async def log_ai_usage(user_id: str, feature: str) -> None:
-    """Log AI feature usage for tracking."""
+async def log_ai_feature_usage(user_id: str, feature: str) -> None:
+    """Log AI feature usage for rate limiting (separate from cost tracking)."""
     await supabase_service.log_ai_usage({
         'user_id': user_id,
         'feature': feature,
@@ -99,6 +101,9 @@ async def get_ai_usage(user: Dict[str, Any] = Depends(require_paid_subscription)
     strategy_briefs = await supabase_service.get_ai_usage_count(user_id, 'strategy_brief', 'month')
     daily_pulses = await supabase_service.get_ai_usage_count(user_id, 'daily_pulse', 'month')
     
+    # Get cost stats
+    cost_stats = await ai_cost_controller.get_usage_stats(user_id)
+
     from datetime import datetime, timezone
     from calendar import monthrange
     
@@ -114,7 +119,11 @@ async def get_ai_usage(user: Dict[str, Any] = Depends(require_paid_subscription)
         daily_pulses_used=daily_pulses,
         daily_pulses_limit=30,
         period='month',
-        reset_at=reset_at.isoformat()
+        reset_at=reset_at.isoformat(),
+        # Include cost tracking
+        budget_inr=cost_stats.get('budget_inr', 25.0),
+        spent_inr=cost_stats.get('spent_inr', 0.0),
+        remaining_inr=cost_stats.get('remaining_inr', 25.0),
     )
 
 
@@ -165,14 +174,26 @@ async def generate_board_report(
     # Build context
     context = await context_builder.build(user_id, user.get('email', ''))
     
-    # Generate report
-    report = await ai_service.generate_board_report(context.to_dict())
-    
-    # Log usage
-    await log_ai_usage(user_id, 'board_report')
-    
-    logger.info(f"Board report generated for user {user_id} using {model_id}")
-    
+    # Generate report - PASS MODEL TO AI SERVICE
+    report, usage = await ai_service.generate_board_report(
+        context.to_dict(),
+        model=model_id  # <-- CRITICAL FIX: Pass the model
+    )
+
+    # CRITICAL FIX: Record usage AFTER generation
+    await ai_cost_controller.record_usage(
+        user_id=user_id,
+        feature='board_report',
+        model=usage.get('model', model_id),
+        input_tokens=usage.get('input_tokens', 0),
+        output_tokens=usage.get('output_tokens', 0),
+    )
+
+    # Log feature usage for rate limiting
+    await log_ai_feature_usage(user_id, 'board_report')
+
+    logger.info(f"Board report generated for user {user_id} using {usage.get('model', model_id)}")
+
     return BoardReportResponse(**report)
 
 
@@ -221,12 +242,26 @@ async def generate_strategy_brief(
     )
     
     context = await context_builder.build(user_id, user.get('email', ''))
-    brief = await ai_service.generate_strategy_brief(context.to_dict())
-    
-    await log_ai_usage(user_id, 'strategy_brief')
-    
-    logger.info(f"Strategy brief generated for user {user_id} using {model_id}")
-    
+
+    # Generate brief - PASS MODEL TO AI SERVICE
+    brief, usage = await ai_service.generate_strategy_brief(
+        context.to_dict(),
+        model=model_id  # <-- CRITICAL FIX: Pass the model
+    )
+
+    # CRITICAL FIX: Record usage AFTER generation
+    await ai_cost_controller.record_usage(
+        user_id=user_id,
+        feature='strategy_brief',
+        model=usage.get('model', model_id),
+        input_tokens=usage.get('input_tokens', 0),
+        output_tokens=usage.get('output_tokens', 0),
+    )
+
+    await log_ai_feature_usage(user_id, 'strategy_brief')
+
+    logger.info(f"Strategy brief generated for user {user_id} using {usage.get('model', model_id)}")
+
     return StrategyBriefResponse(**brief)
 
 
@@ -246,11 +281,30 @@ async def get_daily_pulse(user: Dict[str, Any] = Depends(require_paid_subscripti
     
     await check_ai_rate_limit(user_id, 'daily_pulse')
     
+    # Daily pulse always uses Haiku for cost efficiency
+    model_id, _ = await ai_cost_controller.get_model_for_feature(
+        user_id, 'daily_pulse'
+    )
+
     context = await context_builder.build(user_id, user.get('email', ''))
-    pulse = await ai_service.generate_daily_pulse(context.to_dict())
-    
-    await log_ai_usage(user_id, 'daily_pulse')
-    
+
+    # Generate pulse - PASS MODEL TO AI SERVICE
+    pulse, usage = await ai_service.generate_daily_pulse(
+        context.to_dict(),
+        model=model_id  # <-- CRITICAL FIX: Pass the model
+    )
+
+    # CRITICAL FIX: Record usage AFTER generation
+    await ai_cost_controller.record_usage(
+        user_id=user_id,
+        feature='daily_pulse',
+        model=usage.get('model', model_id),
+        input_tokens=usage.get('input_tokens', 0),
+        output_tokens=usage.get('output_tokens', 0),
+    )
+
+    await log_ai_feature_usage(user_id, 'daily_pulse')
+
     return DailyPulseResponse(**pulse)
 
 
@@ -265,9 +319,28 @@ async def get_weekly_question(user: Dict[str, Any] = Depends(require_paid_subscr
     """
     user_id = user['id']
     
+    # Weekly question always uses Haiku
+    model_id, _ = await ai_cost_controller.get_model_for_feature(
+        user_id, 'weekly_question'
+    )
+
     context = await context_builder.build(user_id, user.get('email', ''))
-    question = await ai_service.generate_weekly_question(context.to_dict())
-    
+
+    # Generate question - PASS MODEL TO AI SERVICE
+    question, usage = await ai_service.generate_weekly_question(
+        context.to_dict(),
+        model=model_id  # <-- CRITICAL FIX: Pass the model
+    )
+
+    # CRITICAL FIX: Record usage AFTER generation
+    await ai_cost_controller.record_usage(
+        user_id=user_id,
+        feature='weekly_question',
+        model=usage.get('model', model_id),
+        input_tokens=usage.get('input_tokens', 0),
+        output_tokens=usage.get('output_tokens', 0),
+    )
+
     return WeeklyQuestionResponse(**question)
 
 
@@ -284,16 +357,36 @@ async def analyze_deviation(
     - Likely causes
     - Actionable recommendation
     """
+    user_id = user['id']
+
     deviation_pct = ((request.actual - request.projected) / request.projected) * 100 if request.projected > 0 else 0
     direction = 'above' if deviation_pct > 0 else 'below'
     
-    analysis = await ai_service.generate_deviation_analysis({
-        'actual': request.actual,
-        'projected': request.projected,
-        'note': request.note,
-        'deviation_pct': deviation_pct
-    })
-    
+    # Deviation analysis uses Haiku
+    model_id, _ = await ai_cost_controller.get_model_for_feature(
+        user_id, 'deviation'
+    )
+
+    # Generate analysis - PASS MODEL TO AI SERVICE
+    analysis, usage = await ai_service.generate_deviation_analysis(
+        {
+            'actual': request.actual,
+            'projected': request.projected,
+            'note': request.note,
+            'deviation_pct': deviation_pct
+        },
+        model=model_id  # <-- CRITICAL FIX: Pass the model
+    )
+
+    # CRITICAL FIX: Record usage AFTER generation
+    await ai_cost_controller.record_usage(
+        user_id=user_id,
+        feature='deviation',
+        model=usage.get('model', model_id),
+        input_tokens=usage.get('input_tokens', 0),
+        output_tokens=usage.get('output_tokens', 0),
+    )
+
     return DeviationAnalysisResponse(
         deviation_pct=abs(deviation_pct),
         direction=direction,

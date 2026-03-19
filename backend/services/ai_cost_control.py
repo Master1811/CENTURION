@@ -8,6 +8,7 @@ Critical Features:
 - Silent fallback to Haiku when Sonnet budget exceeded
 - Never expose model switch to users
 - Always return a response
+- Database-backed persistence (Supabase)
 
 Author: 100Cr Engine Team
 """
@@ -29,23 +30,27 @@ logger = logging.getLogger("100cr_engine.ai_cost")
 class AIModelConfig:
     """Configuration for an AI model."""
     model_id: str
+    model_key: str           # Internal key ('sonnet', 'haiku')
     input_cost_per_1k: float   # INR per 1K input tokens
     output_cost_per_1k: float  # INR per 1K output tokens
     max_tokens: int
     
 
 # Model configurations with INR costs (approximate)
+# IMPORTANT: These are the REAL Anthropic model IDs
 MODELS = {
     'sonnet': AIModelConfig(
-        model_id='claude-sonnet-4-20250514',
+        model_id='claude-3-5-sonnet-20241022',
+        model_key='sonnet',
         input_cost_per_1k=0.25,    # ~$0.003 * 83 INR
         output_cost_per_1k=1.25,   # ~$0.015 * 83 INR
         max_tokens=4096,
     ),
     'haiku': AIModelConfig(
-        model_id='claude-haiku-4-5-20251001',
-        input_cost_per_1k=0.08,    # ~$0.001 * 83 INR
-        output_cost_per_1k=0.42,   # ~$0.005 * 83 INR
+        model_id='claude-3-haiku-20240307',
+        model_key='haiku',
+        input_cost_per_1k=0.02,    # ~$0.00025 * 83 INR
+        output_cost_per_1k=0.10,   # ~$0.00125 * 83 INR
         max_tokens=4096,
     ),
 }
@@ -62,6 +67,7 @@ OVERFLOW_ROUTING = {
     'checkin_interpret': 'haiku',
     'daily_pulse':       'haiku',
     'weekly_question':   'haiku',
+    'deviation':         'haiku',
 }
 
 # Default model for each feature when within budget
@@ -73,6 +79,7 @@ DEFAULT_MODELS = {
     'checkin_interpret': 'sonnet',
     'daily_pulse':       'haiku',    # Always use Haiku for frequent features
     'weekly_question':   'haiku',    # Always use Haiku for frequent features
+    'deviation':         'haiku',    # Analysis is quick, use Haiku
 }
 
 
@@ -80,6 +87,8 @@ class AICostController:
     """
     Controls AI costs per user with budget limits and overflow routing.
     
+    CRITICAL: This uses Supabase for persistence, NOT in-memory storage.
+
     Usage:
         controller = AICostController()
         
@@ -101,33 +110,32 @@ class AICostController:
     
     def __init__(self):
         """Initialize cost controller."""
-        # In-memory usage tracking (would use Redis/DB in production)
-        self._usage_cache: Dict[str, Dict[str, float]] = {}
-        logger.info("✓ AI Cost Controller initialized")
-    
+        logger.info("✓ AI Cost Controller initialized (Supabase-backed)")
+
     def _get_month_key(self) -> str:
         """Get current month key for tracking."""
         now = datetime.now(timezone.utc)
         return f"{now.year}-{now.month:02d}"
     
-    def _get_user_key(self, user_id: str) -> str:
-        """Get cache key for user's monthly usage."""
-        return f"{user_id}:{self._get_month_key()}"
-    
     async def get_user_budget_usage(self, user_id: str) -> float:
         """
-        Get user's current month AI spend in INR.
-        
+        Get user's current month AI spend in INR from Supabase.
+
         Args:
             user_id: User UUID
             
         Returns:
             Total INR spent this month
         """
-        key = self._get_user_key(user_id)
-        usage = self._usage_cache.get(key, {})
-        return usage.get('total_inr', 0.0)
-    
+        from services.supabase import supabase_service
+
+        try:
+            spent = await supabase_service.get_monthly_ai_spend(user_id)
+            return spent
+        except Exception as e:
+            logger.error(f"Error getting AI spend for {user_id}: {e}")
+            return 0.0
+
     async def get_remaining_budget(self, user_id: str) -> float:
         """
         Get user's remaining Sonnet budget for the month.
@@ -182,12 +190,53 @@ class AICostController:
         if await self.is_budget_exceeded(user_id):
             # Silently route to overflow model
             overflow_key = OVERFLOW_ROUTING.get(feature, 'haiku')
-            logger.debug(f"User {user_id} budget exceeded - routing {feature} to {overflow_key}")
+            logger.info(f"User {user_id} budget exceeded - routing {feature} to {overflow_key}")
             return MODELS[overflow_key].model_id, True
         
         # Within budget - use default (Sonnet)
         return MODELS[default_model_key].model_id, False
     
+    def get_model_key_from_id(self, model_id: str) -> str:
+        """
+        Get the internal model key from a model ID.
+
+        Args:
+            model_id: Full Anthropic model ID
+
+        Returns:
+            Internal key ('sonnet' or 'haiku')
+        """
+        for key, config in MODELS.items():
+            if config.model_id == model_id:
+                return key
+
+        # Default to haiku if unknown
+        if 'haiku' in model_id.lower():
+            return 'haiku'
+        return 'sonnet'
+
+    def calculate_cost(
+        self,
+        model_key: str,
+        input_tokens: int,
+        output_tokens: int
+    ) -> float:
+        """
+        Calculate cost for a completed request.
+
+        Args:
+            model_key: 'sonnet' or 'haiku'
+            input_tokens: Number of input tokens used
+            output_tokens: Number of output tokens used
+
+        Returns:
+            Cost in INR
+        """
+        config = MODELS.get(model_key, MODELS['haiku'])
+        input_cost = (input_tokens / 1000) * config.input_cost_per_1k
+        output_cost = (output_tokens / 1000) * config.output_cost_per_1k
+        return input_cost + output_cost
+
     async def record_usage(
         self,
         user_id: str,
@@ -197,58 +246,49 @@ class AICostController:
         output_tokens: int
     ) -> Dict[str, Any]:
         """
-        Record AI usage and update budget tracking.
-        
+        Record AI usage to Supabase and update budget tracking.
+
+        CRITICAL: This must be called after every AI generation!
+
         Args:
             user_id: User UUID
             feature: Feature used
-            model: Model key ('sonnet' or 'haiku')
+            model: Model ID or key (e.g., 'sonnet' or 'claude-3-5-sonnet-20241022')
             input_tokens: Number of input tokens
             output_tokens: Number of output tokens
             
         Returns:
             Usage record with cost
         """
-        # Get model config
-        model_config = MODELS.get(model, MODELS['haiku'])
-        
+        from services.supabase import supabase_service
+
+        # Resolve model key
+        model_key = self.get_model_key_from_id(model) if 'claude' in model else model
+
         # Calculate cost
-        input_cost = (input_tokens / 1000) * model_config.input_cost_per_1k
-        output_cost = (output_tokens / 1000) * model_config.output_cost_per_1k
-        total_cost = input_cost + output_cost
-        
-        # Update cache
-        key = self._get_user_key(user_id)
-        if key not in self._usage_cache:
-            self._usage_cache[key] = {
-                'total_inr': 0.0,
-                'sonnet_inr': 0.0,
-                'haiku_inr': 0.0,
-                'requests': 0,
-            }
-        
-        self._usage_cache[key]['total_inr'] += total_cost
-        self._usage_cache[key]['requests'] += 1
-        
-        if model == 'sonnet':
-            self._usage_cache[key]['sonnet_inr'] += total_cost
-        else:
-            self._usage_cache[key]['haiku_inr'] += total_cost
-        
+        total_cost = self.calculate_cost(model_key, input_tokens, output_tokens)
+
+        # Record to Supabase
         record = {
             'user_id': user_id,
             'feature': feature,
-            'model': model,
+            'model': model_key,
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
             'cost_inr': total_cost,
+        }
+
+        try:
+            await supabase_service.record_ai_transaction(record)
+            logger.info(f"AI usage recorded: user={user_id}, feature={feature}, cost=₹{total_cost:.4f}")
+        except Exception as e:
+            logger.error(f"Failed to record AI usage: {e}")
+
+        return {
+            **record,
             'timestamp': datetime.now(timezone.utc).isoformat(),
         }
-        
-        logger.debug(f"AI usage recorded: {record}")
-        
-        return record
-    
+
     async def get_usage_stats(self, user_id: str) -> Dict[str, Any]:
         """
         Get user's AI usage statistics for the current month.
@@ -259,25 +299,28 @@ class AICostController:
         Returns:
             Usage statistics
         """
-        key = self._get_user_key(user_id)
-        usage = self._usage_cache.get(key, {
-            'total_inr': 0.0,
-            'sonnet_inr': 0.0,
-            'haiku_inr': 0.0,
-            'requests': 0,
-        })
-        
-        return {
-            'month': self._get_month_key(),
-            'budget_inr': SONNET_MONTHLY_BUDGET_PER_USER_INR,
-            'spent_inr': usage['total_inr'],
-            'remaining_inr': max(0, SONNET_MONTHLY_BUDGET_PER_USER_INR - usage['total_inr']),
-            'sonnet_spend_inr': usage['sonnet_inr'],
-            'haiku_spend_inr': usage['haiku_inr'],
-            'total_requests': usage['requests'],
-            'is_budget_exceeded': usage['total_inr'] >= SONNET_MONTHLY_BUDGET_PER_USER_INR,
-        }
-    
+        from services.supabase import supabase_service
+
+        try:
+            spent = await supabase_service.get_monthly_ai_spend(user_id)
+
+            return {
+                'month': self._get_month_key(),
+                'budget_inr': SONNET_MONTHLY_BUDGET_PER_USER_INR,
+                'spent_inr': spent,
+                'remaining_inr': max(0, SONNET_MONTHLY_BUDGET_PER_USER_INR - spent),
+                'is_budget_exceeded': spent >= SONNET_MONTHLY_BUDGET_PER_USER_INR,
+            }
+        except Exception as e:
+            logger.error(f"Error getting usage stats: {e}")
+            return {
+                'month': self._get_month_key(),
+                'budget_inr': SONNET_MONTHLY_BUDGET_PER_USER_INR,
+                'spent_inr': 0.0,
+                'remaining_inr': SONNET_MONTHLY_BUDGET_PER_USER_INR,
+                'is_budget_exceeded': False,
+            }
+
     def estimate_cost(
         self,
         model: str,
@@ -288,17 +331,15 @@ class AICostController:
         Estimate cost for a request before making it.
         
         Args:
-            model: Model key
+            model: Model key or ID
             estimated_input_tokens: Expected input tokens
             estimated_output_tokens: Expected output tokens
             
         Returns:
             Estimated cost in INR
         """
-        config = MODELS.get(model, MODELS['haiku'])
-        input_cost = (estimated_input_tokens / 1000) * config.input_cost_per_1k
-        output_cost = (estimated_output_tokens / 1000) * config.output_cost_per_1k
-        return input_cost + output_cost
+        model_key = self.get_model_key_from_id(model) if 'claude' in model else model
+        return self.calculate_cost(model_key, estimated_input_tokens, estimated_output_tokens)
 
 
 # Global instance

@@ -1,561 +1,840 @@
-# 100Cr Engine - Comprehensive Guide
+# 100Cr Engine - Comprehensive Technical Guide
 
-## Overview
+**Last Updated:** March 19, 2026  
+**Version:** 3.0.0 Production  
+**Audit Status:** Complete
 
-100Cr Engine is a revenue milestone prediction platform built specifically for Indian founders. It answers the critical question: **"When will my business reach ₹100 Crore in annual revenue?"**
+---
 
-## Core Value Proposition
+## Table of Contents
 
-- **Instant Projections**: Calculate your path to ₹100 Crore in seconds
-- **Benchmark Intelligence**: Compare your growth against Indian SaaS founders
-- **Monthly Tracking**: Log actual revenue and see if you're on track
-- **AI Coaching**: Get personalized growth advice powered by Claude
+1. [Architecture Overview](#1-architecture-overview)
+2. [File-by-File Breakdown](#2-file-by-file-breakdown)
+3. [API Endpoint Reference](#3-api-endpoint-reference)
+4. [Database Schema](#4-database-schema)
+5. [Authentication Flow](#5-authentication-flow)
+6. [Access Control System](#6-access-control-system)
+7. [Payment Integration](#7-payment-integration)
+8. [Onboarding Flow](#8-onboarding-flow)
+9. [Dashboard Modules](#9-dashboard-modules)
+10. [AI Integration](#10-ai-integration)
+11. [Environment Configuration](#11-environment-configuration)
+12. [Known Issues & Fixes](#12-known-issues--fixes)
 
-## Architecture Overview
+---
 
-### Tech Stack
+## 1. Architecture Overview
 
-| Layer | Technology | Purpose |
+### 1.1 System Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND (React SPA)                            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │  Landing    │  │   Tools     │  │  Dashboard  │  │    Auth/Checkout    │ │
+│  │  /          │  │  /tools/*   │  │  /dashboard │  │  /auth/callback     │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  │  /checkout          │ │
+│                                                      └─────────────────────┘ │
+│  Context: AuthProvider (user, session, profile, subscription)               │
+│  Routing: react-router-dom v7 + ProtectedRoute                              │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │ REST API (HTTPS)
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              BACKEND (FastAPI)                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │  /api/user  │  │ /api/engine │  │ /api/ai     │  │  /api/payments      │ │
+│  │  Profile    │  │ Projection  │  │ Coach       │  │  Razorpay           │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│  Services: auth.py, supabase.py, anthropic.py, encryption.py               │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         ▼                           ▼                           ▼
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│    Supabase     │       │    Anthropic    │       │    Razorpay     │
+│  PostgreSQL+Auth│       │  Claude AI      │       │   Payments      │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
+```
+
+### 1.2 Tech Stack
+
+| Layer | Technology | Version |
 |-------|------------|---------|
-| Frontend | React 18 + Tailwind CSS | Modern, responsive UI |
-| Backend | FastAPI (Python) | High-performance async API |
-| Database | MongoDB | Flexible document storage |
-| Auth | Supabase Magic Link | Passwordless authentication |
-| AI | Claude (Anthropic API) | Growth coaching & reports |
+| Frontend | React + CRA + Craco | 18.x |
+| Styling | Tailwind CSS | 3.x |
+| Animation | Framer Motion | 11.x |
+| Charts | Recharts | 2.x |
+| Backend | FastAPI | 0.100+ |
+| Database | Supabase PostgreSQL | - |
+| Auth | Supabase Auth | - |
+| AI | Anthropic Claude | - |
+| Payments | Razorpay | - |
 
-### System Architecture
+---
+
+## 2. File-by-File Breakdown
+
+### 2.1 Backend Structure
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Frontend                             │
-│  React + Tailwind + Framer Motion + Recharts                │
-├─────────────────────────────────────────────────────────────┤
-│                         API Layer                            │
-│  FastAPI with JWT Auth + Rate Limiting                      │
-├─────────────────────────────────────────────────────────────┤
-│                       Data Layer                             │
-│  MongoDB (Users, Projections, Check-ins, Connectors)        │
-├─────────────────────────────────────────────────────────────┤
-│                    External Services                         │
-│  Supabase Auth │ Claude AI │ Razorpay │ Stripe              │
-└─────────────────────────────────────────────────────────────┘
+backend/
+├── main.py                 # FastAPI app, CORS, routers, error handlers
+├── server.py               # Uvicorn entry point
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment variables (gitignored)
+├── .env.example            # Template for env vars
+├── migrations/
+│   ├── add_beta_fields_to_profiles.sql   # Beta access columns
+│   └── create_subscriptions_table.sql    # Subscriptions table
+├── models/
+│   ├── __init__.py         # Model exports
+│   ├── founder.py          # UserProfile, Subscription models
+│   ├── projection.py       # ProjectionInputs, Milestone models
+│   ├── checkin.py          # CheckIn models
+│   └── ai.py               # AI request/response models
+├── routers/
+│   ├── __init__.py         # Router exports
+│   ├── engine.py           # /api/engine/* (projections)
+│   ├── benchmarks.py       # /api/benchmarks/* 
+│   ├── ai.py               # /api/ai/* (Claude integration)
+│   ├── connectors.py       # /api/connectors/*
+│   ├── reports.py          # /api/dashboard/*, /api/checkin*
+│   ├── admin.py            # /api/admin/*
+│   └── payments.py         # /api/payments/razorpay/*
+└── services/
+    ├── __init__.py         # Service exports
+    ├── auth.py             # JWT verification, require_auth, require_paid
+    ├── supabase.py         # DB operations (profiles, subscriptions, etc.)
+    ├── anthropic.py        # Claude API integration
+    ├── encryption.py       # Fernet encryption for API keys
+    ├── rate_limiter.py     # IP/user rate limiting
+    ├── context.py          # FounderContext for AI prompts
+    └── ai_cost_control.py  # Sonnet budget, Haiku overflow
 ```
 
-## Feature Breakdown
+### 2.2 Frontend Structure
 
-### 1. Free Tools (Public)
+```
+frontend/src/
+├── App.js                  # Routes, AuthProvider wrapper
+├── index.js                # React entry point
+├── App.css                 # Global styles
+├── index.css               # Tailwind imports
+├── context/
+│   └── AuthContext.jsx     # Auth state, profile, subscription, methods
+├── lib/
+│   ├── api/
+│   │   ├── client.js       # Axios instance
+│   │   └── dashboard.js    # All API functions
+│   ├── auth/
+│   │   └── intent.js       # Auth intent storage (localStorage)
+│   ├── engine/
+│   │   ├── projection.js   # Revenue projection math
+│   │   ├── benchmarks.js   # Benchmark comparison
+│   │   └── constants.js    # CRORE, formatCrore, etc.
+│   ├── supabase/
+│   │   └── client.js       # Supabase client init
+│   ├── copy.js             # All user-facing strings
+│   └── utils.js            # cn() and helpers
+├── components/
+│   ├── auth/
+│   │   ├── ProtectedRoute.jsx    # Route guard (beta/paid)
+│   │   └── AuthModal.jsx         # Email input modal
+│   ├── dashboard/
+│   │   ├── DashboardSidebar.jsx  # Sidebar navigation
+│   │   ├── CheckInModal.jsx      # Monthly check-in form
+│   │   ├── OnboardingModal.jsx   # 3-step onboarding
+│   │   └── FreeTierBanner.jsx    # Beta countdown / upgrade prompt
+│   ├── landing/
+│   │   ├── HeroSectionNew.jsx    # Main hero
+│   │   ├── FounderDNAQuiz.jsx    # Quiz component
+│   │   └── PricingSection.jsx    # Pricing cards
+│   ├── layout/
+│   │   ├── Navbar.jsx            # Top navigation
+│   │   └── Footer.jsx            # Site footer
+│   ├── ui/                       # Shared UI components
+│   ├── tour/                     # Onboarding tour
+│   └── upgrade/
+│       └── UpgradeModal.jsx      # Rate limit / paywall modal
+└── pages/
+    ├── LandingPage.jsx           # Marketing homepage
+    ├── PricingPage.jsx           # Pricing page
+    ├── AuthCallback.jsx          # Magic link handler
+    ├── CheckoutPage.jsx          # Razorpay checkout
+    ├── tools/
+    │   ├── HundredCrCalculator.jsx
+    │   ├── ARRCalculator.jsx
+    │   ├── RunwayCalculator.jsx
+    │   └── GrowthCalculator.jsx
+    ├── dashboard/
+    │   ├── DashboardLayout.jsx   # Layout wrapper
+    │   ├── CommandCentre.jsx     # Main dashboard
+    │   ├── RevenueIntelligence.jsx
+    │   ├── ForecastingEngine.jsx
+    │   ├── BenchmarkIntelligence.jsx
+    │   ├── ReportingEngine.jsx
+    │   ├── AIGrowthCoach.jsx
+    │   ├── GoalArchitecture.jsx
+    │   ├── InvestorRelations.jsx
+    │   ├── Connectors.jsx
+    │   └── Settings.jsx
+    └── preview/                  # Screenshot routes (no auth)
+```
 
-#### 100Cr Calculator
-- Input: Current MRR + Monthly Growth Rate
-- Output: Milestone dates (₹1Cr, ₹10Cr, ₹50Cr, ₹100Cr)
-- Includes: Sensitivity analysis, benchmark comparison
+---
 
-#### ARR Calculator
-- Convert MRR to ARR with growth projections
+## 3. API Endpoint Reference
 
-#### Runway Calculator
-- Calculate months of runway based on burn rate
+### 3.1 Authentication Levels
 
-#### Growth Rate Calculator
-- Calculate MoM growth from two revenue figures
+| Symbol | Meaning |
+|--------|---------|
+| 🔓 | Public (no auth) |
+| 🔑 | Requires auth (JWT) |
+| 💰 | Requires paid subscription |
+| 🔐 | Requires admin role |
 
-### 2. Founder DNA Quiz (Lead Generation)
-- 5 quick questions about your startup
-- Generates personalized projection
-- Optional email capture for follow-up
+### 3.2 Complete Endpoint List
 
-### 3. Dashboard (Paid - ₹899/year)
+#### Health & Root
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/` | 🔓 | API info |
+| GET | `/api/health` | 🔓 | Health check |
 
-#### Command Centre
-- Health Score (0-100)
-- Next milestone countdown
-- AI priority recommendation
-- Action queue
+#### User Management
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/user/profile` | 🔑 | Get profile + subscription |
+| PUT | `/api/user/profile` | 🔑 | Update profile |
+| POST | `/api/user/onboarding` | 🔑 | Complete onboarding |
+| DELETE | `/api/user/delete` | 🔑 | Delete account (cascade) |
 
-#### Revenue Intelligence
-- Revenue vs Baseline vs Benchmark chart
+#### Projection Engine
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/engine/projection` | 🔓* | Run projection (*rate-limited) |
+| GET | `/api/engine/projection/{slug}` | 🔓 | Get shared projection |
+| POST | `/api/engine/scenario` | 🔑 | Scenario analysis |
+
+#### Benchmarks
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/benchmarks/stages` | 🔓 | List all stages |
+| GET | `/api/benchmarks/{stage}` | 🔓 | Get stage benchmarks |
+| POST | `/api/benchmarks/compare` | 🔓 | Compare to benchmark |
+
+#### Dashboard
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/dashboard/overview` | 💰 | Command Centre data |
+| GET | `/api/dashboard/revenue` | 💰 | Revenue Intelligence |
+
+#### Check-ins
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/checkin` | 💰 | Submit check-in |
+| GET | `/api/checkins` | 💰 | List check-ins |
+
+#### Connectors
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/connectors/providers` | 🔓 | List providers |
+| GET | `/api/connectors` | 💰 | List connected |
+| POST | `/api/connectors/{provider}/connect` | 💰 | Connect provider |
+| DELETE | `/api/connectors/{provider}` | 💰 | Disconnect |
+| POST | `/api/connectors/{provider}/sync` | 💰 | Sync data (stub) |
+
+#### AI Features
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/ai/usage` | 💰 | AI usage stats |
+| GET | `/api/ai/daily-pulse` | 💰 | Daily insight |
+| GET | `/api/ai/weekly-question` | 💰 | Strategic question |
+| POST | `/api/ai/board-report` | 💰 | Generate report |
+| POST | `/api/ai/strategy-brief` | 💰 | Strategy brief |
+| POST | `/api/ai/deviation` | 💰 | Deviation analysis |
+
+#### Quiz (Lead Gen)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/quiz/submit` | 🔓 | Submit quiz answers |
+
+#### Payments
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/payments/razorpay/create-order` | 🔑 | Create order |
+| POST | `/api/payments/razorpay/webhook` | 🔓 | Handle webhook |
+
+#### Admin
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/admin/stats` | 🔐 | Platform stats |
+| POST | `/api/admin/subscription/{user_id}` | 🔐 | Grant subscription |
+| POST | `/api/admin/beta/{user_id}` | 🔐 | Grant beta access |
+
+---
+
+## 4. Database Schema
+
+### 4.1 Entity Relationship Diagram (Text)
+
+```
+auth.users (Supabase Auth)
+    │
+    ├──< profiles (1:1)
+    │       ├── id (PK, FK → auth.users)
+    │       ├── email, name, company
+    │       ├── stage, current_mrr, growth_rate
+    │       ├── onboarding_completed
+    │       ├── beta_status, beta_expires_at
+    │       └── plan_tier
+    │
+    ├──< subscriptions (1:1)
+    │       ├── id (PK)
+    │       ├── user_id (FK → auth.users, UNIQUE)
+    │       ├── status, plan, plan_tier
+    │       ├── payment_ref, payment_provider
+    │       └── expires_at
+    │
+    ├──< checkins (1:N)
+    │       ├── id (PK)
+    │       ├── user_id (FK)
+    │       ├── month, actual_revenue
+    │       └── UNIQUE(user_id, month)
+    │
+    ├──< connector_keys (1:N)
+    │       ├── id (PK)
+    │       ├── user_id (FK)
+    │       ├── provider, encrypted_key
+    │       └── UNIQUE(user_id, provider)
+    │
+    └──< ai_usage_log (1:N)
+            ├── id (PK)
+            ├── user_id (FK)
+            ├── feature, model
+            └── input_tokens, output_tokens
+
+projection_runs (standalone)
+    ├── id (PK)
+    ├── slug (UNIQUE)
+    ├── user_id (FK, nullable)
+    ├── inputs, result
+    └── created_at
+
+quiz_submissions (standalone)
+    ├── id (PK)
+    ├── answers, email
+    └── result, percentile
+
+benchmark_contributions (anonymized)
+    ├── id (PK)
+    ├── stage, growth_rate
+    ├── arr_bucket, industry_category
+    └── contribution_hash
+```
+
+### 4.2 RLS Policies Summary
+
+| Table | SELECT | INSERT | UPDATE | DELETE |
+|-------|--------|--------|--------|--------|
+| profiles | auth.uid()=id | auth.uid()=id | auth.uid()=id | - |
+| subscriptions | auth.uid()=user_id | service_role | service_role | service_role |
+| checkins | auth.uid()=user_id | auth.uid()=user_id | auth.uid()=user_id | auth.uid()=user_id |
+| connector_keys | auth.uid()=user_id | auth.uid()=user_id | auth.uid()=user_id | auth.uid()=user_id |
+| projection_runs | TRUE (public) | TRUE | service_role | service_role |
+
+---
+
+## 5. Authentication Flow
+
+### 5.1 Magic Link Sequence
+
+```
+┌─────────┐     ┌─────────────┐     ┌──────────┐     ┌─────────────┐
+│  User   │     │  Frontend   │     │ Supabase │     │   Backend   │
+└────┬────┘     └──────┬──────┘     └────┬─────┘     └──────┬──────┘
+     │                 │                  │                  │
+     │ Enter email     │                  │                  │
+     │────────────────>│                  │                  │
+     │                 │                  │                  │
+     │                 │ signInWithOtp()  │                  │
+     │                 │─────────────────>│                  │
+     │                 │                  │                  │
+     │    Email with magic link          │                  │
+     │<──────────────────────────────────│                  │
+     │                 │                  │                  │
+     │ Click link      │                  │                  │
+     │────────────────>│ /auth/callback   │                  │
+     │                 │                  │                  │
+     │                 │ getSession()     │                  │
+     │                 │─────────────────>│                  │
+     │                 │                  │                  │
+     │                 │<─ session + JWT  │                  │
+     │                 │                  │                  │
+     │                 │ GET /api/user/profile               │
+     │                 │────────────────────────────────────>│
+     │                 │                  │                  │
+     │                 │<─── profile + subscription ─────────│
+     │                 │                  │                  │
+     │<── Dashboard ───│                  │                  │
+     │                 │                  │                  │
+```
+
+### 5.2 Intent Handling
+
+**Storage:** `localStorage` with key `centurion_auth_intent`
+
+**Structure:**
+```javascript
+{
+  intent: 'checkout' | 'calculator' | null,
+  plan: 'founder' | null,
+  redirectTo: '/dashboard' | '/checkout',
+  storedAt: timestamp
+}
+```
+
+**Expiry:** 30 minutes
+
+**Flow:**
+1. User clicks CTA (e.g., "Start Founder Plan")
+2. `storeAuthIntent({ intent: 'checkout', plan: 'founder', redirectTo: '/checkout' })`
+3. AuthModal opens → user enters email
+4. Magic link sent
+5. User clicks link → `/auth/callback`
+6. `getRedirectPathAfterAuth()` reads and clears intent
+7. Redirect to intent's `redirectTo` path
+
+---
+
+## 6. Access Control System
+
+### 6.1 Two-Tier Access Model
+
+```
+                    ┌──────────────────────────────────────┐
+                    │            Authenticated?            │
+                    └──────────────────┬───────────────────┘
+                                       │
+                    ┌──────────────────┴───────────────────┐
+                    │                                      │
+                   YES                                     NO
+                    │                                      │
+                    ▼                                      ▼
+        ┌───────────────────────┐              ┌───────────────────┐
+        │ requireDashboardAccess│              │  Redirect to /    │
+        │ enabled?              │              │  (landing page)   │
+        └───────────┬───────────┘              └───────────────────┘
+                    │
+         ┌──────────┴──────────┐
+         │                     │
+        YES                    NO
+         │                     │
+         ▼                     ▼
+  ┌─────────────────┐   ┌─────────────────┐
+  │ Check access:   │   │ Allow access    │
+  │ isBetaUser OR   │   │ (auth-only)     │
+  │ hasPaidSub      │   │ e.g., /checkout │
+  └────────┬────────┘   └─────────────────┘
+           │
+    ┌──────┴──────┐
+    │             │
+  TRUE          FALSE
+    │             │
+    ▼             ▼
+  Allow    ┌─────────────────────────┐
+           │ Beta expired?           │
+           └───────────┬─────────────┘
+                       │
+           ┌───────────┴───────────┐
+          YES                      NO
+           │                       │
+           ▼                       ▼
+    Redirect to         Redirect to
+    /checkout           /pricing
+    (beta_expired)      (subscription_required)
+```
+
+### 6.2 AuthContext Values
+
+```javascript
+const value = {
+  // State
+  user,                 // Supabase user object
+  session,              // Supabase session
+  profile,              // Backend profile (includes beta_status, etc.)
+  subscription,         // Backend subscription
+  loading,              // Auth initialization in progress
+
+  // Methods
+  signInWithMagicLink,  // Send magic link
+  signOut,              // Clear session
+  getAccessToken,       // Get JWT for API calls
+  refreshProfile,       // Re-fetch profile from backend
+
+  // Computed (for access control)
+  isAuthenticated,      // Boolean(user)
+  isBetaUser,           // beta_status=active AND not expired
+  hasPaidSubscription,  // plan in ['founder','studio','vc_portfolio'] AND status=active
+  canAccessDashboard,   // isBetaUser OR hasPaidSubscription
+};
+```
+
+---
+
+## 7. Payment Integration
+
+### 7.1 Razorpay Flow
+
+```
+┌─────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────┐
+│  User   │     │  Frontend   │     │   Backend   │     │ Razorpay │
+└────┬────┘     └──────┬──────┘     └──────┬──────┘     └────┬─────┘
+     │                 │                   │                  │
+     │ Click Pay       │                   │                  │
+     │────────────────>│                   │                  │
+     │                 │                   │                  │
+     │                 │ POST /create-order│                  │
+     │                 │──────────────────>│                  │
+     │                 │                   │                  │
+     │                 │                   │ order.create()   │
+     │                 │                   │─────────────────>│
+     │                 │                   │                  │
+     │                 │                   │<── order_id ─────│
+     │                 │<── orderId, keyId │                  │
+     │                 │                   │                  │
+     │ Razorpay modal  │                   │                  │
+     │<────────────────│                   │                  │
+     │                 │                   │                  │
+     │ Enter card      │                   │                  │
+     │────────────────>│ ─────────────────────────────────────│
+     │                 │                   │                  │
+     │                 │                   │ webhook (signed) │
+     │                 │                   │<─────────────────│
+     │                 │                   │                  │
+     │                 │                   │ create_subscription
+     │                 │                   │ (user_id, plan)  │
+     │                 │                   │                  │
+     │                 │ Poll /api/user/profile               │
+     │                 │──────────────────>│                  │
+     │                 │                   │                  │
+     │                 │<── subscription.plan=founder ────────│
+     │                 │                   │                  │
+     │<── /dashboard ──│                   │                  │
+```
+
+### 7.2 Webhook Security
+
+```python
+# backend/routers/payments.py
+expected = hmac.new(
+    RAZORPAY_WEBHOOK_SECRET.encode(),
+    body,
+    hashlib.sha256
+).hexdigest()
+
+if not hmac.compare_digest(expected, signature):
+    raise HTTPException(status_code=401, detail="Invalid webhook signature")
+```
+
+### 7.3 Plan Pricing
+
+```python
+PLAN_PRICING = {
+    "founder": {
+        "amount": 1499900,  # ₹14,999 in paise
+        "currency": "INR",
+        "description": "Centurion Founder Plan — Annual",
+    }
+}
+```
+
+---
+
+## 8. Onboarding Flow
+
+### 8.1 Modal Trigger
+
+```javascript
+// CommandCentre.jsx
+useEffect(() => {
+  if (!profile) return;
+  const needsOnboarding = (
+    !profile.company_name &&
+    !profile.onboarding_completed
+  );
+  if (needsOnboarding) {
+    setShowOnboarding(true);
+  }
+}, [profile]);
+```
+
+### 8.2 Three Steps
+
+| Step | Title | Fields |
+|------|-------|--------|
+| 1 | Company | company_name, website (optional) |
+| 2 | Stage | stage (pre-seed/seed/series-a/series-b), sector |
+| 3 | MRR | current_mrr (slider ₹10K - ₹1Cr) |
+
+### 8.3 API Call
+
+```javascript
+// OnboardingModal.jsx
+await submitOnboarding(token, {
+  company_name: data.company_name,
+  website: data.website?.trim() || null,
+  stage: data.stage,
+  sector: data.sector,
+  current_mrr: data.current_mrr,
+});
+await refreshProfile();
+onComplete();
+```
+
+### 8.4 Backend Handler
+
+```python
+# main.py
+@user_router.post("/onboarding")
+async def complete_onboarding(profile: UserProfile, user = Depends(require_auth)):
+    profile_data = {
+        'id': user['id'],
+        'company_name': profile.company_name or profile.company,
+        'stage': profile.stage,
+        'sector': profile.sector or profile.industry,
+        'current_mrr': profile.current_mrr,
+        'onboarding_completed': True,
+    }
+    result = await supabase_service.upsert_profile(profile_data)
+    return {'success': True, 'profile': result}
+```
+
+---
+
+## 9. Dashboard Modules
+
+### 9.1 Command Centre
+
+**API:** `GET /api/dashboard/overview`
+
+**Data Returned:**
+- companyName
+- currentMRR, growthRate
+- nextMilestone (label, value, date, monthsAway)
+- healthScore (0-100)
+- healthSignals (growth, retention, runway, engagement)
+- aiPriority (string)
+- actionQueue (array)
+- streak (int)
+
+**Components Used:**
+- FreeTierBanner
+- OnboardingModal
+- CheckInModal
+- UpgradeModal
+- SyncStatus
+
+### 9.2 Revenue Intelligence
+
+**API:** `GET /api/dashboard/revenue`
+
+**Data:**
+- Revenue vs Baseline chart data
+- Benchmark comparison
 - Revenue Quality Score
-- Cohort retention tracking
+- Cohort tracking
 
-#### Forecasting Engine
-- Scenario branching (optimistic/pessimistic)
-- Sensitivity matrix (growth × churn)
-- What-if narrator
+### 9.3 Settings
 
-#### Benchmark Intelligence
-- Percentile ranking among Indian founders
-- Peer comparison (anonymized)
-- Stage transition readiness score
+**Tabs:**
+1. **Profile** - Personal info, company info (saves to API ✅)
+2. **Billing** - Plan overview, usage stats, invoices
+3. **Support** - FAQs, contact, resources
 
-#### Reporting Engine
-- Monthly board report (AI-generated)
-- Investor update templates
-- Growth strategy briefs
-- Data room snapshot
+**Save Flow:**
+```javascript
+const handleSaveProfile = async (data) => {
+  const profileData = {
+    name: data.fullName,
+    company: data.company,
+    stage: data.stage,
+  };
+  await updateUserProfile(accessToken, profileData);
+  await refreshProfile();
+};
+```
 
-#### AI Growth Coach
-- Daily pulse updates
+---
+
+## 10. AI Integration
+
+### 10.1 Services
+
+**File:** `backend/services/anthropic.py`
+
+**Features:**
+- Daily pulse generation
 - Weekly strategic questions
-- Deviation alerts
-- Monthly coaching summary
+- Board report generation
+- Strategy briefs
+- Deviation analysis
 
-#### Goal Architecture
-- Milestone ladder visualization
-- Quarterly goal tracking
-- Weekly commitment tracker
+### 10.2 Cost Control
 
-#### Investor Relations
-- Shareable projection pack
-- Funding timeline
-- Dilution modeller
+**File:** `backend/services/ai_cost_control.py`
 
-#### API Connectors
-- Tier 1 (API Key): Razorpay, Stripe, Cashfree
-- Tier 2 (OAuth): GA4, Zoho, QuickBooks
-- Tier 3 (CSV): Tally, Amazon, Flipkart
+**Logic:**
+- Per-user Sonnet budget
+- Overflow to Haiku when budget exceeded
+- Usage tracking in `ai_usage_log` table
 
-## API Reference
+### 10.3 Context Building
 
-### Authentication
+**File:** `backend/services/context.py`
 
-All protected endpoints require a Bearer token:
-```
-Authorization: Bearer <supabase_jwt_token>
-```
+**FounderContext includes:**
+- Profile data
+- Recent check-ins
+- Subscription status
+- Benchmarks for stage
+- Current milestones
 
-### Public Endpoints
+---
 
-#### POST /api/engine/projection
-Calculate revenue projection.
+### 10.4 Production AI Optimizations (Required)
 
-**Request:**
-```json
-{
-  "currentMRR": 500000,
-  "growthRate": 0.08,
-  "monthsToProject": 120,
-  "targetRevenue": 1000000000
-}
-```
+**Tuple-unpacking contract (FastAPI router vs AI service):**
+- All generation methods in `backend/services/anthropic.py` return a **tuple**: `(payload, usage)`.
+- Callers must **explicitly unpack**: e.g. `report, usage = await ai_service.generate_board_report(...)`.
 
-**Response:**
-```json
-{
-  "inputs": {"currentMRR": 500000, "growthRate": 0.08},
-  "currentARR": 6000000,
-  "milestones": [
-    {"value": 10000000, "label": "₹1 Crore", "monthsToReach": 7, "date": "2026-10-01"},
-    {"value": 100000000, "label": "₹10 Crore", "monthsToReach": 37, "date": "2029-04-01"},
-    {"value": 500000000, "label": "₹50 Crore", "monthsToReach": 58, "date": "2031-01-01"},
-    {"value": 1000000000, "label": "₹100 Crore", "monthsToReach": 67, "date": "2031-10-01"}
-  ],
-  "sensitivity": {"growthIncrease": 0.01, "monthsGained": 7},
-  "slug": "abc12345"
-}
-```
+**Anthropic Prompt Caching (Cost reduction):**
+- Prompt caching is implemented in `backend/services/anthropic.py` inside `_call_claude` using Anthropic `cache_control: {"type": "ephemeral"}`.
+- For board report generation, the reusable system prefix and the historical check-in section (`Recent Performance`) are cached.
+- For strategy briefs, the reusable prefix and `Performance Summary` are cached.
+- If prompt splitting fails, `_call_claude` falls back to enabling automatic caching.
 
-#### GET /api/benchmarks/{stage}
-Get benchmark data for a funding stage.
+**Claude Sonnet model alignment:**
+- Ensure the cost controller and AI service use the same latest reasoning model id: `claude-3-5-sonnet-20241022`.
 
-**Stages:** `pre-seed`, `seed`, `series-a`
+## 11. Environment Configuration
 
-**Response:**
-```json
-{
-  "stage": "pre-seed",
-  "median": 0.08,
-  "p75": 0.14,
-  "p90": 0.20,
-  "sample_size": 150
-}
-```
+### 11.1 Backend (.env)
 
-### Protected Endpoints (Requires Auth)
+```env
+# Core
+ENVIRONMENT=development|production
 
-#### GET /api/user/profile
-Get current user's profile and subscription.
+# CORS (comma-separated)
+CORS_ORIGINS=http://localhost:3000,https://100crengine.in
 
-#### POST /api/checkin
-Submit monthly revenue check-in.
-
-**Request:**
-```json
-{
-  "month": "2025-03",
-  "actual_revenue": 450000,
-  "note": "Closed 3 enterprise deals"
-}
-```
-
-#### GET /api/dashboard/overview
-Get Command Centre data.
-
-### Rate Limiting
-
-| Feature | Free Tier | Paid Tier |
-|---------|-----------|-----------|
-| Projections | 10/day | 1000/day |
-| PDF Export | 1/day | Unlimited |
-| AI Reports | 0 | 2/month |
-
-## Database Schema
-
-### Collections
-
-#### users
-```javascript
-{
-  id: "uuid",           // Supabase user ID
-  email: "string",
-  name: "string",
-  company: "string",
-  stage: "pre-seed|seed|series-a",
-  current_mrr: Number,
-  growth_rate: Number,
-  onboarding_completed: Boolean,
-  current_streak: Number,
-  created_at: ISODate
-}
-```
-
-#### subscriptions
-```javascript
-{
-  user_id: "uuid",
-  status: "active|cancelled|expired",
-  plan: "founder",
-  starts_at: ISODate,
-  expires_at: ISODate,
-  payment_provider: "razorpay|stripe"
-}
-```
-
-#### projection_runs
-```javascript
-{
-  slug: "string",       // Unique 8-char ID for sharing
-  user_id: "uuid|null", // Null for anonymous
-  inputs: Object,
-  result: Object,
-  created_at: ISODate
-}
-```
-
-#### checkins
-```javascript
-{
-  user_id: "uuid",
-  month: "YYYY-MM",
-  actual_revenue: Number,
-  projected_revenue: Number,
-  deviation_pct: Number,
-  note: "string",
-  source: "manual|razorpay|stripe",
-  created_at: ISODate
-}
-```
-
-#### waitlist_entries
-```javascript
-{
-  id: ObjectId,
-  email: "string",
-  startup_stage: "idea|pre-seed|seed|series-a",
-  revenue_range: "<10L|10L-50L|50L-1Cr|1-5Cr|5Cr+",
-  key_problem: "string",
-  status: "new|reviewed|invited|rejected",
-  notes: "string",
-  created_at: ISODate,
-  invited_at: ISODate|null,
-  invite_token: "uuid|null"          // for magic-link invite
-}
-```
-
-#### referrals
-```javascript
-{
-  code: "string",                    // unique per user
-  owner_user_id: "uuid",
-  visits: Number,
-  signups: Number,
-  conversions: Number,
-  abuse_flag: Boolean,
-  last_seen_ip: "string"
-}
-```
-
-#### feedback
-```javascript
-{
-  user_id: "uuid",
-  channel: "chatbot|survey|popup|email",
-  category: "usability|accuracy|speed|pricing|other",
-  message: "string",
-  context: {
-    page: "string",
-    feature: "string",
-    session_id: "string"
-  },
-  sentiment: "pos|neu|neg",
-  created_at: ISODate
-}
-```
-
-## Security Considerations
-
-### Authentication
-- Supabase handles all authentication
-- Magic link (passwordless) - no passwords to leak
-- JWT tokens with 1-hour expiry
-- Automatic token refresh
-
-### Data Protection
-- API keys encrypted with Fernet before storage
-- Row-level security on user data
-- No sensitive data in URLs
-
-### Rate Limiting
-- IP-based for free tier
-- User-based for paid tier
-- Prevents abuse and controls costs
-
-## Deployment
-
-### Environment Variables
-
-**Backend (.env):**
-```
-MONGO_URL=mongodb+srv://...
-DB_NAME=centurion_db
+# Supabase
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_JWT_SECRET=xxx
-ANTHROPIC_API_KEY=your-anthropic-key
+SUPABASE_JWT_SECRET=xxx  # Optional, defaults to ANON_KEY
+
+# Payments
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_WEBHOOK_SECRET=xxx
+
+# AI (Optional)
+ANTHROPIC_API_KEY=sk-ant-xxx
+
+# Admin
+ADMIN_EMAILS=admin@company.com,ops@company.com
+
+# Dev only
+SKIP_SSL_VERIFY=false
 ```
 
-**Frontend (.env):**
-```
-REACT_APP_BACKEND_URL=https://api.100crengine.in
+### 11.2 Frontend (.env)
+
+```env
+REACT_APP_BACKEND_URL=http://localhost:8001
 REACT_APP_SUPABASE_URL=https://xxx.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=eyJ...
 ```
 
-### Production Checklist
+---
 
-- [ ] Set all environment variables
-- [ ] Configure Supabase redirect URLs
-- [ ] Verify Supabase RLS policies are active
-- [ ] Configure CORS for production domain
-- [ ] Enable SSL/TLS
-- [ ] Set up monitoring (Sentry, etc.)
-- [ ] Enable Supabase Point-in-Time Recovery (PITR)
+## 12. Known Issues & Fixes
 
-## Roadmap
+### 12.1 Fixed Issues
 
-### Phase 1 ✅ (Complete)
-- Core calculator
-- Landing page
-- Dashboard UI
+| Issue | Status | Fix |
+|-------|--------|-----|
+| Settings profile save not working | ✅ Fixed | Wired handleSaveProfile to updateUserProfile API |
+| CORS wildcard in production | ✅ Fixed | Environment-driven CORS_ORIGINS |
+| Beta access not checked | ✅ Fixed | Added beta_status/beta_expires_at to profile |
+| ProtectedRoute too simple | ✅ Fixed | Added requireDashboardAccess prop |
+| Onboarding modal missing | ✅ Fixed | Created OnboardingModal component |
 
-### Phase 2 ✅ (Complete)
-- Supabase authentication
-- Protected routes
-- Backend API structure
+### 12.2 Known Limitations
 
-### Phase 3 (Current)
-- Connect dashboard to live APIs
-- Monthly check-ins
-- Founder DNA Quiz
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Connector sync | ⚠️ Stub | Returns "coming soon" |
+| Admin stats | ⚠️ Stub | Returns zeros |
+| PDF export | ❌ Missing | Not implemented |
+| Email notifications | ❌ Missing | No transactional emails |
 
-### Phase 4 (Upcoming)
-- AI coaching integration
-- PDF report generation
-- Razorpay payments
+### 12.3 Recommended Improvements
 
-### Phase 5 (Future)
-- Real connector APIs
-- Redis rate limiting
-- Mobile app
+1. **Add Sentry** for error tracking
+2. **Add Redis** for distributed rate limiting
+3. **Add Stripe** as payment alternative
+4. **Implement connector sync** (Razorpay first)
+5. **Add email service** (Resend/Postmark)
 
-## Support
+---
 
-- **Documentation**: This guide + API docs
-- **Issues**: GitHub Issues
-- **Email**: support@100crengine.in
+## Appendix A: Quick Commands
 
-## Beta Waitlist & Launch Strategy (Paid Dashboard)
+### Start Development
 
-### Architecture Constraints (Enforced)
-| Constraint | Decision |
-|------------|----------|
-| Database | **Supabase PostgreSQL only** — no MongoDB |
-| Admin curation | **Supabase Studio** — no custom admin UI for first 50 users |
-| Referral engine | **Deferred** — manual tracking via Supabase Studio |
-| Data privacy | **DPDP Act 2023** compliance checkbox mandatory on waitlist |
-| Connector sync | **Razorpay/Stripe read-only MRR sync** during activation (Day 1) |
+```bash
+# Backend
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1  # Windows
+source venv/bin/activate      # Mac/Linux
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8001
 
-### Goals
-- Create a /beta flow that sells transformation first, hides pricing until users feel need, and converts curated founders into paying customers without data loss.
-
-### Phase Plan (user experience)
-- **Phase 1: /beta landing** — Story: problem → pain → transformation; tease dashboard capabilities; omit pricing; single CTA opens animated waitlist modal.
-- **Phase 2: Waitlist popup** — Collect email, startup stage, revenue band, key problem + **DPDP consent checkbox**; show exclusivity copy ("Only 50 founders").
-- **Phase 3: Manual curation** — Ops team selects 50 via **Supabase Studio** (no custom admin UI); grant 60-day free beta; add floating feedback chatbot + weekly prompts.
-- **Phase 4: Activation + Auto-Sync** — Magic-link onboarding; **auto-trigger Razorpay/Stripe MRR sync** on connector connect for zero-friction data ingestion from Day 1.
-- **Phase 5: Conversion window (last 10 days)** — In-app popups + emails; recap delivered value; offer 50% "Founding Member" pricing.
-- **Phase 6: Migration** — Keep same accounts/data; attach billing; flip plan to paid; no reset.
-
-> **Note**: Referral engine deferred to post-beta; manual tracking via Supabase Studio for now.
-
-### Deployment strategy
-- **Environments**: `beta` and `prod` deployments; use **single Supabase project** with feature flags to simplify migration.
-- **Database**: Supabase PostgreSQL only. All tables (`waitlist_entries`, `feedback`, `referrals`, `connector_sync_log`) in same project with strict RLS.
-- **Feature flags**: Store in `profiles.feature_access` JSONB or separate `feature_flags` table. Use LaunchDarkly/GrowthBook when experiments multiply.
-- **Rollout hygiene**: Blue/green deploy or canary for backend; versioned API; enable request logging + Sentry; enable PITR before migrations.
-
-### Beta user management
-- **Flagging**: Add `beta_status`, `beta_expires_at`, `referral_code`, `referred_by`, `feature_access` on `profiles` table.
-- **Access control**: Backend middleware reads Supabase user, checks `feature_access.paid_dashboard`; gates premium routes accordingly.
-- **Dynamic enable/disable**: Backend reads flags; frontend consumes `/api/user/profile` to conditionally render UI.
-
-### Supabase Schema (additive to existing)
-- **profiles** (add columns):
-```sql
-beta_status beta_status DEFAULT 'none',
-beta_expires_at TIMESTAMPTZ,
-referral_code TEXT UNIQUE,
-referred_by TEXT,
-feature_access JSONB DEFAULT '{"paid_dashboard": false, "ai_coach": false, "referrals": false}'
-```
-- **waitlist_entries** (new table):
-```sql
-id UUID PRIMARY KEY,
-email TEXT NOT NULL UNIQUE,
-startup_stage TEXT,
-revenue_range TEXT,
-key_problem TEXT,
-status TEXT DEFAULT 'new',
-dpdp_consent BOOLEAN NOT NULL,
-dpdp_consent_at TIMESTAMPTZ,
-ip_address TEXT,
-referred_by TEXT,
-invite_token UUID,
-invite_token_expires_at TIMESTAMPTZ,
-invited_at TIMESTAMPTZ,
-created_at TIMESTAMPTZ DEFAULT NOW()
-```
-- **feedback** (new table):
-```sql
-id UUID PRIMARY KEY,
-user_id UUID REFERENCES auth.users(id),
-channel TEXT NOT NULL,
-category TEXT,
-message TEXT NOT NULL,
-rating INTEGER,
-nps_score INTEGER,
-context JSONB,
-sentiment TEXT,
-created_at TIMESTAMPTZ DEFAULT NOW()
-```
-- **referrals** (new table, for future use):
-```sql
-id UUID PRIMARY KEY,
-code TEXT NOT NULL UNIQUE,
-owner_user_id UUID REFERENCES auth.users(id),
-visits INTEGER DEFAULT 0,
-signups INTEGER DEFAULT 0,
-conversions INTEGER DEFAULT 0,
-abuse_flag BOOLEAN DEFAULT FALSE,
-created_at TIMESTAMPTZ DEFAULT NOW()
-```
-- **connector_sync_log** (new table):
-```sql
-id UUID PRIMARY KEY,
-user_id UUID REFERENCES auth.users(id),
-provider TEXT NOT NULL,
-sync_type TEXT NOT NULL,
-status TEXT NOT NULL,
-records_fetched INTEGER,
-checkins_created INTEGER,
-error_message TEXT,
-started_at TIMESTAMPTZ DEFAULT NOW(),
-completed_at TIMESTAMPTZ
+# Frontend
+cd frontend
+npm install
+npm start
 ```
 
-### Waitlist system design
-- **Frontend**: /beta page with CTA → animated modal (Framer Motion). Fields: email, stage, revenue, problem, **DPDP consent checkbox**. Submit to `POST /api/beta/waitlist`.
-- **Backend endpoints**:
-  - `POST /api/beta/waitlist` (rate-limited): validate DPDP consent, store entry in Supabase, send thank-you email.
-  - `POST /api/beta/accept` → consumes invite token, creates user (via Supabase magic link), seeds `beta_status=active`, `beta_expires_at=+60d`, `feature_access.paid_dashboard=true`.
-- **Admin tool**: **Supabase Studio** Table Editor for the first 50 users (no custom UI). Filter, review, update `status`, set `invite_token`.
-- **Email flow**: Thank-you on submission; invite with magic link + expiry; weekly check-ins during beta; conversion sequence in last 10 days.
+### Run Migrations
 
-### Connector auto-sync (Day 1 feature)
-- On `POST /api/connectors/{provider}/connect`, after storing encrypted key:
-  - **Trigger immediate read-only sync** (Razorpay or Stripe)
-  - Fetch payments from last 12 months
-  - Aggregate by month and upsert into `checkins` with `source='razorpay'|'stripe'`
-  - Log to `connector_sync_log`
-- Show sync progress in onboarding: "Found ₹X revenue across Y months!"
-- Manual re-sync via `POST /api/connectors/{provider}/sync` (rate-limited 1/hour)
+```sql
+-- Run in Supabase SQL Editor
+-- 1. Beta fields
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS beta_status TEXT DEFAULT 'inactive',
+  ADD COLUMN IF NOT EXISTS beta_expires_at TIMESTAMPTZ;
 
-### DPDP Act 2023 Compliance
-- Waitlist modal includes mandatory checkbox:
-  > ☐ I consent to 100Cr Engine collecting and processing my data as per the Digital Personal Data Protection Act, 2023. [View Privacy Policy]
-- Backend rejects submission if `dpdp_consent != true`
-- Store `dpdp_consent_at` timestamp for audit trail
+-- 2. Index
+CREATE INDEX IF NOT EXISTS profiles_beta_status_idx
+  ON profiles(beta_status);
+```
 
-### Strategic guidance (FAQs)
-- **Supabase project choice**: Use single project; RLS enforces data isolation; simpler migration.
-- **Feature flags**: Store in `profiles.feature_access` JSONB; move to external service when experiments multiply.
-- **Engagement over 60 days**: Habit loops (daily pulse, weekly review), visible streaks, quick wins in first session, tight feedback prompts.
-- **Success definition**: ≥60% invitees active weekly by week 2; ≥40% convert to paid; NPS ≥30; time-to-first-value <10 min; ≥50% connect payment provider Day 1.
-- **Churn avoidance after discount**: Remind of locked-in value, provide annual billing incentive, keep post-offer grace, highlight upcoming roadmap items they influenced.
-- **Referral rewards**: Deferred; manual tracking via Supabase Studio for beta. Prefer access-based rewards when automated.
-- **Feedback prioritization**: Score by impact × frequency × segment (stage/revenue). Run small experiments; avoid building for single-edge requests; publish changelog to close the loop.
+### Grant Beta Access
 
-### Step-by-step execution guide (noob-friendly)
-1) **Set up environments**
-   - Create `beta` and `prod` deployments. Use single Supabase project. Set env vars for each.
-   - Enable Sentry, request logging, and Supabase PITR before inviting anyone.
+```bash
+# Via API (requires admin)
+curl -X POST "https://api.100crengine.in/api/admin/beta/{user_id}" \
+  -H "Authorization: Bearer {admin_token}" \
+  -H "Content-Type: application/json" \
+  -d '{"days": 60}'
+```
 
-2) **Run Supabase schema migration**
-   - Execute SQL in Supabase SQL Editor to add beta columns to `profiles` and create `waitlist_entries`, `feedback`, `referrals`, `connector_sync_log` tables.
-   - Verify RLS policies are active.
+---
 
-3) **Ship the /beta landing**
-   - Add route `/beta` in frontend with hero + problem→pain→transformation story; no pricing shown.
-   - Add single CTA button that opens the waitlist modal.
-
-4) **Build the waitlist modal + API**
-   - Frontend: modal with fields email, startup stage, revenue range, key problem, **DPDP consent checkbox**; submit to `POST /api/beta/waitlist`.
-   - Backend: add waitlist endpoint, rate limit by IP, validate DPDP consent, store entry in Supabase, send thank-you email.
-
-5) **Curate via Supabase Studio**
-   - Open Supabase Dashboard → Table Editor → `waitlist_entries`.
-   - Filter by `status = 'new'`, review entries, update to `'invited'` with `invite_token` and expiry.
-   - Send invite email manually or via script.
-
-6) **Invite and activate beta users**
-   - Email contains magic link to `/beta/accept?token=...`.
-   - Backend: `POST /api/beta/accept` consumes token, creates/links Supabase user, sets `beta_status=active`, `beta_expires_at=+60d`, `feature_access.paid_dashboard=true`.
-   - **Onboarding prompts user to connect Razorpay/Stripe** → auto-sync MRR on connect.
-
-7) **Add feedback + engagement loops**
-   - Embed floating chatbot; route messages to `POST /api/feedback` and store in `feedback` table.
-   - Cron/worker: send weekly micro-survey email; in-app weekly prompt; daily AI pulse notification.
-   - Trigger email if no check-in for 7 days; trigger "Was this helpful?" popup after key actions.
-
-8) **Prepare conversion window (days 50–60)**
-   - In-app banner + modal showing usage value (runs, check-ins, AI uses). CTA to pay.
-   - Emails on days 50, 55, 58, 60 summarising personal value and offering 50% Founding Member pricing.
-   - Payment: Stripe/Razorpay checkout tied to Supabase user. Webhook sets `subscriptions.plan='founder'`, `status='active'`, clears beta expiry.
-
-9) **Handle migration and grace**
-   - Do not move data; only change flags/plan. Set grace period of 7 days post day 60 with read-only access until paid.
-   - Run SQL job to expire users who did not pay: set `beta_status='expired'`, `feature_access.paid_dashboard=false`.
-
-10) **Measure success and adjust**
-    - Track: waitlist→invite→accept; T+7 activation (first projection + first check-in + connector connected); weekly active; beta→paid %. Target: ≥40% conversion, NPS ≥30.
-    - Run A/B on pricing reveal timing via `pricing_reveal_variant` flag; ship changelog and close-the-loop emails on shipped feedback.
+**End of Comprehensive Guide**

@@ -20,10 +20,40 @@ Author: 100Cr Engine Team
 
 import os
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timezone
+from dataclasses import dataclass
 
 logger = logging.getLogger("100cr_engine.ai")
+
+
+# ============================================================================
+# VALID ANTHROPIC MODEL IDS (as of March 2026)
+# ============================================================================
+# These are the actual model strings accepted by the Anthropic API.
+# Update these when new models are released.
+
+VALID_MODELS = {
+    # Claude 3.5 Sonnet (latest, most capable)
+    'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-20241022',
+    # Claude 3 Haiku (fastest, cheapest)
+    'claude-3-haiku-20240307': 'claude-3-haiku-20240307',
+    # Aliases for internal use
+    'sonnet': 'claude-3-5-sonnet-20241022',
+    'haiku': 'claude-3-haiku-20240307',
+}
+
+DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
+
+
+@dataclass
+class AIResponse:
+    """Response from an AI generation call."""
+    content: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    stop_reason: str
 
 
 class AIService:
@@ -35,11 +65,11 @@ class AIService:
     Usage:
         ai = AIService()
         
-        # Generate a board report
-        report = await ai.generate_board_report(context)
-        
+        # Generate a board report with model specification
+        report, usage = await ai.generate_board_report(context, model='sonnet')
+
         # Get daily pulse
-        pulse = await ai.generate_daily_pulse(context)
+        pulse, usage = await ai.generate_daily_pulse(context, model='haiku')
     """
     
     def __init__(self):
@@ -57,6 +87,32 @@ class AIService:
         """Check if AI service is properly configured."""
         return bool(self.api_key)
     
+    def _resolve_model(self, model: Optional[str]) -> str:
+        """
+        Resolve a model identifier to a valid Anthropic model ID.
+
+        Args:
+            model: Model name, alias, or full ID
+
+        Returns:
+            Valid Anthropic model ID
+        """
+        if not model:
+            return DEFAULT_MODEL
+
+        # Check if it's already a valid model ID or alias
+        if model in VALID_MODELS:
+            return VALID_MODELS[model]
+
+        # Check if it matches a known model pattern
+        if model.startswith('claude-3'):
+            # Assume it's a valid model ID being passed directly
+            return model
+
+        # Default fallback
+        logger.warning(f"Unknown model '{model}', defaulting to {DEFAULT_MODEL}")
+        return DEFAULT_MODEL
+
     async def _get_client(self):
         """Lazy initialization of Anthropic client."""
         if self._client is None and self.is_configured:
@@ -68,42 +124,156 @@ class AIService:
     async def _call_claude(
         self,
         prompt: str,
+        model: Optional[str] = None,
         max_tokens: int = 2000,
         temperature: float = 0.7
-    ) -> str:
+    ) -> AIResponse:
         """
         Make a call to Claude API.
         
         Args:
             prompt: The prompt to send
+            model: Model to use (alias or full ID)
             max_tokens: Maximum response length
             temperature: Creativity level (0-1)
             
         Returns:
-            Claude's response text
+            AIResponse with content and token usage
         """
+        resolved_model = self._resolve_model(model)
+
         if not self.is_configured:
-            return "AI features are not configured. Please set ANTHROPIC_API_KEY."
-        
+            return AIResponse(
+                content="AI features are not configured. Please set ANTHROPIC_API_KEY.",
+                model=resolved_model,
+                input_tokens=0,
+                output_tokens=0,
+                stop_reason='error'
+            )
+
         try:
             client = await self._get_client()
-            msg = await client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            # anthropic SDK returns content as a list of blocks
+            # Anthropic Prompt Caching:
+            # Cache reusable "system" instructions + historical check-in blocks to
+            # avoid paying full input-token cost for repeated prefixes.
+            #
+            # We keep this as a best-effort heuristic inside _call_claude so we can
+            # benefit across features without changing every prompt builder.
+            system_blocks = None
+            user_content = None
+
+            # Board report: cache system instructions + "Recent Performance" (check-ins)
+            if "Recent Performance:" in prompt and "Generate a professional board report with:" in prompt:
+                company_idx = prompt.find("Company:")
+                if company_idx != -1:
+                    system_prompt = prompt[:company_idx].strip()
+                    rest = prompt[company_idx:].lstrip()
+
+                    header_idx = rest.find("Recent Performance:")
+                    generate_idx = rest.find("Generate a professional board report with:")
+
+                    if header_idx != -1 and generate_idx != -1 and generate_idx > header_idx:
+                        before_checkins = rest[:header_idx].rstrip()
+                        checkins_text = rest[(header_idx + len("Recent Performance:")):generate_idx].strip()
+                        after_checkins = rest[generate_idx:].lstrip()
+
+                        system_blocks = [
+                            {
+                                "type": "text",
+                                "text": system_prompt,
+                                "cache_control": {"type": "ephemeral"},
+                            },
+                            {
+                                "type": "text",
+                                "text": f"Recent Performance:\n{checkins_text}",
+                                "cache_control": {"type": "ephemeral"},
+                            },
+                        ]
+                        user_content = f"{before_checkins}\n\n{after_checkins}".strip()
+
+            # Strategy brief: cache system instructions + "Performance Summary" (check-ins)
+            if system_blocks is None and "Performance Summary:" in prompt and "Generate a quarterly growth strategy brief with:" in prompt:
+                company_idx = prompt.find("Company:")
+                if company_idx != -1:
+                    system_prompt = prompt[:company_idx].strip()
+                    rest = prompt[company_idx:].lstrip()
+
+                    header_idx = rest.find("Performance Summary:")
+                    generate_idx = rest.find("Generate a quarterly growth strategy brief with:")
+
+                    if header_idx != -1 and generate_idx != -1 and generate_idx > header_idx:
+                        before_summary = rest[:header_idx].rstrip()
+                        checkins_text = rest[(header_idx + len("Performance Summary:")):generate_idx].strip()
+                        after_summary = rest[generate_idx:].lstrip()
+
+                        system_blocks = [
+                            {
+                                "type": "text",
+                                "text": system_prompt,
+                                "cache_control": {"type": "ephemeral"},
+                            },
+                            {
+                                "type": "text",
+                                "text": f"Performance Summary:\n{checkins_text}",
+                                "cache_control": {"type": "ephemeral"},
+                            },
+                        ]
+                        user_content = f"{before_summary}\n\n{after_summary}".strip()
+
+            # Fallback: enable automatic caching for generic prompts
+            # (keeps the request schema valid even if heuristic splitting fails)
+            if system_blocks is None:
+                msg = await client.messages.create(
+                    model=resolved_model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    cache_control={"type": "ephemeral"},
+                    messages=[{"role": "user", "content": prompt}],
+                )
+            else:
+                msg = await client.messages.create(
+                    model=resolved_model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system_blocks,
+                    messages=[{"role": "user", "content": user_content}],
+                )
+
+            # Extract text content
             parts = []
             for block in getattr(msg, "content", []) or []:
                 text = getattr(block, "text", None)
                 if text:
                     parts.append(text)
-            return "\n".join(parts).strip()
+
+            content = "\n".join(parts).strip()
+
+            # Extract token usage from response
+            usage = getattr(msg, "usage", None)
+            input_tokens = getattr(usage, "input_tokens", 0) if usage else 0
+            output_tokens = getattr(usage, "output_tokens", 0) if usage else 0
+            stop_reason = getattr(msg, "stop_reason", "end_turn") or "end_turn"
+
+            logger.debug(f"Claude call: model={resolved_model}, input={input_tokens}, output={output_tokens}")
+
+            return AIResponse(
+                content=content,
+                model=resolved_model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                stop_reason=stop_reason
+            )
+
         except Exception as e:
             logger.error(f"Claude API error: {e}")
-            return f"Error generating AI content: {str(e)}"
-    
+            return AIResponse(
+                content=f"Error generating AI content: {str(e)}",
+                model=resolved_model,
+                input_tokens=0,
+                output_tokens=0,
+                stop_reason='error'
+            )
+
     def _format_currency(self, amount: float) -> str:
         """Format amount in Indian currency notation."""
         if amount >= 10_000_000:
@@ -115,26 +285,18 @@ class AIService:
     
     async def generate_board_report(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, str]:
+        context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Tuple[Dict[str, str], Dict[str, Any]]:
         """
         Generate a monthly board report.
         
         Args:
-            context: Dict with:
-                - company_name: Company name
-                - current_mrr: Current MRR
-                - growth_rate: Monthly growth rate
-                - checkins: Recent check-in history
-                - highlights: Key wins/losses
-                - stage: Funding stage
-                
+            context: Dict with company metrics
+            model: Model to use (optional, defaults to sonnet)
+
         Returns:
-            Dict with:
-                - summary: Executive summary
-                - metrics: Key metrics section
-                - analysis: Growth analysis
-                - next_steps: Recommended actions
+            Tuple of (report_dict, usage_dict)
         """
         prompt = f"""You are an experienced startup board advisor helping an Indian SaaS founder prepare their monthly board report.
 
@@ -156,28 +318,33 @@ Generate a professional board report with:
 Use Indian context (₹ currency, Indian market references).
 Be data-driven and actionable. Keep it under 500 words total."""
 
-        response = await self._call_claude(prompt, max_tokens=1500)
-        
+        response = await self._call_claude(prompt, model=model, max_tokens=1500)
+
         # Parse sections from response
-        sections = self._parse_report_sections(response)
-        
-        return sections
-    
+        sections = self._parse_report_sections(response.content)
+
+        usage = {
+            'model': response.model,
+            'input_tokens': response.input_tokens,
+            'output_tokens': response.output_tokens,
+        }
+
+        return sections, usage
+
     async def generate_daily_pulse(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Generate daily pulse insights.
         
         Args:
             context: Dict with current metrics and recent activity
-            
+            model: Model to use (optional, defaults to haiku for cost)
+
         Returns:
-            Dict with:
-                - greeting: Personalized greeting
-                - highlights: List of key points
-                - action: One suggested action
+            Tuple of (pulse_dict, usage_dict)
         """
         prompt = f"""You are a growth coach for an Indian SaaS founder. Generate a brief morning pulse update.
 
@@ -193,28 +360,38 @@ Generate a brief (3-4 bullet points) morning pulse with:
 
 Be encouraging but actionable. Indian founder context."""
 
-        response = await self._call_claude(prompt, max_tokens=500, temperature=0.8)
-        
-        return {
+        # Default to haiku for daily pulse (cost efficiency)
+        use_model = model or 'haiku'
+        response = await self._call_claude(prompt, model=use_model, max_tokens=500, temperature=0.8)
+
+        pulse = {
             'greeting': 'Good morning! Here\'s your startup pulse for today.',
-            'content': response,
+            'content': response.content,
             'generated_at': datetime.now(timezone.utc).isoformat()
         }
-    
+
+        usage = {
+            'model': response.model,
+            'input_tokens': response.input_tokens,
+            'output_tokens': response.output_tokens,
+        }
+
+        return pulse, usage
+
     async def generate_weekly_question(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, str]:
+        context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Tuple[Dict[str, str], Dict[str, Any]]:
         """
         Generate a weekly strategic question for reflection.
         
         Args:
             context: Dict with company stage and recent performance
-            
+            model: Model to use (optional)
+
         Returns:
-            Dict with:
-                - question: The strategic question
-                - hint: Guidance for answering
+            Tuple of (question_dict, usage_dict)
         """
         prompt = f"""You are a growth coach for a {context.get('stage', 'pre-seed')} Indian SaaS founder.
 
@@ -233,36 +410,48 @@ Format:
 QUESTION: [your question]
 HINT: [your hint]"""
 
-        response = await self._call_claude(prompt, max_tokens=300, temperature=0.9)
-        
+        # Default to haiku for weekly questions
+        use_model = model or 'haiku'
+        response = await self._call_claude(prompt, model=use_model, max_tokens=300, temperature=0.9)
+
         # Parse question and hint
         question = "What's the biggest obstacle preventing you from doubling your growth rate?"
         hint = "Think about sales cycles, marketing channels, pricing, or team capacity."
         
-        if 'QUESTION:' in response:
-            parts = response.split('HINT:')
+        if 'QUESTION:' in response.content:
+            parts = response.content.split('HINT:')
             question = parts[0].replace('QUESTION:', '').strip()
             if len(parts) > 1:
                 hint = parts[1].strip()
         
-        return {
+        result = {
             'question': question,
             'hint': hint,
             'generated_at': datetime.now(timezone.utc).isoformat()
         }
-    
+
+        usage = {
+            'model': response.model,
+            'input_tokens': response.input_tokens,
+            'output_tokens': response.output_tokens,
+        }
+
+        return result, usage
+
     async def generate_deviation_analysis(
         self,
-        context: Dict[str, Any]
-    ) -> str:
+        context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Tuple[str, Dict[str, Any]]:
         """
         Analyze why actual revenue deviated from projection.
         
         Args:
             context: Dict with actual vs projected and check-in notes
-            
+            model: Model to use (optional)
+
         Returns:
-            Analysis text
+            Tuple of (analysis_text, usage_dict)
         """
         deviation = context.get('deviation_pct', 0)
         direction = 'above' if deviation > 0 else 'below'
@@ -279,20 +468,32 @@ Provide a brief (2-3 sentences) analysis of:
 
 Be specific and actionable. Indian SaaS context."""
 
-        return await self._call_claude(prompt, max_tokens=300)
-    
+        # Default to haiku for deviation analysis
+        use_model = model or 'haiku'
+        response = await self._call_claude(prompt, model=use_model, max_tokens=300)
+
+        usage = {
+            'model': response.model,
+            'input_tokens': response.input_tokens,
+            'output_tokens': response.output_tokens,
+        }
+
+        return response.content, usage
+
     async def generate_strategy_brief(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, str]:
+        context: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Tuple[Dict[str, str], Dict[str, Any]]:
         """
         Generate a quarterly growth strategy brief.
         
         Args:
             context: Dict with full company context
-            
+            model: Model to use (optional)
+
         Returns:
-            Dict with strategy sections
+            Tuple of (brief_dict, usage_dict)
         """
         prompt = f"""You are a growth strategy consultant for an Indian SaaS founder.
 
@@ -305,7 +506,7 @@ Target: {context.get('target', '₹100 Crore ARR')}
 Performance Summary:
 {self._format_checkins(context.get('checkins', []))}
 
-Generate a Q1 2025 growth strategy brief with:
+Generate a quarterly growth strategy brief with:
 
 1. SITUATION ANALYSIS (current state, 2-3 sentences)
 2. GROWTH OPPORTUNITIES (3 specific opportunities)
@@ -315,13 +516,21 @@ Generate a Q1 2025 growth strategy brief with:
 
 Indian market context. Be specific and actionable."""
 
-        response = await self._call_claude(prompt, max_tokens=2000)
-        
-        return {
-            'content': response,
+        response = await self._call_claude(prompt, model=model, max_tokens=2000)
+
+        brief = {
+            'content': response.content,
             'generated_at': datetime.now(timezone.utc).isoformat()
         }
-    
+
+        usage = {
+            'model': response.model,
+            'input_tokens': response.input_tokens,
+            'output_tokens': response.output_tokens,
+        }
+
+        return brief, usage
+
     def _format_checkins(self, checkins: List[Dict[str, Any]]) -> str:
         """Format check-in history for prompts."""
         if not checkins:

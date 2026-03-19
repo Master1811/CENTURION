@@ -126,7 +126,7 @@ class ContextBuilder:
         context = await builder.build(user_id)
         
         # Use context for AI features
-        report = await ai_service.generate_board_report(context.to_dict())
+        report, usage = await ai_service.generate_board_report(context.to_dict())
     """
     
     def __init__(self):
