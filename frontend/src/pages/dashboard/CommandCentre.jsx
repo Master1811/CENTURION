@@ -27,6 +27,7 @@ import { CheckInModal } from '@/components/dashboard/CheckInModal';
 import { SyncStatus, RefreshButton } from '@/components/ui/SyncIndicator';
 import { UpgradeModal, useUpgradeModal } from '@/components/upgrade/UpgradeModal';
 import { OnboardingTour, useTour } from '@/components/tour/OnboardingTour';
+import { FreeTierBanner } from '@/components/dashboard/FreeTierBanner';
 
 // Fallback mock data
 const fallbackData = {
@@ -197,6 +198,9 @@ export const CommandCentre = () => {
           </motion.button>
         </div>
       </div>
+
+      {/* Beta/Free Tier Banner */}
+      <FreeTierBanner />
 
       {/* Top Row - Key Metrics */}
       <div className="grid md:grid-cols-3 gap-4">

@@ -179,8 +179,19 @@ export const AuthProvider = ({ children }) => {
    * @returns {boolean}
    */
   const hasPaidSubscription = () => {
-    return subscription?.status === 'active';
+    return ['founder', 'studio', 'vc_portfolio'].includes(subscription?.plan) &&
+           subscription?.status === 'active';
   };
+
+  // Computed: Beta user check (active status AND not expired)
+  const isBetaUser = Boolean(
+    profile?.beta_status === 'active' &&
+    profile?.beta_expires_at &&
+    new Date(profile.beta_expires_at) > new Date()
+  );
+
+  // Computed: Can access dashboard (beta OR paid)
+  const canAccessDashboard = isBetaUser || hasPaidSubscription();
 
   /**
    * Check if user has completed onboarding
@@ -214,12 +225,14 @@ export const AuthProvider = ({ children }) => {
     signInWithMagicLink,
     signOut,
     getAccessToken,
-    hasPaidSubscription,
     hasCompletedOnboarding,
     refreshProfile,
 
-    // Computed
+    // Computed - access control
     isAuthenticated: Boolean(user),
+    isBetaUser,
+    hasPaidSubscription: hasPaidSubscription(),
+    canAccessDashboard,
     isPaid: hasPaidSubscription(),
   };
 

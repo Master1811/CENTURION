@@ -53,6 +53,9 @@ class UserProfileResponse(BaseModel):
     onboarding_completed: bool = False
     current_streak: int = 0
     created_at: Optional[str] = None
+    # Beta access fields
+    beta_status: str = 'inactive'
+    beta_expires_at: Optional[datetime] = None
 
 
 class OnboardingData(BaseModel):

@@ -1,49 +1,80 @@
 // Protected Route Component
 // ==========================
 // Wraps routes that require authentication.
-// Redirects unauthenticated users to the landing page.
+// Implements two-tier access model:
+//   - Beta users: time-limited dashboard access
+//   - Paid users: full dashboard access
+// Standard free users are redirected to pricing.
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
 
 /**
  * ProtectedRoute Component
  * 
- * Guards routes that require authentication.
+ * Guards routes that require authentication and optionally dashboard access.
  * Shows loading state while checking auth status.
- * Redirects to home page if not authenticated.
- * 
+ *
  * @param {Object} props
- * @param {React.ReactNode} props.children - Child components to render if authenticated
- * @param {boolean} props.requirePaid - If true, requires active subscription
+ * @param {React.ReactNode} props.children - Child components to render if access granted
+ * @param {boolean} props.requireDashboardAccess - If true, requires beta OR paid subscription
  */
-export const ProtectedRoute = ({ children, requirePaid = false }) => {
-  const { isAuthenticated, loading, hasPaidSubscription } = useAuth();
+export const ProtectedRoute = ({ children, requireDashboardAccess = false }) => {
   const location = useLocation();
+  const {
+    isAuthenticated,
+    loading,
+    isBetaUser,
+    hasPaidSubscription,
+    canAccessDashboard,
+    profile,
+  } = useAuth();
 
-  // Show loading spinner while checking auth status
+  // Wait for auth to initialise
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 mx-auto mb-3 text-[#09090B] animate-spin" strokeWidth={1.5} />
-          <p className="text-sm text-[#71717A]">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#B8962E] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Redirect to home if not authenticated
+  // Not authenticated at all → landing page
   if (!isAuthenticated) {
-    // Save the attempted URL for redirect after login
-    return <Navigate to="/" state={{ from: location, authRequired: true }} replace />;
+    return (
+      <Navigate
+        to="/"
+        state={{ from: location, authRequired: true }}
+        replace
+      />
+    );
   }
 
-  // Check subscription if required
-  if (requirePaid && !hasPaidSubscription()) {
-    return <Navigate to="/pricing" state={{ upgradeRequired: true }} replace />;
+  // Dashboard access check (beta OR paid)
+  if (requireDashboardAccess && !canAccessDashboard) {
+    // Beta expired specifically
+    if (
+      profile?.beta_status === 'active' &&
+      profile?.beta_expires_at &&
+      new Date(profile.beta_expires_at) <= new Date()
+    ) {
+      return (
+        <Navigate
+          to="/checkout"
+          state={{ reason: 'beta_expired' }}
+          replace
+        />
+      );
+    }
+    // Never had access (standard user, no subscription)
+    return (
+      <Navigate
+        to="/pricing"
+        state={{ reason: 'subscription_required' }}
+        replace
+      />
+    );
   }
 
   return children;

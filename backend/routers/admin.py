@@ -46,6 +46,11 @@ class GrantSubscription(BaseModel):
     duration_days: int = 365
 
 
+class BetaGrantRequest(BaseModel):
+    """Request to grant beta access."""
+    days: int = 60
+
+
 # ============================================================================
 # ADMIN HELPERS
 # ============================================================================
@@ -133,3 +138,43 @@ async def grant_subscription(
         'message': f'Subscription granted until {expires_at.date()}',
         'subscription': subscription_data
     }
+
+
+@router.post("/beta/{user_id}")
+async def grant_beta_access(
+    user_id: str,
+    request: BetaGrantRequest,
+    admin: Dict[str, Any] = Depends(require_admin)
+):
+    """
+    Grant beta access to a user.
+
+    Used for:
+    - Beta program invitations
+    - Partner access
+    - Testing
+
+    Sets beta_status to 'active' and beta_expires_at to now + days.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    expires_at = datetime.now(timezone.utc) + timedelta(days=request.days)
+
+    await supabase_service.update_profile(
+        user_id,
+        {
+            "beta_status": "active",
+            "beta_expires_at": expires_at.isoformat(),
+        }
+    )
+
+    logger.info(f"Admin {admin['email']} granted {request.days}-day beta to {user_id}")
+
+    return {
+        'success': True,
+        'user_id': user_id,
+        'beta_status': 'active',
+        'beta_expires_at': expires_at.isoformat(),
+        'days': request.days,
+    }
+

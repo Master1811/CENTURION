@@ -69,9 +69,9 @@ function App() {
             <Route path="/preview/connectors" element={<PreviewConnectors />} />
             <Route path="/preview/settings" element={<PreviewSettings />} />
             
-            {/* Dashboard (Protected - Requires Authentication) */}
+            {/* Dashboard (Protected - Requires Beta OR Paid Subscription) */}
             <Route path="/dashboard" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireDashboardAccess={true}>
                 <DashboardLayout />
               </ProtectedRoute>
             }>
