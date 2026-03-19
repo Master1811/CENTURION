@@ -62,11 +62,35 @@ export async function updateUserProfile(accessToken, profileData) {
   }, accessToken);
 }
 
+export async function submitOnboarding(
+  accessToken,
+  { company_name, website = null, stage, sector, current_mrr }
+) {
+  return authFetch(
+    '/api/user/onboarding',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        company_name,
+        website,
+        stage,
+        sector,
+        current_mrr,
+      }),
+    },
+    accessToken
+  );
+}
+
+// Backwards compatible alias (older code used different field names)
 export async function completeOnboarding(accessToken, profileData) {
-  return authFetch('/api/user/onboarding', {
-    method: 'POST',
-    body: JSON.stringify(profileData),
-  }, accessToken);
+  return submitOnboarding(accessToken, {
+    company_name: profileData?.company_name ?? profileData?.company,
+    website: profileData?.website ?? null,
+    stage: profileData?.stage,
+    sector: profileData?.sector ?? profileData?.industry,
+    current_mrr: profileData?.current_mrr,
+  });
 }
 
 // ============================================================================
@@ -197,6 +221,7 @@ export default {
   fetchRevenueIntelligence,
   fetchUserProfile,
   updateUserProfile,
+  submitOnboarding,
   completeOnboarding,
   submitCheckIn,
   fetchCheckIns,

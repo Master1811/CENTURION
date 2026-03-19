@@ -31,6 +31,9 @@ class UserProfile(BaseModel):
     
     name: Optional[str] = Field(None, max_length=100)
     company: Optional[str] = Field(None, max_length=100)
+    # Preferred onboarding field names (expected by onboarding tests/UI)
+    company_name: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=255)
     stage: str = Field(
         default='pre-seed',
         pattern='^(pre-seed|seed|series-a|series-b)$'
@@ -38,6 +41,7 @@ class UserProfile(BaseModel):
     current_mrr: Optional[float] = Field(None, gt=0)
     growth_rate: Optional[float] = Field(None, ge=0, le=2.0)
     industry: Optional[str] = None
+    sector: Optional[str] = None
     team_size: Optional[int] = Field(None, ge=1)
 
 
@@ -47,6 +51,8 @@ class UserProfileResponse(BaseModel):
     email: str
     name: Optional[str] = None
     company: Optional[str] = None
+    company_name: Optional[str] = None
+    website: Optional[str] = None
     stage: str = 'pre-seed'
     current_mrr: Optional[float] = None
     growth_rate: Optional[float] = None
@@ -60,15 +66,14 @@ class UserProfileResponse(BaseModel):
 
 class OnboardingData(BaseModel):
     """Data collected during onboarding flow."""
-    name: str = Field(..., min_length=1, max_length=100)
-    company: str = Field(..., min_length=1, max_length=100)
+    company_name: str = Field(..., min_length=1, max_length=100)
+    website: Optional[str] = Field(None, max_length=255)
     stage: str = Field(
         ...,
         pattern='^(pre-seed|seed|series-a|series-b)$'
     )
     current_mrr: float = Field(..., gt=0)
-    growth_rate: float = Field(..., ge=0, le=2.0)
-    industry: Optional[str] = None
+    sector: Optional[str] = None
 
 
 # ============================================================================

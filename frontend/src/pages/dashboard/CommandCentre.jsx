@@ -28,6 +28,7 @@ import { SyncStatus, RefreshButton } from '@/components/ui/SyncIndicator';
 import { UpgradeModal, useUpgradeModal } from '@/components/upgrade/UpgradeModal';
 import { OnboardingTour, useTour } from '@/components/tour/OnboardingTour';
 import { FreeTierBanner } from '@/components/dashboard/FreeTierBanner';
+import { OnboardingModal } from '@/components/dashboard/OnboardingModal';
 
 // Fallback mock data
 const fallbackData = {
@@ -61,11 +62,12 @@ const HealthSignal = ({ status }) => (
 );
 
 export const CommandCentre = () => {
-  const { getAccessToken } = useAuth();
+  const { getAccessToken, profile } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { isOpen: showUpgrade, modalProps, showUpgradeModal, hideUpgradeModal } = useUpgradeModal();
@@ -107,6 +109,19 @@ export const CommandCentre = () => {
     loadData();
   }, [loadData]);
 
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (!profile) return;
+    // Show onboarding if company is not set and onboarding has not been completed
+    const needsOnboarding = (
+      !profile.company_name &&
+      !profile.onboarding_completed
+    );
+    if (needsOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [profile]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadData();
@@ -142,6 +157,13 @@ export const CommandCentre = () => {
 
   return (
     <div className="space-y-6" data-testid="command-centre">
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
+
       {/* Header with Sync Indicator */}
       <div className="flex items-center justify-between">
         <div>

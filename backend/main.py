@@ -226,10 +226,16 @@ async def complete_onboarding(
     """Complete user onboarding."""
     from routers.engine import predict_trajectory
     
+    # Persist onboarding using field names expected by the onboarding UI/tests.
+    # Also fall back to older field names if they are present.
     profile_data = {
         'id': user['id'],
         'email': user['email'],
-        **profile.model_dump(exclude_none=True),
+        'company_name': profile.company_name or profile.company,
+        'website': profile.website,
+        'stage': profile.stage,
+        'sector': profile.sector or profile.industry,
+        'current_mrr': profile.current_mrr,
         'onboarding_completed': True,
     }
     
