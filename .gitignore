@@ -1,24 +1,12 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# ===================
-# IDE and Editors
-# ===================
+# IDE and editors
 .idea/
 .vscode/
-*.iml
 
-# ===================
-# AI/Agent Tool Configs (local settings, not needed in repo)
-# ===================
-.claude/
-.cursor/
-.emergent/
-.playwright-mcp/
-
-# ===================
 # Dependencies
-# ===================
 node_modules/
+/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -28,89 +16,55 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# ===================
-# Python
-# ===================
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-venv/
-.venv/
-env/
-.env/
-*.egg-info/
-.eggs/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# ===================
-# Environment files
-# ===================
-.env
-.env.*
-!.env.example
-*token.json*
-*credentials.json*
-
-# ===================
-# Testing & Coverage
-# ===================
+# Testing
 /coverage
-htmlcov/
-.pytest_cache/
-.coverage
-.coverage.*
 
-# ===================
-# Build & Production
-# ===================
-/build
-dist/
+# Next.js
 /.next/
 /out/
 next-env.d.ts
 *.tsbuildinfo
 
-# ===================
-# Logs and Debug
-# ===================
+# Production builds
+/build
+dist/
+dist
+
+# Environment files (comprehensive coverage)
+
+*token.json*
+*credentials.json*
+
+# Logs and debug files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 dump.rdb
-*.log
 
-# ===================
 # System files
-# ===================
 .DS_Store
-Thumbs.db
 *.pem
 
-# ===================
-# Screenshots & Test artifacts (temporary)
-# ===================
-*.png
-tests/screenshots/
+# Python
+__pycache__/
+*pyc*
+venv/
+.venv/
 
-# ===================
-# Test result files (generated, not source)
-# ===================
-backend_test_results.json
-test_result.md
-test_reports/iteration_*.json
-test_reports/pytest/
+# Development tools
+chainlit.md
+.chainlit
+.ipynb_checkpoints/
+.ac
 
-# ===================
-# Build caches
-# ===================
-.cache/
+# Deployment
+.vercel
 
-# ===================
-# Archive files
-# ===================
+# Data and databases
+agenthub/agents/youtube/db
+
+# Archive files and large assets
 **/*.zip
 **/*.tar.gz
 **/*.tar
@@ -119,16 +73,30 @@ test_reports/pytest/
 *.deb
 *.dylib
 
-# ===================
-# Deployment
-# ===================
-.vercel
+# Build caches
+.cache/
 
-# ===================
-# Misc Development tools
-# ===================
-chainlit.md
-.chainlit
-.ipynb_checkpoints/
+# Mobile development
+android-sdk/ frontend/node_modules/.cache/default-development/4.pack
+frontend/node_modules/.cache/default-development/1.pack
+frontend/node_modules/.cache/default-development/4.pack
+frontend/node_modules/.cache/default-development/5.pack
+frontend/node_modules/.cache/default-development/0.pack
+-e 
+# Environment files
+*.env
+*.env.*
+frontend/node_modules/.cache/default-development/7.pack
+-e 
+# Environment files
+*.env
+*.env.*
+frontend/node_modules/.cache/default-development/3.pack
+frontend/node_modules/.cache/default-development/9.pack
+frontend/node_modules/.cache/default-development/10.pack
+frontend/node_modules/.cache/default-development/11.pack
+-e 
+# Environment files
+*.env
 *.env.*
 frontend/node_modules/.cache/default-development/15.pack
