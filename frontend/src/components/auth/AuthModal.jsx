@@ -19,10 +19,11 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin', headline: h
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [dpdpConsent, setDpdpConsent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !dpdpConsent) return;
 
     setLoading(true);
     setError('');
@@ -42,6 +43,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin', headline: h
     setEmail('');
     setSent(false);
     setError('');
+    setDpdpConsent(false);
     onClose();
   };
 
@@ -169,13 +171,43 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin', headline: h
                     />
                   </div>
 
+                  {/* DPDP Consent Checkbox */}
+                  <label className="flex items-start gap-3 mb-4 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={dpdpConsent}
+                      onChange={(e) => setDpdpConsent(e.target.checked)}
+                      disabled={loading}
+                      required
+                      className={cn(
+                        "mt-0.5 w-4 h-4 rounded border-2 border-zinc-300",
+                        "bg-transparent checked:bg-[#09090B] checked:border-[#09090B]",
+                        "focus:ring-2 focus:ring-[#09090B]/20 focus:ring-offset-0",
+                        "cursor-pointer transition-all"
+                      )}
+                      data-testid="auth-consent-checkbox"
+                    />
+                    <span className="text-xs text-[#71717A] group-hover:text-[#52525B] transition-colors">
+                      I agree to the processing of my personal data as described in the{' '}
+                      <a 
+                        href="/privacy" 
+                        className="text-[#09090B] hover:underline font-medium"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Privacy Policy
+                      </a>
+                    </span>
+                  </label>
+
                   {error && (
                     <p className="text-sm text-red-500 mb-4">{error}</p>
                   )}
 
                   <button
                     type="submit"
-                    disabled={loading || !email}
+                    disabled={loading || !email || !dpdpConsent}
                     className={cn(
                       'w-full h-12 rounded-xl',
                       'bg-[#09090B] text-white',
@@ -207,7 +239,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'signin', headline: h
                 </form>
 
                 <p className="text-xs text-[#A1A1AA] text-center mt-4">
-                  By continuing, you agree to our Terms of Service and Privacy Policy.
+                  By continuing, you agree to our Terms of Service.
                 </p>
               </>
             ) : (

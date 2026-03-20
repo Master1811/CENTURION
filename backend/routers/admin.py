@@ -472,3 +472,74 @@ async def get_system_health(
     
     return health
 
+
+
+
+# ============================================================================
+# WAITLIST ADMIN
+# ============================================================================
+
+@router.get("/waitlist")
+async def get_admin_waitlist(
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """
+    Get all waitlist entries for admin review.
+    
+    Returns entries ordered by created_at (newest first) with total count.
+    """
+    if not supabase_service.is_configured:
+        return {"total": 0, "entries": []}
+    
+    try:
+        result = supabase_service._client.table("waitlist")\
+            .select("*")\
+            .order("created_at", desc=True)\
+            .execute()
+        
+        entries = result.data or []
+        
+        return {
+            "total": len(entries),
+            "entries": entries
+        }
+    except Exception as e:
+        admin_logger.error(f"Failed to fetch waitlist: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch waitlist: {str(e)}"
+        )
+
+
+@router.put("/waitlist/{email}/convert")
+async def mark_waitlist_converted(
+    email: str,
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """
+    Mark a waitlist entry as converted (user signed up).
+    """
+    if not supabase_service.is_configured:
+        return {"success": False, "message": "Database not configured"}
+    
+    try:
+        result = supabase_service._client.table("waitlist")\
+            .update({"converted": True})\
+            .eq("email", email.lower())\
+            .execute()
+        
+        if result.data:
+            admin_logger.info(f"Waitlist entry converted: {email}")
+            return {"success": True, "message": "Entry marked as converted"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Email not found in waitlist"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update: {str(e)}"
+        )

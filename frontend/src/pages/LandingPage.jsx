@@ -1,5 +1,5 @@
 // Landing Page - Figma-inspired layout (with 100Cr Engine branding)
-// Structure: Hero → Scroll Story → Inline CTA → Quiz → Social Proof → Teaser → FAQ → Inline CTA → CTA
+// Structure: Hero → Scroll Story → Inline CTA → Quiz → Social Proof → Teaser → FAQ → Waitlist → CTA
 
 import React from 'react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -13,6 +13,8 @@ import { FounderDNAQuiz } from '@/components/landing/FounderDNAQuiz';
 import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { TeaserLockedSection } from '@/components/landing/TeaserLockedSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { WaitlistSection } from '@/components/landing/WaitlistSection';
+import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 
 export const LandingPage = () => {
   return (
@@ -48,11 +50,17 @@ export const LandingPage = () => {
         {/* Inline CTA #2 */}
         <InlineCTA />
 
+        {/* Beta Waitlist - below the hero */}
+        <WaitlistSection />
+
         {/* Final CTA */}
         <CTASection />
       </main>
       
       <Footer />
+      
+      {/* Cookie Consent Banner */}
+      <CookieConsentBanner />
     </div>
   );
 };

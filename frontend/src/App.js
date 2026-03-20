@@ -15,6 +15,7 @@ import GrowthCalculator from "@/pages/tools/GrowthCalculator";
 import PricingPage from "@/pages/PricingPage";
 import AuthCallback from "@/pages/AuthCallback";
 import CheckoutPage from "@/pages/CheckoutPage";
+import PrivacyPage from "@/pages/PrivacyPage";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -54,6 +55,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
             
             {/* Free Tools */}
             <Route path="/tools" element={<Navigate to="/tools/100cr-calculator" replace />} />

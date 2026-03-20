@@ -71,6 +71,7 @@ from routers import (
     admin_router,
 )
 from routers.payments import router as payments_router
+from routers.waitlist import router as waitlist_router
 from services import (
     supabase_service,
     get_current_user,
@@ -461,6 +462,10 @@ api_router.include_router(admin_router)
 app.include_router(api_router)
 app.include_router(
     payments_router,
+    prefix="/api"
+)
+app.include_router(
+    waitlist_router,
     prefix="/api"
 )
 

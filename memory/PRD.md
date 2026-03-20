@@ -259,12 +259,40 @@ Tables defined in `/docs/supabase_schema.sql`:
   - Silently redirects non-admins to home (security through obscurity)
   - `REACT_APP_ADMIN_EMAILS` for frontend admin check
 
+### Phase 12 - Beta Launch Features (Complete - March 20, 2026)
+- **Waitlist System**:
+  - `backend/routers/waitlist.py` with POST /api/waitlist endpoint
+  - Pydantic validation with stage options matching FounderDNAQuiz
+  - Duplicate email check returns 409 Conflict
+  - Position number calculated from total waitlist count
+  - Shareable referral URL with email slug (e.g., `?ref=user-email`)
+  - GET /api/admin/waitlist endpoint for admin management
+  - PUT /api/admin/waitlist/{email}/convert for conversion tracking
+- **DPDP Compliance (Digital Personal Data Protection Act 2023)**:
+  - `backend/migrations/dpdp_compliance.sql` with waitlist table and profile columns
+  - `dpdp_consent_given` and `dpdp_consent_at` fields in both tables
+  - Required consent checkbox in waitlist form (blocks submission when unchecked)
+  - Required consent checkbox in AuthModal (blocks email submission)
+  - Privacy Policy page at /privacy with all 6 DPDP disclosures:
+    1. Identity of Data Fiduciary
+    2. Categories of Personal Data Collected
+    3. Purpose of Processing
+    4. Retention Period
+    5. User Rights (access, correction, erasure, grievance redressal, nomination)
+    6. Contact Details (Data Protection Officer)
+- **Cookie Consent Banner**:
+  - Appears on first visit to non-authenticated users
+  - Accept/Decline buttons
+  - Stored in localStorage as `centurion_cookie_consent`
+  - If declined, analytics scripts are not loaded
+  - Timestamp recorded for compliance audit
+
 ## Testing Status
-- **Backend**: 100% (31/31 tests passed)
+- **Backend**: 100% (31/31 tests passed + waitlist endpoints verified)
 - **Frontend**: 100% (all features verified)
-- **Habit Engine**: 4 cron jobs running (verified)
-- **Admin Dashboard**: Protected and functional
-- **Security Audit**: All critical items verified
+- **Waitlist**: POST returns position number, consent validation works
+- **Privacy Page**: Loads at /privacy without errors
+- **Cookie Banner**: Appears, stores choice correctly
 - **Last Test**: March 20, 2026
 
 ## Scalability Notes (10,000+ Users)
@@ -288,12 +316,12 @@ The habit engine is designed for scale:
 - [x] Admin Control Panel with monitoring
 
 ### P1 (High) - Next Sprint
+- [ ] Run `backend/migrations/dpdp_compliance.sql` in Supabase SQL Editor
 - [ ] Set ADMIN_EMAILS environment variable in backend/.env
 - [ ] Set REACT_APP_ADMIN_EMAILS in frontend/.env
 - [ ] Enable Google OAuth in Supabase project settings
-- [ ] Run habit engine schema migrations in Supabase
-- [ ] Configure ANTHROPIC_API_KEY for AI features
-- [ ] Test with real authenticated user flow
+- [ ] Set ANTHROPIC_API_KEY for AI features
+- [ ] Configure FRONTEND_URL env variable for correct share URLs
 
 ### P2 (Medium)
 - [ ] Configure Resend for production email delivery
