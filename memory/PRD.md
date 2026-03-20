@@ -229,11 +229,42 @@ Tables defined in `/docs/supabase_schema.sql`:
   - Protected routes redirect gracefully to auth
   - No user traps - clear navigation paths
 
+### Phase 11 - Security Audit & Observability (Complete - March 20, 2026)
+- **Authentication Security Enhancements**:
+  - `require_paid_subscription` properly handles starter/founder/trialing statuses
+  - Subscription expiration checking with proper date parsing
+  - Comprehensive logging of all auth events
+- **Payments Webhook Security**:
+  - Proper HMAC signature verification (constant-time comparison)
+  - Complete plan handling: starter (30d), founder (365d), trial (7d)
+  - `expires_at` field properly calculated and stored
+  - Idempotency check via `payment_ref` to prevent duplicate processing
+- **Habit Engine Integration**:
+  - Anomaly alert triggered on >10% revenue drop during check-in
+  - Streak updates with 35-day window (reset if gap too long)
+  - Background task processing for non-blocking alerts
+- **Admin Security**:
+  - Hashed email comparison for admin verification (prevents timing attacks)
+  - All admin access attempts logged for audit trail
+  - Silent redirect for non-admins (doesn't reveal admin route exists)
+  - `ADMIN_EMAILS` environment variable for configuration
+- **Comprehensive Observability**:
+  - `logging_service.py` with structured JSON logging
+  - Request middleware adds `X-Request-ID` (8-char UUID) and `X-Response-Time`
+  - Sensitive data masking in logs
+  - MetricsCollector for performance tracking
+  - Named loggers: auth_logger, api_logger, habit_logger, payment_logger, ai_logger, admin_logger, db_logger
+- **Frontend Admin Protection**:
+  - `ProtectedRoute` with `requireAdmin` prop
+  - Silently redirects non-admins to home (security through obscurity)
+  - `REACT_APP_ADMIN_EMAILS` for frontend admin check
+
 ## Testing Status
-- **Backend**: 100% (25/25 tests passed)
+- **Backend**: 100% (31/31 tests passed)
 - **Frontend**: 100% (all features verified)
 - **Habit Engine**: 4 cron jobs running (verified)
 - **Admin Dashboard**: Protected and functional
+- **Security Audit**: All critical items verified
 - **Last Test**: March 20, 2026
 
 ## Scalability Notes (10,000+ Users)
@@ -257,7 +288,8 @@ The habit engine is designed for scale:
 - [x] Admin Control Panel with monitoring
 
 ### P1 (High) - Next Sprint
-- [ ] Set ADMIN_EMAILS environment variable for admin access
+- [ ] Set ADMIN_EMAILS environment variable in backend/.env
+- [ ] Set REACT_APP_ADMIN_EMAILS in frontend/.env
 - [ ] Enable Google OAuth in Supabase project settings
 - [ ] Run habit engine schema migrations in Supabase
 - [ ] Configure ANTHROPIC_API_KEY for AI features
