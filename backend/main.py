@@ -221,14 +221,42 @@ user_router = APIRouter(prefix="/user", tags=["User"])
 
 @user_router.get("/profile")
 async def get_user_profile(user: Dict[str, Any] = Depends(require_auth)):
-    """Get current user's profile."""
-    profile = await supabase_service.get_profile(user['id'])
-    subscription = await supabase_service.get_subscription(user['id'])
+    """
+    Get current user's profile.
+    
+    Auto-creates profile if it doesn't exist (handles first-time login).
+    """
+    user_id = user['id']
+    user_email = user['email']
+    
+    profile = await supabase_service.get_profile(user_id)
+    
+    # Auto-create profile if it doesn't exist (first-time user)
+    if profile is None:
+        logger.info(f"Creating new profile for first-time user: {user_id}")
+        try:
+            profile = await supabase_service.upsert_profile({
+                'id': user_id,
+                'email': user_email,
+                'onboarding_completed': False,
+                'plan_tier': 'FREE',
+            })
+            logger.info(f"Profile created successfully for user: {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to create profile for user {user_id}: {e}")
+            # Return minimal profile even if creation failed
+            profile = {
+                'id': user_id,
+                'email': user_email,
+                'onboarding_completed': False,
+            }
+    
+    subscription = await supabase_service.get_subscription(user_id)
     
     return {
         'user': {
-            'id': user['id'],
-            'email': user['email'],
+            'id': user_id,
+            'email': user_email,
             **(profile or {})
         },
         'subscription': subscription
@@ -343,11 +371,6 @@ api_router.include_router(user_router)
 
 quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
-class QuizSubmission(BaseModel):
-    """Founder DNA Quiz submission."""
-    answers: Dict[str, Any]
-    email: Optional[EmailStr] = None
-
 class QuizAnswers(BaseModel):
     """Validated quiz answers with strict enums."""
     revenue_range: Literal['less-than-1l', '1l-5l', '5l-20l', '20l-50l', 'more-than-50l']
@@ -361,6 +384,7 @@ class QuizAnswers(BaseModel):
 
 
 class QuizSubmission(BaseModel):
+    """Founder DNA Quiz submission."""
     answers: QuizAnswers
     email: Optional[EmailStr] = None
 
@@ -428,8 +452,8 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
     
     # Get benchmark comparison
     benchmark = INDIA_SAAS_BENCHMARKS.get(stage, INDIA_SAAS_BENCHMARKS['pre-seed'])
-    percentile, status = calculate_percentile(growth, benchmark)
-    insight = generate_insight(growth, percentile, status, stage)
+    percentile, benchmark_status = calculate_percentile(growth, benchmark)
+    insight = generate_insight(growth, percentile, benchmark_status, stage)
     
     # Store submission
     await supabase_service.save_quiz_submission({
@@ -447,7 +471,7 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
         'projection': projection,
         'benchmark': {
             'percentile': percentile,
-            'status': status,
+            'status': benchmark_status,
         },
         'insight': insight,
     }

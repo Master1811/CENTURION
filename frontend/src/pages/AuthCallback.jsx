@@ -49,9 +49,32 @@ export const AuthCallback = () => {
       }
 
       try {
-        // Supabase client automatically handles the token exchange
-        // when detectSessionInUrl is true (which it is in our client)
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Check for PKCE code in URL (for OAuth flows)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        let session = null;
+        let error = null;
+        
+        if (code) {
+          // PKCE flow: Exchange code for session
+          console.log('[Auth] PKCE code detected, exchanging for session...');
+          const result = await supabase.auth.exchangeCodeForSession(code);
+          session = result.data?.session;
+          error = result.error;
+          
+          if (error) {
+            console.error('[Auth] Code exchange failed:', error);
+          }
+        } else {
+          // Implicit flow or magic link: Session should already be in URL hash
+          // Supabase client automatically handles the token exchange
+          // when detectSessionInUrl is true (which it is in our client)
+          console.log('[Auth] No code parameter, trying getSession...');
+          const result = await supabase.auth.getSession();
+          session = result.data?.session;
+          error = result.error;
+        }
 
         if (error) {
           console.error('Auth callback error:', error);
@@ -61,11 +84,13 @@ export const AuthCallback = () => {
         }
 
         if (session) {
+          console.log('[Auth] Session obtained successfully');
           setStatus('success');
           const paramRedirect = searchParams.get('redirectTo');
           const redirectTo = paramRedirect || getRedirectPathAfterAuth();
           setTimeout(() => navigate(redirectTo), 1500);
         } else {
+          console.warn('[Auth] No session found after callback');
           setStatus('error');
           setErrorMessage('No session found. Please try signing in again.');
         }

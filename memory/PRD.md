@@ -389,8 +389,24 @@ REACT_APP_SUPABASE_ANON_KEY=xxx
 ```
 
 ## Next Immediate Tasks
-1. Set ADMIN_EMAILS environment variable in backend/.env (comma-separated admin emails)
-2. Enable Google OAuth provider in Supabase project (Authentication > Providers > Google)
-3. Run habit engine schema in Supabase SQL Editor (engagement_events table)
-4. Set ANTHROPIC_API_KEY in backend/.env for AI features
-5. Test full auth flow with real user (Magic Link + Google OAuth)
+1. Run profile auto-creation trigger in Supabase SQL Editor (`backend/migrations/profile_auto_creation_trigger.sql`)
+2. Grant beta access to your user (`backend/migrations/grant_beta_access.sql`)
+3. Verify SKIP_SSL_VERIFY=true in backend/.env (for local dev)
+4. Verify SUPABASE_JWT_SECRET is the actual JWT Secret from Supabase Dashboard -> Settings -> API
+5. Add your local callback URL to Supabase Dashboard -> Authentication -> URL Configuration -> Redirect URLs: `http://localhost:3000/auth/callback`
+6. Test full auth flow: Magic Link → AuthCallback → Dashboard
+
+## Recent Fixes (March 2026 - Auth Audit)
+
+### Fixed Issues:
+1. **JWKS SSL + ES256 Support**: Backend now handles SSL verification issues and supports all asymmetric JWT algorithms (ES256, RS256, etc.)
+2. **Auto Profile Creation**: GET /api/user/profile now auto-creates profile for first-time users
+3. **Frontend 401 Handling**: Frontend signs out user on 401 instead of leaving them in broken state
+4. **PKCE Flow Support**: AuthCallback now properly handles PKCE code exchange for OAuth flows
+5. **Variable Shadowing Fix**: Fixed `status` variable shadowing in quiz endpoint
+
+### New Migration Files:
+- `backend/migrations/profile_auto_creation_trigger.sql` - Database trigger for auto profile creation
+- `backend/migrations/grant_beta_access.sql` - SQL to grant beta access to users
+- `docs/AUTH_FIXES_SUMMARY.md` - Detailed documentation of all auth fixes
+

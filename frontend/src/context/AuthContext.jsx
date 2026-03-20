@@ -59,9 +59,34 @@ export const AuthProvider = ({ children }) => {
             plan: data.subscription?.plan,
           });
         }
+      } else if (response.status === 401) {
+        // Token is invalid or expired - sign out user to force re-authentication
+        console.warn('[Auth] 401 received from profile endpoint - signing out');
+        addBreadcrumb('Profile fetch returned 401 - forcing sign out', 'auth', 'warning');
+        
+        // Clear local state
+        setProfile(null);
+        setSubscription(null);
+        
+        // Sign out from Supabase to clear invalid session
+        if (isSupabaseConfigured()) {
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('[Auth] Error during sign out:', signOutError);
+          }
+        }
+        setUser(null);
+        setSession(null);
+        clearUserContext();
+      } else {
+        // Other errors (5xx, etc.) - log but don't sign out
+        console.error('[Auth] Profile fetch failed with status:', response.status);
+        addBreadcrumb(`Profile fetch failed: ${response.status}`, 'auth', 'error');
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
+      addBreadcrumb('Profile fetch network error', 'auth', 'error', { error: error.message });
     }
   }, []);
 

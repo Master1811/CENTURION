@@ -163,7 +163,7 @@ class AuthConfig:
 
 
 def get_jwks_client() -> Optional[PyJWKClient]:
-    """Get or create the JWKS client singleton."""
+    """Get or create the JWKS client singleton with SSL handling."""
     global _jwks_client
     
     if _jwks_client is not None:
@@ -174,6 +174,25 @@ def get_jwks_client() -> Optional[PyJWKClient]:
         return None
     
     try:
+        # Check if SSL verification should be skipped (for local dev behind corporate proxy)
+        skip_ssl = os.environ.get('SKIP_SSL_VERIFY', 'false').lower() == 'true'
+        
+        if skip_ssl:
+            import ssl
+            import urllib.request
+            
+            # Create SSL context that doesn't verify certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # PyJWKClient uses urllib internally, so we need to install a custom opener
+            https_handler = urllib.request.HTTPSHandler(context=ssl_context)
+            opener = urllib.request.build_opener(https_handler)
+            urllib.request.install_opener(opener)
+            
+            logger.warning("⚠️ SSL verification disabled for JWKS client - development mode only")
+        
         _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=3600)
         logger.info(f"JWKS client initialized for {jwks_url}")
         return _jwks_client
@@ -186,8 +205,8 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
     """
     Verify a Supabase JWT token and return the decoded payload.
     
-    Supports two verification modes:
-    1. JWKS (RS256) - Recommended for production
+    Supports multiple verification modes:
+    1. JWKS (RS256/ES256) - Recommended for production (asymmetric)
     2. HS256 - Legacy symmetric verification
     
     Verification checks:
@@ -208,15 +227,20 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
     try:
         unverified_header = jwt.get_unverified_header(token)
         algorithm = unverified_header.get('alg', 'HS256')
-    except jwt.exceptions.DecodeError:
+        logger.debug(f"Token algorithm detected: {algorithm}")
+    except jwt.exceptions.DecodeError as e:
+        logger.warning(f"Invalid token format: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token format",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    # Try JWKS verification for RS256 tokens
-    if algorithm == 'RS256':
+    # Asymmetric algorithms that require JWKS verification
+    ASYMMETRIC_ALGORITHMS = ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512']
+    
+    # Try JWKS verification for asymmetric algorithms (RS256, ES256, etc.)
+    if algorithm in ASYMMETRIC_ALGORITHMS:
         jwks_client = get_jwks_client()
         if jwks_client:
             try:
@@ -224,29 +248,47 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
                 payload = jwt.decode(
                     token,
                     signing_key.key,
-                    algorithms=['RS256'],
+                    algorithms=[algorithm],  # Use the actual algorithm from the token
                     audience='authenticated',
                     options={'verify_exp': True, 'verify_aud': True}
                 )
-                logger.debug(f"JWT verified via JWKS for user: {payload.get('sub')}")
+                logger.debug(f"JWT verified via JWKS ({algorithm}) for user: {payload.get('sub')}")
                 return payload
             except jwt.ExpiredSignatureError:
-                logger.warning("JWT token expired (JWKS)")
+                logger.warning(f"JWT token expired (JWKS/{algorithm})")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token has expired. Please sign in again.",
                     headers={"WWW-Authenticate": "Bearer"}
                 )
             except jwt.InvalidAudienceError:
-                logger.warning("JWT audience mismatch (JWKS)")
+                logger.warning(f"JWT audience mismatch (JWKS/{algorithm})")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token audience",
                     headers={"WWW-Authenticate": "Bearer"}
                 )
+            except jwt.InvalidSignatureError as e:
+                logger.error(f"JWT signature verification failed (JWKS/{algorithm}): {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token signature",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
             except Exception as e:
-                logger.warning(f"JWKS verification failed, trying HS256: {e}")
-                # Fall through to HS256 verification
+                logger.error(f"JWKS verification failed for {algorithm}: {e}")
+                # For asymmetric algorithms, don't fall back to HS256 - it won't work
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Token verification failed: {str(e)}",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+        else:
+            logger.error(f"JWKS client unavailable for {algorithm} token verification")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication service unavailable. Please try again later."
+            )
     
     # HS256 verification (legacy or fallback)
     jwt_secret = AuthConfig.get_jwt_secret()
@@ -511,7 +553,7 @@ async def require_paid_subscription(
                         'upgrade_url': '/pricing'
                     }
                 )
-        except ValueError as e:
+        except ValueError:
             logger.warning(f"Invalid expiry date format for user {user_id}: {expires_at}")
     
     # Success - attach subscription info to user
