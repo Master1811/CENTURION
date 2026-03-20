@@ -146,6 +146,95 @@ async def check_email_exists(email: str) -> bool:
         return False
 
 
+async def boost_referrer_position(referral_slug: str) -> Optional[str]:
+    """
+    Boost the referrer's position when someone joins via their link.
+    
+    Each referral boosts the referrer's position by 1 (moves them up in the queue).
+    Returns the referrer's email if found, None otherwise.
+    """
+    if not supabase_service.is_configured or not referral_slug:
+        return None
+    
+    try:
+        # Find all users whose email slug matches the referral
+        # We need to search since we don't store slugs directly
+        result = supabase_service._client.table('waitlist')\
+            .select('id, email, referral_count')\
+            .execute()
+        
+        referrer = None
+        for entry in result.data or []:
+            entry_email = entry.get('email', '')
+            if generate_email_slug(entry_email) == referral_slug:
+                referrer = entry
+                break
+        
+        if referrer:
+            # Increment referral count
+            current_count = referrer.get('referral_count') or 0
+            new_count = current_count + 1
+            
+            supabase_service._client.table('waitlist')\
+                .update({'referral_count': new_count})\
+                .eq('id', referrer['id'])\
+                .execute()
+            
+            logger.info(f"Boosted referrer {referrer['email']}: {current_count} -> {new_count} referrals")
+            return referrer['email']
+    except Exception as e:
+        logger.warning(f"Could not boost referrer position: {e}")
+    
+    return None
+
+
+async def get_effective_position(email: str) -> int:
+    """
+    Calculate effective position considering referral boosts.
+    
+    Position = (signup order) - (referral_count)
+    Minimum position is 1.
+    """
+    if not supabase_service.is_configured:
+        return 1
+    
+    try:
+        # Get all waitlist entries ordered by created_at
+        result = supabase_service._client.table('waitlist')\
+            .select('email, referral_count, created_at')\
+            .order('created_at')\
+            .execute()
+        
+        entries = result.data or []
+        
+        # Calculate effective positions
+        # Sort by (original_position - referral_count) to determine queue order
+        positions = []
+        for idx, entry in enumerate(entries):
+            original_pos = idx + 1
+            referral_boost = entry.get('referral_count') or 0
+            effective_pos = max(1, original_pos - referral_boost)
+            positions.append({
+                'email': entry['email'],
+                'effective_pos': effective_pos,
+                'original_pos': original_pos,
+                'referral_count': referral_boost
+            })
+        
+        # Sort by effective position
+        positions.sort(key=lambda x: (x['effective_pos'], x['original_pos']))
+        
+        # Find the target email's final position
+        for idx, p in enumerate(positions):
+            if p['email'].lower() == email.lower():
+                return idx + 1
+        
+        return len(entries) + 1
+    except Exception as e:
+        logger.warning(f"Could not calculate effective position: {e}")
+        return 1
+
+
 # ============================================================================
 # ROUTES
 # ============================================================================
@@ -160,6 +249,9 @@ async def join_waitlist(
     
     Requires DPDP consent checkbox to be checked.
     Returns position number and shareable referral URL.
+    
+    If a referral_source (ref slug) is provided, the referrer
+    gets a position boost (moves up in the queue).
     """
     email = signup.email.lower()
     
@@ -177,6 +269,13 @@ async def join_waitlist(
     
     # Get current position before insert
     position = await get_waitlist_position()
+    
+    # Boost the referrer's position if referral_source is provided
+    referrer_email = None
+    if signup.referral_source:
+        referrer_email = await boost_referrer_position(signup.referral_source)
+        if referrer_email:
+            logger.info(f"New signup {email} via referral from {referrer_email}")
     
     # Prepare waitlist entry
     now = datetime.now(timezone.utc)
@@ -218,10 +317,15 @@ async def join_waitlist(
     base_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
     share_url = f"{base_url}/?ref={email_slug}"
     
+    # Build message with referral boost info
+    message = "We'll email you when your spot opens — share your link to move up the list"
+    if referrer_email:
+        message = f"Welcome! You joined via a referral. Share your link to boost your position!"
+    
     return WaitlistResponse(
         success=True,
         position=position,
-        message="We'll email you when your spot opens — share your link to move up the list",
+        message=message,
         share_url=share_url
     )
 

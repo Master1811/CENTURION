@@ -48,6 +48,13 @@ sys.path.insert(0, str(ROOT_DIR))
 load_dotenv(ROOT_DIR / '.env')
 
 # ============================================================================
+# SENTRY INITIALIZATION (must be before app creation)
+# ============================================================================
+
+from services.sentry_config import init_sentry
+init_sentry()
+
+# ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
 

@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { setUserContext, clearUserContext, addBreadcrumb } from '@/lib/sentry';
 
 // Create the context
 const AuthContext = createContext(null);
@@ -48,6 +49,16 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         setProfile(data.user);
         setSubscription(data.subscription);
+        
+        // Set Sentry user context for error tracking
+        if (data.user?.id) {
+          setUserContext(data.user.id, data.user.email, {
+            plan: data.subscription?.plan || 'free',
+          });
+          addBreadcrumb('User profile loaded', 'auth', 'info', {
+            plan: data.subscription?.plan,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
@@ -180,6 +191,10 @@ export const AuthProvider = ({ children }) => {
    * Sign out the current user
    */
   const signOut = async () => {
+    // Clear Sentry user context
+    clearUserContext();
+    addBreadcrumb('User signed out', 'auth', 'info');
+    
     if (!isSupabaseConfigured()) {
       setUser(null);
       setSession(null);

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS waitlist (
     dpdp_consent_given BOOLEAN NOT NULL DEFAULT FALSE,
     dpdp_consent_at TIMESTAMPTZ,
     converted BOOLEAN NOT NULL DEFAULT FALSE,
+    referral_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
