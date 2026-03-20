@@ -81,22 +81,24 @@ export function OnboardingModal({ onComplete }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 glass-backdrop"
     >
-      <div
-        className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="glass-modal w-full max-w-md overflow-hidden"
       >
         {/* Progress bar */}
         <div className="flex">
           {[1, 2, 3].map(s => (
             <div
               key={s}
-              className="h-1 flex-1 transition-colors duration-300"
+              className="h-1 flex-1 transition-all duration-500 ease-out"
               style={{
                 background: s <= step
-                  ? '#B8962E'
-                  : '#F4F4F5',
+                  ? 'linear-gradient(90deg, #C9A961, #B8962E)'
+                  : 'rgba(0,0,0,0.04)',
               }}
             />
           ))}
@@ -291,7 +293,7 @@ export function OnboardingModal({ onComplete }) {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

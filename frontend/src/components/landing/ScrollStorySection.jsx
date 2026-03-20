@@ -1,560 +1,462 @@
-// ScrollStorySection - Scroll-triggered feature showcase
-// Each scroll reveals ONE feature with left text, right visual
-
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
-import { 
-  TrendingUp, 
-  CheckCircle, 
-  Sparkles, 
-  BarChart3, 
-  Zap,
-  ArrowRight
+// ScrollStorySection - Enhanced with hover, 3D motion, parallax, micro-interactions
+// (cursor effect removed)
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { motion, useInView, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import {
+  TrendingUp, CheckCircle, Sparkles, BarChart3, Zap, ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
-// Chart data for projection animation
+// ─── Brand tokens ─────────────────────────────────────────────────────────────
+const C = {
+  brightCyan:  '#00BFFF',
+  brightCyan2: '#00C8E8',
+  midCyan:     '#0099CC',
+  tealEdge:    '#006080',
+  darkCorner:  '#050A10',
+  midTone:     '#007BA0',
+  sectionBg:   '#060E18',
+};
+
+// ─── Chart data ───────────────────────────────────────────────────────────────
 const projectionData = [
-  { month: 'Jan', value: 200000, projected: 200000 },
-  { month: 'Mar', value: 320000, projected: 350000 },
-  { month: 'May', value: 510000, projected: 550000 },
-  { month: 'Jul', value: 820000, projected: 900000 },
+  { month: 'Jan', value: 200000,  projected: 200000  },
+  { month: 'Mar', value: 320000,  projected: 350000  },
+  { month: 'May', value: 510000,  projected: 550000  },
+  { month: 'Jul', value: 820000,  projected: 900000  },
   { month: 'Sep', value: 1300000, projected: 1450000 },
   { month: 'Nov', value: 2100000, projected: 2350000 },
-  { month: 'Jan\'26', value: 3400000, projected: 3800000 },
+  { month: "Jan'26", value: 3400000, projected: 3800000 },
 ];
 
-const benchmarkData = [
-  { name: 'You', value: 12, fill: '#09090B' },
-  { name: 'Median', value: 8, fill: '#A1A1AA' },
-  { name: 'Top 25%', value: 15, fill: '#52525B' },
+const features = [
+  {
+    id: 'projection-engine',
+    eyebrow: 'Projection Engine',
+    headline: 'See your future revenue in seconds',
+    description: "Enter your current MRR and growth rate. Instantly see when you'll hit ₹1 Crore, ₹10 Crore, and ₹100 Crore. No spreadsheets. No guesswork.",
+    accentColor: C.brightCyan,
+    icon: TrendingUp,
+    col: 0,
+  },
+  {
+    id: 'check-in-system',
+    eyebrow: 'Monthly Check-Ins',
+    headline: 'Update once. Stay on track forever.',
+    description: "Log your actual revenue each month. We'll tell you if you're ahead or behind, and exactly what to focus on next.",
+    accentColor: '#22C55E',
+    icon: CheckCircle,
+    col: 0,
+  },
+  {
+    id: 'ai-insights',
+    eyebrow: 'AI Growth Coach',
+    headline: "AI tells you what's working and what's not",
+    description: 'Get daily insights powered by AI. Understand your growth patterns, spot opportunities, and get actionable recommendations.',
+    accentColor: C.brightCyan2,
+    icon: Sparkles,
+    col: 1,
+  },
+  {
+    id: 'benchmarks',
+    eyebrow: 'Benchmark Intelligence',
+    headline: 'See how you compare with your stage',
+    description: 'Are you growing faster or slower than other founders? Compare your metrics against real Indian startup benchmarks.',
+    accentColor: '#F59E0B',
+    icon: BarChart3,
+    col: 2,
+  },
+  {
+    id: 'connectors',
+    eyebrow: 'Revenue Connectors',
+    headline: 'Auto-sync your revenue. No manual work.',
+    description: 'Connect Razorpay, Stripe, or Cashfree. Your revenue data flows in automatically. We calculate everything for you.',
+    accentColor: C.midCyan,
+    icon: Zap,
+    col: 2,
+  },
 ];
 
-// Animated typing text component
+// ─── 3D tilt card wrapper ─────────────────────────────────────────────────────
+const TiltCard = ({ children, accentColor, className = '' }) => {
+  const ref     = useRef(null);
+  const rotateX = useSpring(useMotionValue(0), { stiffness: 200, damping: 22 });
+  const rotateY = useSpring(useMotionValue(0), { stiffness: 200, damping: 22 });
+  const glowX   = useMotionValue(50);
+  const glowY   = useMotionValue(50);
+  const [hovered, setHovered] = useState(false);
+
+  const handleMouse = useCallback((e) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = (e.clientX - rect.left) / rect.width  - 0.5;
+    const cy = (e.clientY - rect.top)  / rect.height - 0.5;
+    rotateX.set(-cy * 12);
+    rotateY.set( cx * 12);
+    glowX.set(((e.clientX - rect.left) / rect.width)  * 100);
+    glowY.set(((e.clientY - rect.top)  / rect.height) * 100);
+  }, [rotateX, rotateY, glowX, glowY]);
+
+  const handleLeave = () => {
+    rotateX.set(0); rotateY.set(0);
+    setHovered(false);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      className={cn('relative', className)}
+      style={{ perspective: 800, transformStyle: 'preserve-3d' }}
+      onMouseMove={handleMouse}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={handleLeave}
+      whileHover={{ scale: 1.025 }}
+      transition={{ scale: { duration: 0.2 } }}
+    >
+      <motion.div
+        style={{
+          rotateX, rotateY,
+          transformStyle: 'preserve-3d',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          background: hovered ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+          border: hovered ? `1px solid ${accentColor}55` : '1px solid rgba(255,255,255,0.08)',
+          boxShadow: hovered
+            ? `0 0 0 1px ${accentColor}20, 0 20px 50px rgba(0,0,0,0.50), 0 0 30px ${accentColor}18`
+            : '0 4px 24px rgba(0,0,0,0.35)',
+          transition: 'background 0.25s, border-color 0.25s, box-shadow 0.25s',
+        }}
+      >
+        {hovered && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-2xl"
+            style={{
+              background: `radial-gradient(circle 120px at ${glowX.get()}% ${glowY.get()}%, ${accentColor}22, transparent 65%)`,
+            }}
+          />
+        )}
+        <div className="absolute inset-x-0 top-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, ${accentColor}45, transparent)` }} />
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ─── Animated bar ─────────────────────────────────────────────────────────────
+const AnimBar = ({ value, max, color, delay = 0 }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  return (
+    <div ref={ref} className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <motion.div
+        className="h-full rounded-full"
+        style={{ background: color, boxShadow: `0 0 6px ${color}66` }}
+        initial={{ width: 0 }}
+        animate={isInView ? { width: `${(value / max) * 100}%` } : {}}
+        transition={{ delay, duration: 0.9, ease: 'easeOut' }}
+      />
+    </div>
+  );
+};
+
+// ─── Smooth count-up ──────────────────────────────────────────────────────────
+const CountUp = ({ to, prefix = '', suffix = '' }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (!isInView) return;
+    const controls = { stop: false };
+    let start; const dur = 1400;
+    const tick = (ts) => {
+      if (!start) start = ts;
+      const p    = Math.min((ts - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.floor(ease * to));
+      if (p < 1 && !controls.stop) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { controls.stop = true; };
+  }, [isInView, to]);
+  return <span ref={ref}>{prefix}{display}{suffix}</span>;
+};
+
+// ─── Typing text ──────────────────────────────────────────────────────────────
 const TypingText = ({ text, delay = 0 }) => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  
+  const isInView = useInView(ref, { once: true });
   return (
     <span ref={ref} className="inline">
-      {text.split('').map((char, i) => (
-        <motion.span
-          key={i}
+      {text.split('').map((ch, i) => (
+        <motion.span key={i}
           initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ delay: delay + i * 0.03, duration: 0.1 }}
-        >
-          {char}
-        </motion.span>
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ delay: delay + i * 0.025, duration: 0.08 }}
+        >{ch}</motion.span>
       ))}
     </span>
   );
 };
 
-// Individual scroll story section
-const StorySection = ({ 
-  id, 
-  eyebrow, 
-  headline, 
-  description, 
-  visual, 
-  index,
-  accentColor = '#09090B'
-}) => {
+// ─── Mini previews ────────────────────────────────────────────────────────────
+const MiniPreview = ({ feature }) => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  
+  const isInView = useInView(ref, { once: true, margin: '-40px' });
+
+  if (feature.id === 'projection-engine') return (
+    <div ref={ref} className="mt-4 rounded-xl overflow-hidden"
+      style={{ background: 'rgba(0,191,255,0.06)', border: '1px solid rgba(0,191,255,0.14)' }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <span className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.45)' }}>Path to ₹100Cr</span>
+        <span className="text-xs font-mono font-bold" style={{ color: C.brightCyan }}>
+          <CountUp to={48} suffix=" mo" />
+        </span>
+      </div>
+      <div className="h-[72px] px-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={projectionData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="ssGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={C.brightCyan} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={C.brightCyan} stopOpacity={0}    />
+              </linearGradient>
+            </defs>
+            <XAxis hide /> <YAxis hide />
+            <Area type="monotone" dataKey="value" stroke={C.brightCyan} strokeWidth={2}
+              fill="url(#ssGrad)" isAnimationActive={isInView} animationDuration={1200} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  if (feature.id === 'check-in-system') return (
+    <motion.div ref={ref} className="mt-4 rounded-xl p-3 flex items-center gap-3"
+      style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.22)' }}
+      initial={{ opacity: 0, y: 8 }} animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ delay: 0.3 }}>
+      <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#22C55E' }} strokeWidth={1.5} />
+      <div>
+        <p className="text-xs font-semibold" style={{ color: '#22C55E' }}>You're ahead of projection!</p>
+        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>+12% above expected</p>
+      </div>
+    </motion.div>
+  );
+
+  if (feature.id === 'ai-insights') return (
+    <div ref={ref} className="mt-4 space-y-2">
+      {["MRR growth accelerated 3.2%", "CAC dropped by ₹450", "Focus on enterprise tier"].map((txt, i) => (
+        <div key={i} className="flex items-start gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: C.brightCyan2 }} />
+          <span><TypingText text={txt} delay={0.4 + i * 0.35} /></span>
+        </div>
+      ))}
+    </div>
+  );
+
+  if (feature.id === 'benchmarks') return (
+    <div ref={ref} className="mt-4 space-y-2.5">
+      {[
+        { label: 'You',     value: 12, max: 20, color: C.brightCyan },
+        { label: 'Top 25%', value: 15, max: 20, color: 'rgba(255,255,255,0.30)' },
+        { label: 'Median',  value: 8,  max: 20, color: 'rgba(255,255,255,0.18)' },
+      ].map(({ label, value, max, color }, i) => (
+        <div key={label}>
+          <div className="flex justify-between mb-1">
+            <span className="text-xs" style={{ color: i === 0 ? C.brightCyan2 : 'rgba(255,255,255,0.42)' }}>{label}</span>
+            <span className="text-xs font-mono" style={{ color: i === 0 ? C.brightCyan2 : 'rgba(255,255,255,0.42)' }}>{value}%</span>
+          </div>
+          <AnimBar value={value} max={max} color={color} delay={0.3 + i * 0.15} />
+        </div>
+      ))}
+    </div>
+  );
+
+  if (feature.id === 'connectors') return (
+    <div ref={ref} className="mt-4 space-y-2">
+      {[
+        { name: 'Razorpay', color: '#0066FF', connected: true  },
+        { name: 'Stripe',   color: '#635BFF', connected: true  },
+        { name: 'Cashfree', color: '#00C853', connected: false },
+      ].map(({ name, color, connected }, i) => (
+        <motion.div key={name}
+          className="flex items-center justify-between px-3 py-2 rounded-lg"
+          style={{
+            background: connected ? 'rgba(34,197,94,0.07)' : 'rgba(255,255,255,0.04)',
+            border: connected ? '1px solid rgba(34,197,94,0.20)' : '1px solid rgba(255,255,255,0.07)',
+          }}
+          initial={{ opacity: 0, x: -10 }}
+          animate={isInView ? { opacity: 1, x: 0 } : {}}
+          transition={{ delay: 0.25 + i * 0.12 }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+              style={{ background: color }}>{name[0]}</div>
+            <span className="text-xs text-white">{name}</span>
+          </div>
+          {connected
+            ? <span className="text-xs" style={{ color: '#22C55E' }}>✓ Synced</span>
+            : <span className="text-xs" style={{ color: C.midCyan }}>Connect →</span>
+          }
+        </motion.div>
+      ))}
+    </div>
+  );
+
+  return null;
+};
+
+// ─── Feature card ─────────────────────────────────────────────────────────────
+const FeatureCard = ({ feature, index }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  const Icon = feature.icon;
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <div 
+    <motion.div
       ref={ref}
-      id={id}
-      className="min-h-[80vh] flex items-center py-20"
+      initial={{ opacity: 0, y: 40, filter: 'blur(6px)' }}
+      animate={isInView ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}}
+      transition={{ delay: index * 0.10, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="max-w-6xl mx-auto px-4 md:px-8 w-full">
-        <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-center">
-          {/* Left: Text Content */}
-          <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            animate={isInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <motion.span 
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide mb-6"
-              style={{ backgroundColor: `${accentColor}10`, color: accentColor }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.4 }}
-            >
-              {eyebrow}
-            </motion.span>
-            
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#09090B] mb-6 leading-tight">
-              {headline}
-            </h2>
-            
-            <p className="text-lg text-[#52525B] leading-relaxed mb-8">
-              {description}
-            </p>
-            
-            <motion.button
-              className={cn(
-                'inline-flex items-center gap-2',
-                'px-6 py-3 rounded-full',
-                'bg-[#09090B] text-white text-sm font-medium',
-                'hover:bg-[#18181B]',
-                'transition-all duration-200'
-              )}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Try it free
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          </motion.div>
-          
-          {/* Right: Visual */}
-          <motion.div
-            initial={{ opacity: 0, x: 40, scale: 0.95 }}
-            animate={isInView ? { opacity: 1, x: 0, scale: 1 } : {}}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="relative"
-          >
-            {visual}
-          </motion.div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Visual Components for each section
-const ProjectionVisual = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  
-  return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] shadow-xl overflow-hidden">
-      {/* Window chrome */}
-      <div className="flex items-center h-10 px-4 bg-[#F9FAFB] border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="flex-1 text-center text-xs text-[#71717A] font-medium">Projection Engine</span>
-      </div>
-      
-      <div className="p-6">
-        <div className="flex items-baseline justify-between mb-4">
-          <div>
-            <p className="text-xs text-[#71717A] uppercase tracking-wide mb-1">Path to ₹100 Crore</p>
-            <motion.p 
-              className="text-2xl font-bold text-[#09090B] font-mono"
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
-              transition={{ delay: 0.5 }}
-            >
-              <CountingNumber value={48} /> months
-            </motion.p>
-          </div>
-          <motion.span 
-            className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium"
-            initial={{ scale: 0 }}
-            animate={isInView ? { scale: 1 } : {}}
-            transition={{ delay: 0.8, type: "spring" }}
-          >
-            4 years ahead
-          </motion.span>
-        </div>
-        
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={projectionData}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#09090B" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#09090B" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis 
-                dataKey="month" 
-                axisLine={false} 
-                tickLine={false}
-                tick={{ fontSize: 11, fill: '#A1A1AA' }}
-              />
-              <YAxis hide />
-              <Area
-                type="monotone"
-                dataKey="projected"
-                stroke="#E4E4E7"
-                strokeWidth={2}
-                strokeDasharray="4 4"
-                fill="transparent"
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#09090B"
-                strokeWidth={2.5}
-                fill="url(#colorValue)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CheckInVisual = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  
-  return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] shadow-xl overflow-hidden">
-      <div className="flex items-center h-10 px-4 bg-[#F9FAFB] border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="flex-1 text-center text-xs text-[#71717A] font-medium">Monthly Check-in</span>
-      </div>
-      
-      <div className="p-6 space-y-4">
-        <div>
-          <label className="text-sm font-medium text-[#09090B] mb-2 block">March 2026 Revenue</label>
-          <motion.div 
-            className="relative"
-            initial={{ opacity: 0, y: 10 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ delay: 0.3 }}
-          >
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#71717A]">₹</span>
-            <input 
-              type="text" 
-              value="4,85,000"
-              readOnly
-              className="w-full h-12 pl-8 pr-4 rounded-xl border-2 border-[#09090B] text-lg font-mono font-semibold text-[#09090B] bg-[#F9FAFB]"
-            />
-          </motion.div>
-        </div>
-        
-        <motion.div
-          className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={isInView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ delay: 0.6 }}
+      <TiltCard accentColor={feature.accentColor}>
+        <div
+          className="px-6 py-6"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
         >
-          <CheckCircle className="w-5 h-5 text-emerald-600" />
-          <div>
-            <p className="text-sm font-medium text-emerald-800">You're ahead of projection!</p>
-            <p className="text-xs text-emerald-600">+12% above expected</p>
-          </div>
-        </motion.div>
-        
-        <motion.button
-          className="w-full h-11 rounded-xl bg-[#09090B] text-white text-sm font-medium"
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.8 }}
-        >
-          Save Check-in
-        </motion.button>
-      </div>
-    </div>
-  );
-};
-
-const AIInsightsVisual = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  
-  const insights = [
-    "Your MRR growth accelerated 3.2% this month",
-    "Customer acquisition cost dropped by ₹450",
-    "Recommend: Focus on enterprise tier to boost ARPU"
-  ];
-  
-  return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] shadow-xl overflow-hidden">
-      <div className="flex items-center h-10 px-4 bg-[#F9FAFB] border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="flex-1 text-center text-xs text-[#71717A] font-medium">AI Growth Coach</span>
-      </div>
-      
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-[#09090B]">Daily Pulse</p>
-            <p className="text-xs text-[#71717A]">March 17, 2026</p>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          {insights.map((insight, i) => (
+          <div className="flex items-center gap-3 mb-4">
             <motion.div
-              key={i}
-              className="flex items-start gap-3 p-3 rounded-xl bg-[#F9FAFB]"
-              initial={{ opacity: 0, x: -20 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ delay: 0.3 + i * 0.2 }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `${feature.accentColor}18`, border: `1px solid ${feature.accentColor}35` }}
+              animate={hovered ? { scale: 1.12, rotate: 6 } : { scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 18 }}
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-2 shrink-0" />
-              <p className="text-sm text-[#52525B]">
-                {isInView && <TypingText text={insight} delay={0.5 + i * 0.3} />}
-              </p>
+              <Icon className="w-5 h-5" style={{ color: feature.accentColor }} strokeWidth={1.5} />
             </motion.div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
+            <span className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: `${feature.accentColor}99`, letterSpacing: '0.14em' }}>
+              {feature.eyebrow}
+            </span>
+          </div>
 
-const BenchmarksVisual = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  
-  return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] shadow-xl overflow-hidden">
-      <div className="flex items-center h-10 px-4 bg-[#F9FAFB] border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="flex-1 text-center text-xs text-[#71717A] font-medium">Benchmark Intelligence</span>
-      </div>
-      
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-sm font-medium text-[#09090B]">Monthly Growth Rate</p>
-          <span className="px-2 py-1 rounded-md bg-[#F4F4F5] text-xs text-[#71717A]">Pre-Seed Stage</span>
-        </div>
-        
-        <div className="space-y-4">
-          {[
-            { label: 'You', value: 12, color: '#09090B', highlight: true },
-            { label: 'Top 25%', value: 15, color: '#52525B' },
-            { label: 'Median', value: 8, color: '#A1A1AA' },
-          ].map((item, i) => (
-            <div key={item.label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className={cn(
-                  'text-sm',
-                  item.highlight ? 'font-semibold text-[#09090B]' : 'text-[#71717A]'
-                )}>
-                  {item.label}
-                </span>
-                <span className={cn(
-                  'font-mono text-sm',
-                  item.highlight ? 'font-bold text-[#09090B]' : 'text-[#71717A]'
-                )}>
-                  {item.value}%
-                </span>
-              </div>
-              <div className="h-2 bg-[#F4F4F5] rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ backgroundColor: item.color }}
-                  initial={{ width: 0 }}
-                  animate={isInView ? { width: `${(item.value / 20) * 100}%` } : {}}
-                  transition={{ delay: 0.3 + i * 0.15, duration: 0.8, ease: "easeOut" }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <motion.div
-          className="mt-6 p-3 rounded-xl bg-amber-50 border border-amber-200"
-          initial={{ opacity: 0, y: 10 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 1 }}
-        >
-          <p className="text-sm text-amber-800 font-medium">
-            You're in the <span className="font-bold">top 18%</span> of pre-seed founders
-          </p>
-        </motion.div>
-      </div>
-    </div>
-  );
-};
+          <h3 className="font-bold text-[15px] leading-snug mb-2 text-white">{feature.headline}</h3>
+          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.52)' }}>{feature.description}</p>
 
-const ConnectorsVisual = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
-  
-  const connectors = [
-    { name: 'Razorpay', status: 'connected', color: '#0066FF' },
-    { name: 'Stripe', status: 'connected', color: '#635BFF' },
-    { name: 'Cashfree', status: 'available', color: '#00C853' },
-  ];
-  
-  return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[rgba(0,0,0,0.08)] shadow-xl overflow-hidden">
-      <div className="flex items-center h-10 px-4 bg-[#F9FAFB] border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <span className="flex-1 text-center text-xs text-[#71717A] font-medium">Revenue Connectors</span>
-      </div>
-      
-      <div className="p-6">
-        <div className="space-y-3 mb-6">
-          {connectors.map((connector, i) => (
-            <motion.div
-              key={connector.name}
-              className={cn(
-                'flex items-center justify-between p-4 rounded-xl border',
-                connector.status === 'connected' 
-                  ? 'bg-emerald-50 border-emerald-200' 
-                  : 'bg-[#F9FAFB] border-[rgba(0,0,0,0.06)]'
-              )}
-              initial={{ opacity: 0, x: -20 }}
-              animate={isInView ? { opacity: 1, x: 0 } : {}}
-              transition={{ delay: 0.2 + i * 0.15 }}
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                  style={{ backgroundColor: connector.color }}
-                >
-                  {connector.name[0]}
-                </div>
-                <div>
-                  <p className="font-medium text-[#09090B]">{connector.name}</p>
-                  <p className="text-xs text-[#71717A]">Payment gateway</p>
-                </div>
-              </div>
-              {connector.status === 'connected' ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                  <CheckCircle className="w-4 h-4" />
-                  Synced
-                </span>
-              ) : (
-                <button className="text-xs text-[#09090B] font-medium hover:underline">
-                  Connect
-                </button>
-              )}
-            </motion.div>
-          ))}
-        </div>
-        
-        {/* Data flow animation */}
-        <motion.div
-          className="flex items-center justify-center gap-2 text-xs text-[#71717A]"
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.8 }}
-        >
+          <MiniPreview feature={feature} />
+
           <motion.div
-            className="flex items-center gap-1"
-            animate={{ x: [0, 5, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="flex items-center gap-1 mt-4 text-xs font-medium"
+            style={{ color: feature.accentColor }}
+            initial={{ opacity: 0, x: -6 }}
+            animate={hovered ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
+            transition={{ duration: 0.2 }}
           >
-            <Zap className="w-3 h-3 text-amber-500" />
-            <span>₹4.2L synced today</span>
+            Learn more <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
           </motion.div>
-        </motion.div>
-      </div>
-    </div>
+        </div>
+      </TiltCard>
+    </motion.div>
   );
 };
 
-// Counting number animation
-const CountingNumber = ({ value }) => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  
-  return (
-    <motion.span
-      ref={ref}
-      initial={{ opacity: 0 }}
-      animate={isInView ? { opacity: 1 } : {}}
-    >
-      {isInView && (
-        <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          {value}
-        </motion.span>
-      )}
-    </motion.span>
-  );
-};
-
-// Main component
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export const ScrollStorySection = () => {
-  const features = [
-    {
-      id: 'projection-engine',
-      eyebrow: 'PROJECTION ENGINE',
-      headline: 'See your future revenue in seconds',
-      description: 'Enter your current MRR and growth rate. Instantly see when you\'ll hit ₹1 Crore, ₹10 Crore, and ₹100 Crore. No spreadsheets. No guesswork.',
-      visual: <ProjectionVisual />,
-      accentColor: '#09090B',
-    },
-    {
-      id: 'check-in-system',
-      eyebrow: 'MONTHLY CHECK-INS',
-      headline: 'Update once. Stay on track forever.',
-      description: 'Log your actual revenue each month. We\'ll tell you if you\'re ahead or behind, and exactly what to focus on next.',
-      visual: <CheckInVisual />,
-      accentColor: '#059669',
-    },
-    {
-      id: 'ai-insights',
-      eyebrow: 'AI GROWTH COACH',
-      headline: 'AI tells you what\'s working and what\'s not',
-      description: 'Get daily insights powered by AI. Understand your growth patterns, spot opportunities, and get actionable recommendations.',
-      visual: <AIInsightsVisual />,
-      accentColor: '#7C3AED',
-    },
-    {
-      id: 'benchmarks',
-      eyebrow: 'BENCHMARK INTELLIGENCE',
-      headline: 'See how you compare with your stage',
-      description: 'Are you growing faster or slower than other founders? Compare your metrics against real Indian startup benchmarks.',
-      visual: <BenchmarksVisual />,
-      accentColor: '#D97706',
-    },
-    {
-      id: 'connectors',
-      eyebrow: 'REVENUE CONNECTORS',
-      headline: 'Auto-sync your revenue. No manual work.',
-      description: 'Connect Razorpay, Stripe, or Cashfree. Your revenue data flows in automatically. We calculate everything for you.',
-      visual: <ConnectorsVisual />,
-      accentColor: '#0066FF',
-    },
-  ];
+  const headerRef      = useRef(null);
+  const isHeaderInView = useInView(headerRef, { once: true, margin: '-60px' });
+
+  const left   = features.filter(f => f.col === 0);
+  const center = features.filter(f => f.col === 1);
+  const right  = features.filter(f => f.col === 2);
 
   return (
-    <section 
-      id="features" 
-      className="bg-[#FAFAFA]"
+    <section
+      id="features"
+      className="relative py-20 md:py-28 overflow-hidden"
+      style={{ background: C.sectionBg }}
       data-testid="scroll-story-section"
     >
-      {features.map((feature, index) => (
-        <StorySection
-          key={feature.id}
-          {...feature}
-          index={index}
-        />
-      ))}
+      {/* ── Background ── */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ backgroundImage: `radial-gradient(ellipse 70% 45% at 50% 0%, rgba(0,191,255,0.12) 0%, transparent 60%)` }} />
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: `
+          radial-gradient(ellipse 40% 35% at 5%  60%, rgba(0,96,128,0.18) 0%, transparent 55%),
+          radial-gradient(ellipse 40% 35% at 95% 60%, rgba(0,96,128,0.18) 0%, transparent 55%)
+        `,
+      }} />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.10]" style={{
+        backgroundImage: `radial-gradient(circle, rgba(0,191,255,0.6) 1px, transparent 1px)`,
+        backgroundSize: '32px 32px',
+        maskImage: 'radial-gradient(ellipse 85% 65% at 50% 30%, black 20%, transparent 75%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 85% 65% at 50% 30%, black 20%, transparent 75%)',
+      }} />
+      <div className="absolute top-0 inset-x-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(0,191,255,0.18), transparent)' }} />
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8">
+        {/* Header */}
+        <motion.div
+          ref={headerRef}
+          className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-14"
+          initial={{ opacity: 0, y: 24 }}
+          animate={isHeaderInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3"
+              style={{ color: `${C.brightCyan2}88`, letterSpacing: '0.16em' }}>
+              Features
+            </p>
+            <motion.h2
+              className="text-3xl md:text-4xl font-bold landing-heading-white-fade"
+              initial={{ opacity: 0, y: 14, filter: 'blur(7px)' }}
+              animate={isHeaderInView ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}}
+              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <span className="not-italic">Plan.</span>{' '}
+              <span className="italic" style={{ color: C.brightCyan2 }}>Build.</span>{' '}
+              <span className="not-italic">Launch.</span>
+            </motion.h2>
+          </div>
+
+          <motion.button
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold self-start lg:self-auto relative overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, ${C.brightCyan} 0%, ${C.midCyan} 60%, ${C.tealEdge} 100%)`,
+              color: C.darkCorner,
+              boxShadow: `0 0 0 1px rgba(0,191,255,0.30), 0 8px 24px rgba(0,191,255,0.20)`,
+            }}
+            whileHover={{ scale: 1.04, boxShadow: `0 0 0 1px rgba(0,191,255,0.45), 0 12px 32px rgba(0,191,255,0.30)` }}
+            whileTap={{ scale: 0.96 }}
+          >
+            <motion.span className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%)', backgroundSize: '200% 100%' }}
+              animate={{ backgroundPosition: ['-100% 0', '200% 0'] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear', repeatDelay: 1 }} />
+            <span className="relative z-10 flex items-center gap-2">
+              Try all features free
+              <ArrowRight className="w-4 h-4" strokeWidth={2} />
+            </span>
+          </motion.button>
+        </motion.div>
+
+        {/* 3-column grid */}
+        <div className="grid lg:grid-cols-3 gap-5">
+          <div className="space-y-5">
+            {left.map((f, i) => <FeatureCard key={f.id} feature={f} index={i} />)}
+          </div>
+          <div className="space-y-5 lg:mt-8">
+            {center.map((f, i) => <FeatureCard key={f.id} feature={f} index={i + 2} />)}
+          </div>
+          <div className="space-y-5">
+            {right.map((f, i) => <FeatureCard key={f.id} feature={f} index={i + 3} />)}
+          </div>
+        </div>
+      </div>
     </section>
   );
 };

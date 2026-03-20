@@ -34,9 +34,9 @@ const use3DTilt = (enabled = true) => {
 };
 
 export const CenturionCard = React.forwardRef(({
-  className, 
+  className,
   hover = false,
-  variant = 'default', // default | premium | glass | dark
+  variant = 'default', // default | premium | glass | liquid-glass | dark
   enable3D = false, // Enable 3D tilt effect
   children,
   ...props 
@@ -64,6 +64,17 @@ export const CenturionCard = React.forwardRef(({
       'border border-white/60',
       'shadow-[var(--shadow-card)]',
       'backdrop-blur-xl',
+    ],
+    // New: Premium liquid glass variant
+    'liquid-glass': [
+      'bg-gradient-to-br from-[rgba(255,255,255,0.85)] via-[rgba(255,255,255,0.65)] to-[rgba(255,255,255,0.75)]',
+      'border border-[rgba(255,255,255,0.35)]',
+      'shadow-[var(--shadow-glass-xl)]',
+      'backdrop-blur-[32px]',
+      // Top shine line
+      'after:content-[\'\'] after:absolute after:top-0 after:left-0 after:right-0 after:h-px',
+      'after:bg-gradient-to-r after:from-transparent after:via-white/40 after:to-transparent',
+      'after:pointer-events-none',
     ],
     dark: [
       'bg-gradient-to-br from-[#09090B] via-[#18181B] to-[#27272A]',

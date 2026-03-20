@@ -27,12 +27,12 @@ import uuid
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 
 from fastapi import FastAPI, APIRouter, Request, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from dotenv import load_dotenv
 
@@ -77,6 +77,11 @@ from services import (
     require_auth,
     require_paid_subscription,
 )
+from services.scheduler import (
+    setup_scheduler,
+    get_scheduler,
+)
+from services.validation import sanitize_text
 from models import (
     UserProfile,
     MagicLinkRequest,
@@ -125,9 +130,19 @@ async def lifespan(app: FastAPI):
     
     logger.info(f"✓ Environment: {config.ENVIRONMENT}")
     logger.info("✓ API ready at /api")
+
+    setup_scheduler()
+    get_scheduler().start()
+    msg = "[APP] Scheduler started"
+    print(msg, flush=True)
+    logger.info(msg)
     
     yield
     
+    get_scheduler().shutdown()
+    msg = "[APP] Scheduler stopped"
+    print(msg, flush=True)
+    logger.info(msg)
     logger.info("Shutting down 100Cr Engine API...")
     logger.info("✓ Cleanup complete")
 
@@ -325,6 +340,23 @@ class QuizSubmission(BaseModel):
     answers: Dict[str, Any]
     email: Optional[EmailStr] = None
 
+class QuizAnswers(BaseModel):
+    """Validated quiz answers with strict enums."""
+    revenue_range: Literal['less-than-1l', '1l-5l', '5l-20l', '20l-50l', 'more-than-50l']
+    growth_speed: Literal['declining', 'flat', 'slow', 'moderate', 'fast', 'explosive']
+    startup_stage: Literal['idea', 'mvp', 'early-traction', 'product-market-fit', 'scaling']
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def _sanitize_answer(cls, value: str, info):  # noqa: ANN001
+        return sanitize_text(value, info.field_name, max_length=40)
+
+
+class QuizSubmission(BaseModel):
+    answers: QuizAnswers
+    email: Optional[EmailStr] = None
+
+
 @quiz_router.post("/submit")
 async def submit_quiz(submission: QuizSubmission, request: Request):
     """
@@ -349,8 +381,8 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
             }
         )
 
-    answers = submission.answers
-    
+    answers = submission.answers.model_dump()
+
     # Map quiz answers to projection parameters
     mrr_mapping = {
         'less-than-1l': 50000,

@@ -20,6 +20,8 @@ Author: 100Cr Engine Team
 
 import os
 import logging
+import base64
+import json
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from enum import Enum
@@ -181,7 +183,24 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
         )
         
     except jwt.InvalidAudienceError:
-        logger.warning("JWT audience mismatch")
+        # Best-effort: log unverified claims (alg/aud/iss/sub) for debugging.
+        unverified_header = {}
+        unverified_payload = {}
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            _, payload_b64, _ = token.split(".", 2)
+            padded = payload_b64 + "=="
+            unverified_payload = json.loads(base64.urlsafe_b64decode(padded))
+        except Exception:
+            pass
+
+        logger.warning(
+            "JWT audience mismatch | alg=%s aud=%s iss=%s sub=%s",
+            unverified_header.get("alg"),
+            unverified_payload.get("aud"),
+            unverified_payload.get("iss"),
+            unverified_payload.get("sub"),
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token audience",
@@ -189,7 +208,25 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
         )
         
     except jwt.InvalidTokenError as e:
-        logger.warning(f"Invalid JWT token: {e}")
+        # Best-effort: log unverified header + payload claims (no signature verification).
+        unverified_header = {}
+        unverified_payload = {}
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            _, payload_b64, _ = token.split(".", 2)
+            padded = payload_b64 + "=="
+            unverified_payload = json.loads(base64.urlsafe_b64decode(padded))
+        except Exception:
+            pass
+
+        logger.warning(
+            "Invalid JWT token: %s | alg=%s aud=%s iss=%s sub=%s",
+            str(e),
+            unverified_header.get("alg"),
+            unverified_payload.get("aud"),
+            unverified_payload.get("iss"),
+            unverified_payload.get("sub"),
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
@@ -273,8 +310,9 @@ async def require_paid_subscription(
     2. User has an active subscription in the database
     3. Subscription has not expired
     
-    Use this for Founder Plan premium features.
-    
+    Paid plans: starter, founder, studio, vc_portfolio
+    Valid statuses: active, trialing
+
     Example:
         @router.post("/checkin")
         async def submit_checkin(
@@ -290,6 +328,10 @@ async def require_paid_subscription(
         HTTPException: 401 if not authenticated
         HTTPException: 403 if not subscribed or subscription expired
     """
+    # Paid plans list
+    PAID_PLANS = ['starter', 'founder', 'studio', 'vc_portfolio']
+    ACTIVE_STATUSES = ['active', 'trialing']
+
     # First verify authentication
     user = await require_auth(credentials)
     
@@ -302,12 +344,24 @@ async def require_paid_subscription(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 'error': 'subscription_required',
-                'message': 'This feature requires a Founder Plan subscription.',
+                'message': 'This feature requires a paid subscription.',
                 'upgrade_url': '/pricing'
             }
         )
     
-    if subscription.get('status') != 'active':
+    # Check plan is a paid plan
+    if subscription.get('plan') not in PAID_PLANS:
+        logger.info(f"User {user['id']} on free plan: {subscription.get('plan')}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                'error': 'subscription_required',
+                'message': 'This feature requires a paid subscription.',
+                'upgrade_url': '/pricing'
+            }
+        )
+
+    if subscription.get('status') not in ACTIVE_STATUSES:
         logger.info(f"Subscription not active for user {user['id']}: {subscription.get('status')}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

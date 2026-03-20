@@ -297,6 +297,34 @@ async def submit_checkin(
     }
     
     saved = await supabase_service.upsert_checkin(checkin_data)
+
+    # Update streak using habit engine fields (streak_count + last_checkin_at)
+    try:
+        from datetime import datetime, timezone
+
+        profile = await supabase_service.get_profile_by_id(user_id)
+
+        current_streak = (profile or {}).get("streak_count") or 0
+        last_checkin = (profile or {}).get("last_checkin_at")
+        now = datetime.now(timezone.utc)
+
+        if last_checkin:
+            if isinstance(last_checkin, str):
+                last_checkin = datetime.fromisoformat(
+                    last_checkin.replace("Z", "+00:00")
+                )
+            days_since = (now - last_checkin).days
+            new_streak = current_streak + 1 if days_since <= 35 else 1
+        else:
+            new_streak = 1
+
+        await supabase_service.update_streak(
+            user_id=user_id,
+            streak_count=new_streak,
+            last_checkin_at=now.isoformat(),
+        )
+    except Exception as e:
+        print(f"[STREAK] Update failed: {e}")
     
     # Update user profile with latest MRR
     await supabase_service.update_profile(user_id, {
@@ -335,7 +363,7 @@ async def _update_streak(user_id: str) -> None:
 @check_router.get("/checkins", response_model=CheckInHistory)
 async def get_checkins(
     user: Dict[str, Any] = Depends(require_paid_subscription),
-    limit: int = Query(12, ge=1, le=36)
+    limit: int = Query(12, ge=1, le=100)
 ):
     """
     Get user's check-in history.

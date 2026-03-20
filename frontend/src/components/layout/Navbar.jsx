@@ -49,6 +49,7 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, signOut, loading } = useAuth();
+  const isLanding = location.pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -125,17 +126,18 @@ export const Navbar = () => {
         animate={{ y: hidden ? -100 : 0 }}
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          'fixed top-4 left-1/2 -translate-x-1/2 z-50',
-          'w-auto max-w-[95vw]',
-          'h-[56px] px-2',
-          'flex items-center justify-center gap-1',
-          'rounded-full',
-          'border border-white/20',
-          'transition-all duration-300',
-          // Glassmorphism
-          scrolled
-            ? 'bg-white/70 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]'
-            : 'bg-white/50 backdrop-blur-md shadow-[0_4px_16px_rgba(0,0,0,0.06)]'
+          'fixed z-50 transition-all duration-300',
+          isLanding
+            ? 'top-0 left-0 right-0 w-full h-[72px] px-6 md:px-12 rounded-none border-0 bg-transparent'
+            : 'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full glass-dark',
+          'flex items-center',
+          isLanding ? 'justify-between' : 'justify-center gap-1',
+          // Glassmorphism (non-landing)
+          !isLanding && scrolled
+            ? 'shadow-[0_8px_32px_rgba(0,191,255,0.12)]'
+            : !isLanding
+              ? 'shadow-[0_4px_16px_rgba(0,191,255,0.08)]'
+              : 'bg-transparent'
         )}
         data-testid="navbar"
       >
@@ -145,12 +147,21 @@ export const Navbar = () => {
           className="flex items-center gap-1 px-4 shrink-0"
           data-testid="navbar-logo"
         >
-          <span className="font-heading font-bold text-[#09090B]">100Cr</span>
-          <span className="font-heading font-medium text-[#71717A]">Engine</span>
+          <span className={cn("font-heading font-bold", "text-white")}>
+            100Cr
+          </span>
+          <span
+            className={cn(
+              "font-heading font-medium",
+              'text-white/70'
+            )}
+          >
+            Engine
+          </span>
         </Link>
 
         {/* Desktop Links */}
-        <div className="hidden md:flex items-center">
+        <div className={cn("hidden md:flex items-center", isLanding && "flex-1 justify-center")}>
           {/* Tools Dropdown */}
           <div className="relative">
             <button
@@ -163,8 +174,12 @@ export const Navbar = () => {
                 'text-sm font-medium',
                 'transition-colors duration-150',
                 toolsOpen || location.pathname.includes('/tools')
-                  ? 'text-[#09090B] bg-black/5'
-                  : 'text-[#52525B] hover:text-[#09090B] hover:bg-black/5'
+                  ? isLanding
+                    ? 'text-white bg-white/10'
+                    : 'text-white bg-white/10'
+                  : isLanding
+                    ? 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
               )}
               data-testid="tools-dropdown-trigger"
             >
@@ -185,15 +200,19 @@ export const Navbar = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{
-                    duration: 0.2,
+                    duration: 0.25,
                     ease: [0.22, 1, 0.36, 1] // --ease-luxury
                   }}
                   className={cn(
                     'absolute top-full left-0 mt-2',
                     'w-72 p-2',
-                    'bg-white/90 backdrop-blur-xl',
-                    'rounded-2xl border border-[rgba(0,0,0,0.08)]',
-                    'shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                    isLanding
+                      ? 'glass-card-elevated'
+                      : 'glass-dark',
+                    'rounded-2xl',
+                    isLanding
+                      ? ''
+                      : 'shadow-[0_16px_48px_rgba(0,191,255,0.08),0_4px_16px_rgba(0,0,0,0.3)]'
                   )}
                   onClick={(e) => e.stopPropagation()}
                   data-testid="tools-dropdown-menu"
@@ -217,17 +236,45 @@ export const Navbar = () => {
                           className={cn(
                             'flex items-start gap-3 p-3 rounded-xl',
                             'transition-all duration-200 ease-[var(--ease-luxury)]',
-                            'hover:bg-[rgba(0,0,0,0.04)] hover:translate-x-1',
-                            location.pathname === item.href && 'bg-[rgba(0,0,0,0.06)]'
+                            isLanding
+                              ? 'hover:bg-[rgba(0,0,0,0.04)] hover:translate-x-1'
+                              : 'hover:bg-white/10 hover:translate-x-1',
+                            location.pathname === item.href &&
+                              (isLanding ? 'bg-[rgba(0,0,0,0.06)]' : 'bg-white/10')
                           )}
                           data-testid={`tool-link-${item.href.split('/').pop()}`}
                         >
-                          <div className="p-2 rounded-lg bg-[rgba(0,0,0,0.04)] transition-transform duration-200 group-hover:scale-110">
-                            <Icon className="w-4 h-4 text-[#09090B]" strokeWidth={1.5} />
+                          <div
+                            className={cn(
+                              'p-2 rounded-lg transition-transform duration-200 group-hover:scale-110',
+                              isLanding ? 'bg-[rgba(0,0,0,0.04)]' : 'bg-white/10'
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                'w-4 h-4',
+                                isLanding ? 'text-[#09090B]' : 'text-white/90'
+                              )}
+                              strokeWidth={1.5}
+                            />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-[#09090B]">{item.label}</p>
-                            <p className="text-xs text-[#71717A] mt-0.5">{item.description}</p>
+                            <p
+                              className={cn(
+                                'text-sm font-medium mt-0.5',
+                                isLanding ? 'text-[#09090B]' : 'text-white/90'
+                              )}
+                            >
+                              {item.label}
+                            </p>
+                            <p
+                              className={cn(
+                                'text-xs mt-0.5',
+                                isLanding ? 'text-[#71717A]' : 'text-white/60'
+                              )}
+                            >
+                              {item.description}
+                            </p>
                           </div>
                         </Link>
                       </motion.div>
@@ -240,14 +287,20 @@ export const Navbar = () => {
 
           <Link
             to="/tools/100cr-calculator#benchmarks"
-            className="px-4 py-2 text-sm font-medium text-[#52525B] hover:text-[#09090B] transition-colors"
+            className={cn(
+              'px-4 py-2 text-sm font-medium transition-colors',
+              'text-white/70 hover:text-white'
+            )}
           >
             {copy.nav.benchmarks}
           </Link>
 
           <Link
             to="/pricing"
-            className="px-4 py-2 text-sm font-medium text-[#52525B] hover:text-[#09090B] transition-colors"
+            className={cn(
+              'px-4 py-2 text-sm font-medium transition-colors',
+              'text-white/70 hover:text-white'
+            )}
           >
             {copy.nav.pricing}
           </Link>
@@ -264,8 +317,7 @@ export const Navbar = () => {
               className={cn(
                 'flex items-center gap-2',
                 'h-10 px-4 ml-2 rounded-full',
-                'bg-[#F4F4F5] text-[#09090B] text-sm font-medium',
-                'hover:bg-[#E4E4E7]',
+                  'bg-white/10 text-white/90 text-sm font-medium border border-white/20 hover:bg-white/20',
                 'transition-all duration-200'
               )}
               data-testid="user-menu-trigger"
@@ -285,16 +337,34 @@ export const Navbar = () => {
                   className={cn(
                     'absolute top-full right-0 mt-2',
                     'w-56 p-2',
-                    'bg-white/90 backdrop-blur-xl',
-                    'rounded-2xl border border-[rgba(0,0,0,0.08)]',
-                    'shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                    isLanding
+                      ? 'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.08)]'
+                      : 'glass-dark',
+                    'rounded-2xl',
+                    isLanding
+                      ? 'shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                      : 'shadow-[0_16px_48px_rgba(0,191,255,0.10)]'
                   )}
                   onClick={(e) => e.stopPropagation()}
                   data-testid="user-menu-dropdown"
                 >
                   <div className="px-3 py-2 border-b border-[rgba(0,0,0,0.06)] mb-2">
-                    <p className="text-sm font-medium text-[#09090B] truncate">{user?.email}</p>
-                    <p className="text-xs text-[#71717A]">Founder Plan</p>
+                    <p
+                      className={cn(
+                        'text-sm font-medium truncate',
+                        isLanding ? 'text-[#09090B]' : 'text-white/90'
+                      )}
+                    >
+                      {user?.email}
+                    </p>
+                    <p
+                      className={cn(
+                        'text-xs',
+                        isLanding ? 'text-[#71717A]' : 'text-white/60'
+                      )}
+                    >
+                      Founder Plan
+                    </p>
                   </div>
                   
                   <Link
@@ -302,8 +372,9 @@ export const Navbar = () => {
                     onClick={() => setUserMenuOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl',
-                      'text-sm text-[#52525B]',
-                      'hover:bg-[rgba(0,0,0,0.04)] transition-colors'
+                      isLanding
+                        ? 'text-sm text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                        : 'text-sm text-white/70 hover:bg-white/10'
                     )}
                     data-testid="user-menu-dashboard"
                   >
@@ -316,8 +387,9 @@ export const Navbar = () => {
                     onClick={() => setUserMenuOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl',
-                      'text-sm text-[#52525B]',
-                      'hover:bg-[rgba(0,0,0,0.04)] transition-colors'
+                      isLanding
+                        ? 'text-sm text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                        : 'text-sm text-white/70 hover:bg-white/10'
                     )}
                   >
                     <User className="w-4 h-4" strokeWidth={1.5} />
@@ -346,9 +418,7 @@ export const Navbar = () => {
             className={cn(
               'hidden md:flex items-center gap-2',
               'h-10 px-5 ml-2 rounded-full',
-              'bg-[#09090B] text-white text-sm font-medium',
-              'shadow-[0_2px_8px_rgba(0,0,0,0.2)]',
-              'hover:bg-[#18181B] hover:shadow-[0_4px_16px_rgba(0,0,0,0.25)]',
+              'bg-white text-[#09090B] text-sm font-medium border border-white/20 shadow-none hover:bg-white/90',
               'transition-all duration-200'
             )}
             data-testid="navbar-cta"
@@ -360,7 +430,7 @@ export const Navbar = () => {
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-3"
+          className={cn("md:hidden p-3 text-white/90")}
           data-testid="mobile-menu-toggle"
           aria-label="Toggle menu"
         >
@@ -382,15 +452,22 @@ export const Navbar = () => {
             transition={{ duration: 0.2 }}
             className={cn(
               'fixed top-[80px] left-4 right-4 z-40',
-              'bg-white/90 backdrop-blur-xl',
-              'rounded-2xl border border-[rgba(0,0,0,0.08)]',
-              'shadow-[0_16px_48px_rgba(0,0,0,0.12)]',
+              isLanding
+                ? 'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.08)] shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                : 'glass-dark shadow-[0_16px_48px_rgba(0,191,255,0.10)]',
               'p-3',
               'md:hidden'
             )}
             data-testid="mobile-menu"
           >
-            <p className="type-label text-[#A1A1AA] px-3 py-2">{copy.tools.dropdown}</p>
+            <p
+              className={cn(
+                'type-label px-3 py-2',
+                isLanding ? 'text-[#A1A1AA]' : 'text-white/60'
+              )}
+            >
+              {copy.tools.dropdown}
+            </p>
             <div className="space-y-1 mb-3">
               {toolsItems.map((item) => {
                 const Icon = item.icon;
@@ -399,20 +476,46 @@ export const Navbar = () => {
                     key={item.href}
                     to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[rgba(0,0,0,0.04)] transition-colors"
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors",
+                      isLanding ? "hover:bg-[rgba(0,0,0,0.04)]" : "hover:bg-white/10"
+                    )}
                   >
-                    <Icon className="w-4 h-4 text-[#52525B]" strokeWidth={1.5} />
-                    <span className="text-sm text-[#52525B]">{item.label}</span>
+                    <Icon
+                      className={cn(
+                        'w-4 h-4',
+                        isLanding ? 'text-[#52525B]' : 'text-white/70'
+                      )}
+                      strokeWidth={1.5}
+                    />
+                    <span
+                      className={cn(
+                        'text-sm',
+                        isLanding ? 'text-[#52525B]' : 'text-white/70'
+                      )}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}
             </div>
             
-            <div className="border-t border-[rgba(0,0,0,0.06)] pt-3 space-y-1">
+            <div
+              className={cn(
+                'pt-3 space-y-1',
+                isLanding ? 'border-t border-[rgba(0,0,0,0.06)]' : 'border-t border-white/10'
+              )}
+            >
               <Link
                 to="/pricing"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-3 text-sm text-[#52525B] hover:bg-[rgba(0,0,0,0.04)] rounded-xl transition-colors"
+                className={cn(
+                  'block px-3 py-3 text-sm rounded-xl transition-colors',
+                  isLanding
+                    ? 'text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                    : 'text-white/70 hover:bg-white/10'
+                )}
               >
                 {copy.nav.pricing}
               </Link>
@@ -433,8 +536,9 @@ export const Navbar = () => {
               }}
               className={cn(
                 'mt-3 w-full h-11 rounded-full',
-                'bg-[#09090B] text-white text-sm font-medium',
-                'hover:bg-[#18181B]',
+                isLanding
+                  ? 'bg-[#09090B] text-white text-sm font-medium hover:bg-[#18181B]'
+                  : 'bg-white text-[#09090B] text-sm font-medium hover:bg-white/90',
                 'transition-colors'
               )}
             >

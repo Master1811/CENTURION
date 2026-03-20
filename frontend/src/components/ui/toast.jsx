@@ -23,7 +23,8 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
+        // Toasts are small surfaces; keep them restrained but premium.
+        default: "glass-card text-card-foreground border-white/20",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
       },
@@ -72,7 +73,7 @@ ToastClose.displayName = ToastPrimitives.Close.displayName
 const ToastTitle = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-semibold [&+div]:text-xs", className)}
+    className={cn("font-heading text-sm font-bold [&+div]:text-xs", className)}
     {...props} />
 ))
 ToastTitle.displayName = ToastPrimitives.Title.displayName

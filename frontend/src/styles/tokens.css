@@ -33,11 +33,80 @@
   --gradient-amethyst: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 50%, #C4B5FD 100%);
   --gradient-amber: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 50%, #FCD34D 100%);
   
+  /* ═══════════════════════════════════════════════════════════════════════
+     GLASSMORPHISM / LIQUID GLASS SYSTEM
+     Premium, restrained glass effects for intentional, handcrafted feel
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Glass Surfaces — Layered transparency system */
+  --glass-subtle: rgba(255, 255, 255, 0.6);
+  --glass-light: rgba(255, 255, 255, 0.75);
+  --glass-medium: rgba(255, 255, 255, 0.85);
+  --glass-solid: rgba(255, 255, 255, 0.92);
+  --glass-dark: rgba(9, 9, 11, 0.8);
+  --glass-dark-subtle: rgba(9, 9, 11, 0.6);
+
+  /* Glass Borders — Subtle luminance edges */
+  --glass-border-light: rgba(255, 255, 255, 0.2);
+  --glass-border-medium: rgba(255, 255, 255, 0.35);
+  --glass-border-strong: rgba(255, 255, 255, 0.5);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+  --glass-border-inner: rgba(255, 255, 255, 0.15);
+
+  /* Blur Levels — Progressive depth system */
+  --blur-none: 0px;
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 20px;
+  --blur-xl: 32px;
+  --blur-2xl: 48px;
+
   /* Glass Effect Gradients */
   --gradient-glass-light: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
   --gradient-glass-dark: linear-gradient(135deg, rgba(9,9,11,0.95) 0%, rgba(24,24,27,0.9) 100%);
   --gradient-glass-frost: linear-gradient(135deg, rgba(248,250,252,0.8) 0%, rgba(241,245,249,0.6) 100%);
   
+  /* Liquid Glass Gradients — Premium depth illusion */
+  --liquid-glass-highlight: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  --liquid-glass-shine: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0) 50%
+  );
+  --liquid-glass-refraction: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(0, 0, 0, 0.02) 70%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+
+  /* Glass Shadows — Soft, diffused depth */
+  --shadow-glass-sm:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.02);
+  --shadow-glass-md:
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 8px 24px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-glass-lg:
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --shadow-glass-xl:
+    0 12px 40px rgba(0, 0, 0, 0.08),
+    0 24px 64px rgba(0, 0, 0, 0.06),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  --shadow-glass-glow:
+    0 0 60px rgba(255, 255, 255, 0.1),
+    0 0 100px rgba(255, 255, 255, 0.05);
+
   /* Shimmer/Shine Effects */
   --shimmer-gold: linear-gradient(90deg, transparent, rgba(212,184,150,0.4), transparent);
   --shimmer-silver: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
@@ -62,6 +131,7 @@
   --ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-glass: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   /* Motion — Durations */
   --duration-instant: 100ms;

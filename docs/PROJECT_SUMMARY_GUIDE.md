@@ -3,7 +3,7 @@
 
 **Analysis Date:** March 19, 2026  
 **Version:** 3.0.0 Production  
-**Status:** Production Ready
+**Status:** Production Ready (core) + Habit Engine Dev Mode (verification pending)
 
 ---
 
@@ -126,7 +126,7 @@ First Dashboard Visit → Check !company_name → OnboardingModal → 3 Steps �
 | Connector Sync | ⚠️ Stub | Planned: Razorpay API integration |
 | Admin Stats | ⚠️ Stub | Planned: DB count queries |
 | PDF Export | ❌ Missing | Planned: Puppeteer/WeasyPrint |
-| Email Service | ❌ Missing | Planned: Resend integration |
+| Email Service | ⚠️ Local dev logger | Resend integration deferred; verify `backend/logs/emails.log` + JSON previews |
 
 ---
 
@@ -221,7 +221,10 @@ REACT_APP_SUPABASE_ANON_KEY=eyJ...
 - [ ] Track conversion metrics
 - [ ] Gather beta user feedback
 - [ ] Implement connector sync
-- [ ] Add email notifications
+- [ ] Add email notifications (habit engine): verify digest/check-in/reminder/milestone/streak + dedup
+- [ ] Set `ANTHROPIC_API_KEY` to a real key (avoid Haiku fallbacks in dev)
+- [ ] Run `backend/migrations/habit_engine_schema.sql` and confirm RPCs + columns exist in Supabase
+- [ ] Verify `/api/admin/trigger/*` + `/api/admin/engagement/*` endpoints are reachable on localhost
 - [x] AI production optimizations enabled (tuple-unpacking correctness + Anthropic prompt caching)
 
 ---

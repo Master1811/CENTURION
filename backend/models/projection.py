@@ -51,13 +51,13 @@ class ProjectionInputs(BaseModel):
     
     currentMRR: float = Field(
         ...,
-        gt=0,
+        ge=0,
         le=50 * CRORE,
         description="Current Monthly Recurring Revenue in INR"
     )
     growthRate: float = Field(
         ...,
-        ge=0,
+        ge=-1,
         le=2.0,
         description="Monthly growth rate as decimal (0.08 = 8%)"
     )
@@ -77,10 +77,10 @@ class ScenarioInputs(BaseModel):
     """
     Input for scenario analysis (what-if modeling).
     """
-    currentMRR: float = Field(..., gt=0)
-    baseGrowthRate: float = Field(..., ge=0, le=2.0)
-    optimisticGrowthRate: float = Field(..., ge=0, le=2.0)
-    pessimisticGrowthRate: float = Field(..., ge=0, le=2.0)
+    currentMRR: float = Field(..., ge=0)
+    baseGrowthRate: float = Field(..., ge=-1, le=2.0)
+    optimisticGrowthRate: float = Field(..., ge=-1, le=2.0)
+    pessimisticGrowthRate: float = Field(..., ge=-1, le=2.0)
     monthsToProject: int = Field(default=60, ge=1, le=240)
 
 

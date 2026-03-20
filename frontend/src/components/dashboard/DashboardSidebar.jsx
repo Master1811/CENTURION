@@ -36,12 +36,12 @@ export const DashboardSidebar = () => {
   return (
     <aside className={cn(
       'fixed left-0 top-0 bottom-0 w-64',
-      'bg-white border-r border-[rgba(0,0,0,0.06)]',
+      'glass-sidebar',
       'flex flex-col',
       'hidden lg:flex'
     )}>
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-[rgba(0,0,0,0.06)]">
+      <div className="h-16 flex items-center px-6 border-b border-[rgba(0,0,0,0.04)]">
         <Link to="/" className="flex items-center gap-1.5">
           <span className="font-heading font-bold text-[#09090B]">100Cr</span>
           <span className="font-heading text-[#71717A]">Engine</span>
@@ -61,12 +61,12 @@ export const DashboardSidebar = () => {
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg',
+                  'group flex items-center gap-3 px-3 py-2.5 rounded-xl',
                   'text-sm font-medium',
                   'transition-all duration-200 ease-[var(--ease-luxury)]',
                   isActive
-                    ? 'bg-[#09090B] text-white shadow-sm'
-                    : 'text-[#52525B] hover:bg-[rgba(0,0,0,0.04)] hover:text-[#09090B] hover:translate-x-1'
+                    ? 'bg-[#09090B] text-white shadow-md'
+                    : 'text-[#52525B] hover:bg-[rgba(0,0,0,0.03)] hover:text-[#09090B] hover:translate-x-1'
                 )}
                 data-testid={`sidebar-${item.href.split('/').pop()}`}
               >
@@ -85,14 +85,15 @@ export const DashboardSidebar = () => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">
+      <div className="p-4 border-t border-[rgba(0,0,0,0.04)]">
         {/* Plan Badge */}
         <div className={cn(
-          'flex items-center gap-2 px-3 py-2 mb-3',
-          'bg-gradient-to-r from-amber-50 to-orange-50',
-          'border border-amber-200/50 rounded-lg',
+          'flex items-center gap-2 px-3 py-2.5 mb-3',
+          'bg-gradient-to-r from-amber-50/80 to-orange-50/80',
+          'backdrop-blur-sm',
+          'border border-amber-200/40 rounded-xl',
           'transition-all duration-300 ease-[var(--ease-luxury)]',
-          'hover:shadow-sm hover:border-amber-300/60'
+          'hover:shadow-sm hover:border-amber-300/50 hover:-translate-y-0.5'
         )}>
           <Crown className="w-4 h-4 text-amber-600" strokeWidth={1.5} />
           <span className="text-sm font-medium text-amber-900">Founder Plan</span>
@@ -100,7 +101,7 @@ export const DashboardSidebar = () => {
 
         <Link
           to="/dashboard/settings"
-          className="group flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.04)] rounded-lg transition-all duration-200 ease-[var(--ease-luxury)] hover:translate-x-1"
+          className="group flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.03)] rounded-xl transition-all duration-200 ease-[var(--ease-luxury)] hover:translate-x-1"
         >
           <Settings className="w-4 h-4 transition-transform duration-200 group-hover:rotate-45" strokeWidth={1.5} />
           Settings
@@ -111,7 +112,7 @@ export const DashboardSidebar = () => {
             localStorage.removeItem('auth_token');
             window.location.href = '/';
           }}
-          className="group w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 ease-[var(--ease-luxury)]"
+          className="group w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#52525B] hover:text-red-600 hover:bg-red-50/80 rounded-xl transition-all duration-200 ease-[var(--ease-luxury)]"
         >
           <LogOut className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" strokeWidth={1.5} />
           Sign out

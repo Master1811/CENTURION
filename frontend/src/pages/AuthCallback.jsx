@@ -19,6 +19,27 @@ export const AuthCallback = () => {
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Check for errors in URL hash (Supabase returns errors in hash fragment)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hashError = hashParams.get('error');
+      const hashErrorCode = hashParams.get('error_code');
+      const hashErrorDescription = hashParams.get('error_description');
+
+      if (hashError) {
+        console.error('Auth hash error:', { hashError, hashErrorCode, hashErrorDescription });
+        setStatus('error');
+
+        // Provide user-friendly error messages
+        if (hashErrorCode === 'otp_expired') {
+          setErrorMessage('Your magic link has expired. Please request a new one.');
+        } else if (hashError === 'access_denied') {
+          setErrorMessage('Access denied. The link may have expired or been used already.');
+        } else {
+          setErrorMessage(hashErrorDescription?.replace(/\+/g, ' ') || 'Authentication failed. Please try again.');
+        }
+        return;
+      }
+
       if (!isSupabaseConfigured()) {
         // Mock auth for development
         setStatus('success');
@@ -41,7 +62,8 @@ export const AuthCallback = () => {
 
         if (session) {
           setStatus('success');
-          const redirectTo = getRedirectPathAfterAuth();
+          const paramRedirect = searchParams.get('redirectTo');
+          const redirectTo = paramRedirect || getRedirectPathAfterAuth();
           setTimeout(() => navigate(redirectTo), 1500);
         } else {
           setStatus('error');

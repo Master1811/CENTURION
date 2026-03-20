@@ -15,14 +15,15 @@ Author: 100Cr Engine Team
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Literal
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel, Field, field_validator
 
 from services.auth import require_paid_subscription
 from services.supabase import supabase_service
 from services.encryption import encryption_service
+from services.validation import sanitize_api_key
 
 logger = logging.getLogger("100cr_engine.connectors")
 
@@ -95,6 +96,16 @@ class ConnectResponse(BaseModel):
     message: str
 
 
+class ConnectRequest(BaseModel):
+    """API key payload for connecting a provider."""
+    api_key: str = Field(..., min_length=10, max_length=200, pattern=r"^[A-Za-z0-9._-]+$")
+
+    @field_validator('api_key', mode='before')
+    @classmethod
+    def _sanitize_key(cls, value: str):  # noqa: ANN001
+        return sanitize_api_key(value)
+
+
 # ============================================================================
 # ROUTES
 # ============================================================================
@@ -145,8 +156,8 @@ async def list_connectors(user: Dict[str, Any] = Depends(require_paid_subscripti
 
 @router.post("/{provider}/connect", response_model=ConnectResponse)
 async def connect_provider(
-    provider: str,
-    api_key: str = Query(..., min_length=10, description="API key for the provider"),
+    provider: Literal['razorpay', 'stripe', 'cashfree', 'chargebee'],
+    body: ConnectRequest,
     user: Dict[str, Any] = Depends(require_paid_subscription)
 ):
     """
@@ -161,20 +172,14 @@ async def connect_provider(
     Returns:
         Connection status
     """
-    if provider not in SUPPORTED_PROVIDERS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported provider. Choose from: {list(SUPPORTED_PROVIDERS.keys())}"
-        )
-    
     user_id = user['id']
     
     # TODO: Validate API key by making a test request to the provider
     # This would be implemented per-provider
     
     # Encrypt the API key before storage
-    encrypted_key = encryption_service.encrypt(api_key)
-    
+    encrypted_key = encryption_service.encrypt(body.api_key)
+
     # Save connector
     connector_data = {
         'user_id': user_id,
@@ -197,7 +202,7 @@ async def connect_provider(
 
 @router.delete("/{provider}")
 async def disconnect_provider(
-    provider: str,
+    provider: Literal['razorpay', 'stripe', 'cashfree', 'chargebee'],
     user: Dict[str, Any] = Depends(require_paid_subscription)
 ):
     """
@@ -222,7 +227,7 @@ async def disconnect_provider(
 
 @router.post("/{provider}/sync")
 async def sync_provider(
-    provider: str,
+    provider: Literal['razorpay', 'stripe', 'cashfree', 'chargebee'],
     user: Dict[str, Any] = Depends(require_paid_subscription)
 ):
     """

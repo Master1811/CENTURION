@@ -7,7 +7,9 @@ Author: 100Cr Engine Team
 """
 
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from services.validation import sanitize_text, sanitize_basic_text
 
 
 # ============================================================================
@@ -36,6 +38,13 @@ class StrategyBriefRequest(BaseModel):
     quarter: Optional[str] = None  # Q1, Q2, Q3, Q4
     year: Optional[int] = None
     focus_areas: Optional[List[str]] = None
+
+    @field_validator('focus_areas', mode='before')
+    @classmethod
+    def _sanitize_focus_areas(cls, value: Optional[List[str]]):  # noqa: ANN001
+        if value is None:
+            return None
+        return [sanitize_basic_text(item, 'focus_areas', max_length=120) for item in value if item is not None]
 
 
 class StrategyBriefResponse(BaseModel):
@@ -79,9 +88,14 @@ class WeeklyQuestionResponse(BaseModel):
 
 class DeviationAnalysisRequest(BaseModel):
     """Request to analyze revenue deviation."""
-    actual: float
-    projected: float
+    actual: float = Field(ge=0, le=1e9)
+    projected: float = Field(ge=0, le=1e9)
     note: Optional[str] = None
+
+    @field_validator('note', mode='before')
+    @classmethod
+    def _sanitize_note(cls, value: Optional[str]):  # noqa: ANN001
+        return sanitize_basic_text(value, 'note', max_length=500)
 
 
 class DeviationAnalysisResponse(BaseModel):
@@ -101,11 +115,21 @@ class CoachChatMessage(BaseModel):
     role: str = Field(pattern='^(user|assistant)$')
     content: str
 
+    @field_validator('content', mode='before')
+    @classmethod
+    def _sanitize_content(cls, value: str):  # noqa: ANN001
+        return sanitize_text(value, 'content', max_length=2000)
+
 
 class CoachChatRequest(BaseModel):
     """Request to chat with AI coach."""
     message: str = Field(..., min_length=1, max_length=2000)
     conversation_history: Optional[List[CoachChatMessage]] = None
+
+    @field_validator('message', mode='before')
+    @classmethod
+    def _sanitize_message(cls, value: str):  # noqa: ANN001
+        return sanitize_text(value, 'message', max_length=2000)
 
 
 class CoachChatResponse(BaseModel):

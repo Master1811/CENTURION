@@ -4,6 +4,8 @@ export function storeAuthIntent(intent) {
   localStorage.setItem(AUTH_INTENT_KEY, JSON.stringify({
     intent: intent?.intent ?? null,
     plan: intent?.plan ?? null,
+    price: intent?.price ?? null,
+    billing: intent?.billing ?? null,
     redirectTo: intent?.redirectTo ?? '/dashboard',
     storedAt: Date.now(),
   }));

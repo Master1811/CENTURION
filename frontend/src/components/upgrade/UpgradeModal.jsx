@@ -94,7 +94,7 @@ export const UpgradeModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 glass-backdrop"
         onClick={onClose}
       >
         <motion.div
@@ -102,13 +102,13 @@ export const UpgradeModal = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-lg glass-modal overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-[#F4F4F5] transition-colors z-10"
+            className="absolute top-4 right-4 p-2 rounded-xl glass-button transition-all duration-200 z-10"
           >
             <X className="w-5 h-5 text-[#71717A]" strokeWidth={1.5} />
           </button>
@@ -122,7 +122,7 @@ export const UpgradeModal = ({
               <ReasonIcon className="w-7 h-7" strokeWidth={1.5} />
             </div>
             
-            <h2 className="text-2xl font-bold text-[#09090B] mb-2">
+            <h2 className="text-2xl font-heading font-bold text-[#09090B] mb-2">
               {reasonData.title}
             </h2>
             

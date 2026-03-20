@@ -640,5 +640,161 @@ class SupabaseService:
 
 
 
+    # =========================================================================
+    # HABIT / ENGAGEMENT ENGINE
+    # =========================================================================
+
+    async def get_paid_users_for_digest(self) -> List[Dict[str, Any]]:
+        """Get users eligible for the Monday digest via RPC."""
+        if not self.is_configured:
+            return []
+
+        try:
+            result = self._client.rpc("get_paid_users_for_digest").execute()
+            return result.data or []
+        except Exception as e:
+            logger.warning(f"get_paid_users_for_digest RPC failed: {e}")
+            return []
+
+    async def get_recent_checkins(
+        self,
+        user_id: str,
+        limit: int = 2
+    ) -> List[Dict[str, Any]]:
+        """
+        Get the most recent check-ins for a user.
+
+        Uses the existing `checkins` table and orders by `month` desc.
+        """
+        if not self.is_configured:
+            return []
+
+        try:
+            result = (
+                self._client.table("checkins")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("month", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.warning(f"get_recent_checkins failed: {e}")
+            return []
+
+    async def get_profile_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch a profile row by `profiles.id`."""
+        if not self.is_configured:
+            return None
+
+        try:
+            result = (
+                self._client.table("profiles")
+                .select("*")
+                .eq("id", user_id)
+                .single()
+                .execute()
+            )
+            return result.data
+        except Exception as e:
+            logger.warning(f"get_profile_by_id failed: {e}")
+            return None
+
+    async def log_engagement_events(self, events: List[Dict[str, Any]]) -> None:
+        """Insert engagement events into `engagement_events`."""
+        if not self.is_configured:
+            return
+
+        if not events:
+            return
+
+        try:
+            self._client.table("engagement_events").insert(events).execute()
+        except Exception as e:
+            # Table may not exist yet on fresh setups.
+            logger.warning(f"log_engagement_events failed (non-fatal): {e}")
+            return
+
+    async def update_streak(
+        self,
+        user_id: str,
+        streak_count: int,
+        last_checkin_at: str
+    ) -> None:
+        """Update `streak_count` and `last_checkin_at` in profiles."""
+        if not self.is_configured:
+            return
+
+        try:
+            self._client.table("profiles").update(
+                {
+                    "streak_count": streak_count,
+                    "last_checkin_at": last_checkin_at,
+                }
+            ).eq("id", user_id).execute()
+        except Exception as e:
+            logger.warning(f"update_streak failed (non-fatal): {e}")
+            return
+
+    async def get_cohort_percentile(self, growth_rate: float, stage: str) -> int:
+        """Get cohort percentile via RPC (defaults to 50 on error)."""
+        if not self.is_configured:
+            return 50
+
+        try:
+            result = self._client.rpc(
+                "get_cohort_percentile",
+                {"p_growth_rate": growth_rate, "p_stage": stage},
+            ).execute()
+
+            data = getattr(result, "data", None)
+            if not data:
+                return 50
+
+            if isinstance(data, list) and data:
+                row = data[0]
+                if isinstance(row, dict):
+                    return int(list(row.values())[0])
+                return int(row)
+
+            if isinstance(data, dict) and data:
+                return int(list(data.values())[0])
+
+            return 50
+        except Exception as e:
+            logger.warning(f"get_cohort_percentile RPC failed: {e}")
+            return 50
+
+    async def get_cohort_size(self, stage: str) -> int:
+        """Get cohort size via RPC (defaults to 100 on error)."""
+        if not self.is_configured:
+            return 100
+
+        try:
+            result = self._client.rpc(
+                "get_cohort_size",
+                {"p_stage": stage},
+            ).execute()
+
+            data = getattr(result, "data", None)
+            if not data:
+                return 100
+
+            if isinstance(data, list) and data:
+                row = data[0]
+                if isinstance(row, dict):
+                    return int(list(row.values())[0])
+                return int(row)
+
+            if isinstance(data, dict) and data:
+                return int(list(data.values())[0])
+
+            return 100
+        except Exception as e:
+            logger.warning(f"get_cohort_size RPC failed: {e}")
+            return 100
+
+
 # Global instance (singleton pattern)
 supabase_service = SupabaseService()

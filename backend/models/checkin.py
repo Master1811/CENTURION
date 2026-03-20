@@ -7,7 +7,9 @@ Author: 100Cr Engine Team
 """
 
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from services.validation import sanitize_basic_text
 
 
 class CheckInData(BaseModel):
@@ -30,7 +32,8 @@ class CheckInData(BaseModel):
     )
     actual_revenue: float = Field(
         ...,
-        gt=0,
+        ge=0,
+        le=1e9,
         description="Actual MRR for the month"
     )
     note: Optional[str] = Field(
@@ -43,6 +46,11 @@ class CheckInData(BaseModel):
         pattern='^(manual|razorpay|stripe|cashfree|csv)$',
         description="Data source"
     )
+
+    @field_validator('note', mode='before')
+    @classmethod
+    def _sanitize_note(cls, value: Optional[str]):  # noqa: ANN001
+        return sanitize_basic_text(value, 'note', max_length=500)
 
 
 class CheckInResponse(BaseModel):

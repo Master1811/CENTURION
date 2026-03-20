@@ -838,3 +838,51 @@ curl -X POST "https://api.100crengine.in/api/admin/beta/{user_id}" \
 ---
 
 **End of Comprehensive Guide**
+
+---
+
+## Habit-Forming Engagement System (Centurion Habit Engine) — Status Update
+
+### Implemented (code + DB artifacts)
+- Added Supabase migration `backend/migrations/habit_engine_schema.sql` (profiles: `streak_count`, `last_checkin_at`, `email_preferences`; new `engagement_events`; RPCs `get_paid_users_for_digest`, `get_cohort_percentile`, `get_cohort_size`).
+- Implemented `backend/services/engagement_engine.py` (in-memory dedup, local JSON email logger, Async Anthropic Haiku wrapper, batch runner).
+- Implemented `backend/services/habit_layers.py`:
+  - L1 Monday Morning Digest
+  - L2 Check-in Reminder
+  - L3 Milestone Countdown
+  - L4 Streak Protection
+  - L5 Anomaly Alert (event-driven)
+- Implemented `backend/services/scheduler.py` (APScheduler cron jobs, Asia/Kolkata, gated by `SCHEDULER_ENABLED=true`).
+- Wired scheduler lifecycle into `backend/main.py`.
+- Updated `backend/routers/reports.py` to update streak fields after check-ins.
+- Updated `backend/routers/payments.py` to trigger anomaly alerts on Razorpay failure/refund/cancel/halt events (via `BackgroundTasks`).
+- Updated `backend/routers/admin.py` with localhost admin endpoints to:
+  - Trigger jobs (`/api/admin/trigger/{job_name}`)
+  - View engagement event stats and per-user events
+  - Inspect dedup cache (`/api/admin/dedup/status`)
+
+### Verified
+- `python -m compileall` passed for backend modules after implementation.
+- Uvicorn startup shows scheduler job registration logs and app scheduler lifecycle prints.
+
+### Pending / Incomplete Verification
+- Confirm Supabase migration ran successfully after the final script adjustments (RPC column references required DB-specific field names).
+- Confirm admin engagement routes are reachable on the running localhost instance (curl attempts for `/api/admin/trigger/*` and `/api/admin/dedup/status` returned `404` during verification).
+- Confirm `backend/logs/emails.log` is being written when triggering jobs (and that digest preview includes the Haiku-generated board question).
+- Confirm end-to-end dedup behavior (trigger digest twice; second run should mostly skip).
+- Confirm streak updates end-to-end:
+  - POST check-in endpoint updates `profiles.streak_count` and `profiles.last_checkin_at`.
+- Confirm engagement events are logged to `engagement_events` after any successful trigger/alert.
+
+### Next Steps
+1. Re-run the Supabase migration file and confirm `get_paid_users_for_digest()` and both cohort RPCs exist.
+2. Use a valid admin JWT (depends on `ADMIN_EMAILS` + Supabase JWT verification) and re-test:
+   - `POST /api/admin/trigger/digest`
+   - `POST /api/admin/trigger/checkin_reminder`
+   - `POST /api/admin/trigger/milestone_countdown`
+   - `POST /api/admin/trigger/streak_protection`
+3. Inspect `backend/logs/emails.log` for JSON lines and board-question previews.
+4. Validate streak + engagement event flows via authenticated user check-ins and admin engagement endpoints.
+
+### Production Upgrade Path (not done yet)
+- Add `REDIS_URL` and `RESEND_API_KEY` to `.env` to switch dedup and email sending from dev-local mode to production services.

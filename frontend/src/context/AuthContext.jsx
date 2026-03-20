@@ -179,9 +179,21 @@ export const AuthProvider = ({ children }) => {
    * @returns {boolean}
    */
   const hasPaidSubscription = () => {
-    return ['founder', 'studio', 'vc_portfolio'].includes(subscription?.plan) &&
-           subscription?.status === 'active';
+    const plan = subscription?.plan;
+    const status = subscription?.status;
+    const expiresAt = subscription?.expires_at;
+
+    const isTrial = plan === 'starter' && status === 'trialing' && expiresAt && new Date(expiresAt) > new Date();
+    const isActivePaid = ['starter', 'founder', 'studio', 'vc_portfolio'].includes(plan) && status === 'active';
+
+    return Boolean(isTrial || isActivePaid);
   };
+
+  // Trial helper computed values
+  const isTrialUser = subscription?.plan === 'starter' && subscription?.status === 'trialing' && subscription?.expires_at && new Date(subscription.expires_at) > new Date();
+  const trialDaysRemaining = isTrialUser
+    ? Math.max(0, Math.ceil((new Date(subscription.expires_at) - new Date()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   // Computed: Beta user check (active status AND not expired)
   const isBetaUser = Boolean(
@@ -191,7 +203,8 @@ export const AuthProvider = ({ children }) => {
   );
 
   // Computed: Can access dashboard (beta OR paid)
-  const canAccessDashboard = isBetaUser || hasPaidSubscription();
+  const paidSubscription = hasPaidSubscription();
+  const canAccessDashboard = isBetaUser || paidSubscription;
 
   /**
    * Check if user has completed onboarding
@@ -231,9 +244,11 @@ export const AuthProvider = ({ children }) => {
     // Computed - access control
     isAuthenticated: Boolean(user),
     isBetaUser,
-    hasPaidSubscription: hasPaidSubscription(),
+    isTrialUser,
+    trialDaysRemaining,
+    hasPaidSubscription: paidSubscription,
     canAccessDashboard,
-    isPaid: hasPaidSubscription(),
+    isPaid: paidSubscription,
   };
 
   return (

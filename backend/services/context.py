@@ -22,6 +22,7 @@ from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
 
 from services.supabase import supabase_service
+from services.validation import sanitize_basic_text
 
 logger = logging.getLogger("100cr_engine.context")
 
@@ -132,7 +133,14 @@ class ContextBuilder:
     def __init__(self):
         """Initialize context builder."""
         self._supabase = supabase_service
-    
+
+    def _safe_text(self, value: Optional[str], field: str, max_length: int = 100) -> Optional[str]:
+        """Best-effort sanitize text for AI prompts; drop on validation failure."""
+        try:
+            return sanitize_basic_text(value, field, max_length=max_length)
+        except Exception:
+            return None
+
     async def build(self, user_id: str, email: str = '') -> FounderContext:
         """
         Build a complete FounderContext for a user.
@@ -149,13 +157,18 @@ class ContextBuilder:
         subscription = await self._supabase.get_subscription(user_id)
         checkins = await self._supabase.get_checkins(user_id, limit=12)
         
+        allowed_stages = {'pre-seed', 'seed', 'series-a', 'series-b'}
+        stage_value = profile.get('stage', 'pre-seed') if profile else 'pre-seed'
+        if stage_value not in allowed_stages:
+            stage_value = 'pre-seed'
+
         # Build context
         context = FounderContext(
             user_id=user_id,
             email=email or (profile.get('email', '') if profile else ''),
-            name=profile.get('name') if profile else None,
-            company_name=profile.get('company') if profile else None,
-            stage=profile.get('stage', 'pre-seed') if profile else 'pre-seed',
+            name=self._safe_text(profile.get('name') if profile else None, 'name'),
+            company_name=self._safe_text(profile.get('company') if profile else None, 'company'),
+            stage=stage_value,
             current_mrr=self._get_current_mrr(profile, checkins),
             growth_rate=self._calculate_growth_rate(profile, checkins),
             checkins=checkins,

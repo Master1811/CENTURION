@@ -18,7 +18,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 
-from fastapi import APIRouter, HTTPException, Depends, Request, status
+from fastapi import APIRouter, HTTPException, Depends, Request, status, Path
 
 from models.projection import (
     ProjectionInputs,
@@ -246,7 +246,11 @@ async def run_projection(
 
 
 @router.get("/projection/{slug}")
-async def get_shared_projection(slug: str, request: Request):
+async def get_shared_projection(
+    request: Request,
+    slug: str = Path(..., pattern=r"^[A-Za-z0-9_-]{4,32}$"),
+    user: Optional[Dict[str, Any]] = Depends(get_current_user),
+):
     """
     Retrieve a shared projection by its unique slug.
     
@@ -273,11 +277,27 @@ async def get_shared_projection(slug: str, request: Request):
         )
 
     projection = await supabase_service.get_projection_by_slug(slug)
-    
+
     if not projection:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Projection not found"
+        )
+
+    # IDOR protection:
+    # If the caller is logged in and the projection is owned by another user,
+    # deny access (anonymous sharing remains allowed via random slug URLs).
+    owner_id = projection.get("user_id") if isinstance(projection, dict) else None
+    # If projection is owned by a specific user, only that owner can read it.
+    if owner_id and not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        )
+    if user and owner_id and owner_id != user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
         )
     
     # Increment rate limit counter
@@ -303,7 +323,7 @@ async def run_scenario_analysis(
     # Check rate limit
     identifier = get_client_identifier(request)
     is_paid = user is not None and user.get('subscription', {}).get('status') == 'active' if user else False
-    
+
     limit_status = await rate_limiter.check(identifier, 'scenario', is_paid)
     if not limit_status['allowed']:
         raise HTTPException(

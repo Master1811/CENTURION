@@ -519,3 +519,51 @@ The Centurion 100Cr Engine is **production-ready** with all critical flows imple
 
 The system is ready for **beta launch** with 50 curated users.
 
+---
+
+## 13. Habit Engine Roadmap Update (Completed Dev Work, Pending Verification)
+
+### Done
+- Created and iteratively fixed `backend/migrations/habit_engine_schema.sql` to match the actual `profiles` schema in this repo (missing `full_name` / `company_name` required adjustments).
+- Added Supabase service methods in `backend/services/supabase.py`:
+  - `get_paid_users_for_digest`
+  - `get_recent_checkins`
+  - `get_profile_by_id`
+  - `log_engagement_events`
+  - `update_streak`
+  - `get_cohort_percentile`
+  - `get_cohort_size`
+- Implemented the habit engine foundation + layers:
+  - `backend/services/engagement_engine.py` (dev-mode dedup + local JSON email logging)
+  - `backend/services/habit_layers.py` (digest, check-in reminder, milestone countdown, streak protection, anomaly alert)
+  - `backend/services/scheduler.py` (APScheduler cron)
+- Wired scheduler into `backend/main.py` lifecycle.
+- Wired streak update into the check-in flow (`backend/routers/reports.py`).
+- Wired anomaly trigger into Razorpay webhook (`backend/routers/payments.py`).
+- Added admin endpoints (`backend/routers/admin.py`) to:
+  - Trigger jobs
+  - Inspect engagement event counts and per-user events
+  - Inspect the in-memory dedup cache
+- Set `SCHEDULER_ENABLED=true` in `backend/.env` and added scheduler startup/shutdown logs.
+
+### In Progress / Verified
+- Backend imports compile.
+- Uvicorn startup shows scheduler registration + scheduler start prints.
+
+### Pending / Blockers
+- Re-confirm Supabase migration success (final rerun after schema adjustments) and that RPCs exist.
+- Verify localhost admin endpoints are reachable end-to-end:
+  - `POST /api/admin/trigger/digest`
+  - `GET /api/admin/dedup/status`
+  - `GET /api/admin/engagement/*`
+- Verify email log output:
+  - `backend/logs/emails.log` JSON lines
+  - digest preview includes the Haiku board question
+- Verify dedup correctness by triggering the same job twice.
+- Verify streak update correctness via a real check-in submission and Supabase profile validation.
+- Verify engagement event inserts into `engagement_events`.
+
+### Future Implementations (Production Upgrade Path)
+- Add `REDIS_URL` to enable distributed dedup.
+- Add `RESEND_API_KEY` to enable real email sending (switch from local logger to Resend).
+

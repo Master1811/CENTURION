@@ -12,7 +12,7 @@ Author: 100Cr Engine Team
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
@@ -160,7 +160,7 @@ async def list_stages():
 
 
 @router.get("/{stage}", response_model=BenchmarkData)
-async def get_benchmarks(stage: str):
+async def get_benchmarks(stage: Literal['pre-seed', 'seed', 'series-a', 'series-b']):
     """
     Get benchmark data for a funding stage.
     
@@ -191,8 +191,8 @@ async def get_benchmarks(stage: str):
 
 @router.post("/compare", response_model=BenchmarkComparison)
 async def compare_benchmark(
-    growth_rate: float = Query(..., ge=0, le=2.0, description="Monthly growth rate as decimal"),
-    stage: str = Query(..., description="Funding stage")
+    growth_rate: float = Query(..., ge=-1, le=2.0, description="Monthly growth rate as decimal"),
+    stage: Literal['pre-seed', 'seed', 'series-a', 'series-b'] = Query(..., description="Funding stage")
 ):
     """
     Compare a growth rate against benchmarks for a stage.

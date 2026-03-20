@@ -1,5 +1,5 @@
-// Landing Page - High-conversion layout inspired by codemate.ai
-// Structure: Hero → Scroll Story → Quiz → Social Proof → Teaser → Pricing → CTA
+// Landing Page - Figma-inspired layout (with 100Cr Engine branding)
+// Structure: Hero → Scroll Story → Inline CTA → Quiz → Social Proof → Teaser → FAQ → Inline CTA → CTA
 
 import React from 'react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -7,12 +7,12 @@ import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { Footer } from '@/components/layout/Footer';
 import { HeroSection } from '@/components/landing/HeroSectionNew';
 import { ScrollStorySection } from '@/components/landing/ScrollStorySection';
+import { LogoCarousel } from '@/components/landing/LogoCarousel';
+import { InlineCTA, CTASection } from '@/components/landing/CTASectionNew';
 import { FounderDNAQuiz } from '@/components/landing/FounderDNAQuiz';
 import { SocialProofSection } from '@/components/landing/SocialProofSection';
 import { TeaserLockedSection } from '@/components/landing/TeaserLockedSection';
-import { PricingSection } from '@/components/landing/PricingSection';
-import { CTASection, InlineCTA } from '@/components/landing/CTASectionNew';
-import { LogoCarousel } from '@/components/landing/LogoCarousel';
+import { FAQSection } from '@/components/landing/FAQSection';
 
 export const LandingPage = () => {
   return (
@@ -30,25 +30,24 @@ export const LandingPage = () => {
         
         {/* Scroll Story - 5 feature sections */}
         <ScrollStorySection />
-        
+
         {/* Inline CTA #1 */}
         <InlineCTA variant="dark" />
-        
-        {/* Founder DNA Quiz - Lead generation */}
+
+        {/* Founder DNA Quiz - lead generation */}
         <FounderDNAQuiz />
-        
-        {/* Social Proof - Testimonials and metrics */}
+
+        {/* Premium preview feature block */}
         <SocialProofSection />
-        
-        {/* Teaser Locked Features - Premium preview */}
+
         <TeaserLockedSection />
-        
+
+        {/* FAQ */}
+        <FAQSection />
+
         {/* Inline CTA #2 */}
         <InlineCTA />
-        
-        {/* Pricing */}
-        <PricingSection />
-        
+
         {/* Final CTA */}
         <CTASection />
       </main>

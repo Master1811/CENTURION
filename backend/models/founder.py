@@ -6,9 +6,11 @@ Pydantic models for user profiles and subscriptions.
 Author: 100Cr Engine Team
 """
 
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
+
+from services.validation import sanitize_basic_text, sanitize_url, validate_phone
 
 
 # ============================================================================
@@ -29,20 +31,34 @@ class UserProfile(BaseModel):
         }
     )
     
-    name: Optional[str] = Field(None, max_length=100)
-    company: Optional[str] = Field(None, max_length=100)
+    name: Optional[str] = Field(None, max_length=80, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
+    company: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
     # Preferred onboarding field names (expected by onboarding tests/UI)
-    company_name: Optional[str] = Field(None, max_length=100)
+    company_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
     website: Optional[str] = Field(None, max_length=255)
-    stage: str = Field(
-        default='pre-seed',
-        pattern='^(pre-seed|seed|series-a|series-b)$'
-    )
-    current_mrr: Optional[float] = Field(None, gt=0)
-    growth_rate: Optional[float] = Field(None, ge=0, le=2.0)
-    industry: Optional[str] = None
-    sector: Optional[str] = None
+    stage: Literal['pre-seed', 'seed', 'series-a', 'series-b'] = 'pre-seed'
+    current_mrr: Optional[float] = Field(None, ge=0, le=1e9)
+    growth_rate: Optional[float] = Field(None, ge=-1, le=2.0)
+    industry: Optional[str] = Field(None, max_length=50, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
+    sector: Optional[Literal['B2B SaaS', 'D2C', 'EdTech', 'FinTech', 'HealthTech', 'Other']] = None
     team_size: Optional[int] = Field(None, ge=1)
+    phone: Optional[str] = Field(None, max_length=20, pattern=r"^[0-9+\-\s]{7,20}$")
+    timezone: Optional[str] = Field(None, max_length=50, pattern=r"^[A-Za-z0-9_+\-/]{1,50}$")
+
+    @field_validator('name', 'company', 'company_name', 'industry', mode='before')
+    @classmethod
+    def _sanitize_text_fields(cls, value: Optional[str], info):  # noqa: ANN001
+        return sanitize_basic_text(value, info.field_name, max_length=100)
+
+    @field_validator('phone', mode='before')
+    @classmethod
+    def _validate_phone(cls, value: Optional[str]):  # noqa: ANN001
+        return validate_phone(value)
+
+    @field_validator('website', mode='before')
+    @classmethod
+    def _sanitize_website(cls, value: Optional[str]):  # noqa: ANN001
+        return sanitize_url(value, 'website')
 
 
 class UserProfileResponse(BaseModel):
@@ -66,14 +82,11 @@ class UserProfileResponse(BaseModel):
 
 class OnboardingData(BaseModel):
     """Data collected during onboarding flow."""
-    company_name: str = Field(..., min_length=1, max_length=100)
+    company_name: str = Field(..., min_length=1, max_length=100, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
     website: Optional[str] = Field(None, max_length=255)
-    stage: str = Field(
-        ...,
-        pattern='^(pre-seed|seed|series-a|series-b)$'
-    )
-    current_mrr: float = Field(..., gt=0)
-    sector: Optional[str] = None
+    stage: Literal['pre-seed', 'seed', 'series-a', 'series-b']
+    current_mrr: float = Field(..., ge=0, le=1e9)
+    sector: Optional[Literal['B2B SaaS', 'D2C', 'EdTech', 'FinTech', 'HealthTech', 'Other']] = None
 
 
 # ============================================================================

@@ -18,7 +18,7 @@ import { useAuth } from '@/context/AuthContext';
  *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Child components to render if access granted
- * @param {boolean} props.requireDashboardAccess - If true, requires beta OR paid subscription
+ * @param {boolean} props.requireDashboardAccess - If true, requires beta OR trial OR paid subscription
  */
 export const ProtectedRoute = ({ children, requireDashboardAccess = false }) => {
   const location = useLocation();
@@ -29,6 +29,7 @@ export const ProtectedRoute = ({ children, requireDashboardAccess = false }) => 
     hasPaidSubscription,
     canAccessDashboard,
     profile,
+    subscription,
   } = useAuth();
 
   // Wait for auth to initialise
@@ -51,8 +52,24 @@ export const ProtectedRoute = ({ children, requireDashboardAccess = false }) => 
     );
   }
 
-  // Dashboard access check (beta OR paid)
+  // Dashboard access check (beta OR trial OR paid)
   if (requireDashboardAccess && !canAccessDashboard) {
+    // Trial expired specifically
+    if (
+      subscription?.plan === 'starter' &&
+      subscription?.status === 'trialing' &&
+      subscription?.expires_at &&
+      new Date(subscription.expires_at) <= new Date()
+    ) {
+      return (
+        <Navigate
+          to="/checkout?plan=starter"
+          state={{ reason: 'trial_expired' }}
+          replace
+        />
+      );
+    }
+
     // Beta expired specifically
     if (
       profile?.beta_status === 'active' &&

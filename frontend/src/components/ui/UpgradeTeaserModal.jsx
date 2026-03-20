@@ -51,7 +51,7 @@ export const UpgradeTeaserModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4"
         onClick={onClose}
       >
         <motion.div
@@ -59,14 +59,14 @@ export const UpgradeTeaserModal = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3, type: 'spring', damping: 25 }}
-          className="w-full max-w-lg bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden"
+          className="w-full max-w-lg glass-modal overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header with gradient */}
           <div className="relative h-48 bg-gradient-to-br from-[#09090B] to-[#27272A] p-6">
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="absolute right-4 top-4 p-2 rounded-xl glass-button-dark transition-all duration-200"
             >
               <X className="w-5 h-5 text-white" strokeWidth={1.5} />
             </button>
@@ -76,7 +76,7 @@ export const UpgradeTeaserModal = ({
               <span className="text-amber-400 text-sm font-medium">FOUNDER PLAN</span>
             </div>
             
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-heading font-bold text-white mb-2">
               {trigger === 'limit' 
                 ? "You've hit the free limit" 
                 : "Unlock Premium Features"}
@@ -92,7 +92,7 @@ export const UpgradeTeaserModal = ({
                   <feature.icon className="w-6 h-6 text-[#09090B]" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#09090B] mb-1">{feature.title}</h3>
+                  <h3 className="font-heading font-semibold text-[#09090B] mb-1">{feature.title}</h3>
                   <p className="text-sm text-[#71717A]">{feature.description}</p>
                 </div>
               </div>

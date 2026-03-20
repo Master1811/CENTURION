@@ -275,3 +275,34 @@ Footer "(Coming soon)" is intentional and uses copy for the link label. Placehol
 **Estimated fix time:** 4–8 hours (excluding webhook implementation, which may add 2–4 hours if not yet designed).
 
 After these fixes, the core product (projection engine, benchmarks, auth, check-ins, dashboard, AI coach, connectors with encrypted keys) is in place. Remaining items (connector sync, admin stats, copy centralisation, rate limits, logging) are high-priority follow-ups but not blocking for a controlled v1 launch.
+
+---
+
+## 14. Habit-Forming Engagement Engine (Localhost Dev Mode) — Readiness Update
+
+### What’s completed
+- DB artifacts: `backend/migrations/habit_engine_schema.sql`
+  - `profiles` extended with `streak_count`, `last_checkin_at`, `email_preferences`
+  - New `engagement_events` table with RLS policy
+  - RPCs: `get_paid_users_for_digest()`, `get_cohort_percentile()`, `get_cohort_size()`
+- Backend code:
+  - `backend/services/engagement_engine.py`: in-memory dedup + local JSON email logging + Haiku wrapper + batch runner
+  - `backend/services/habit_layers.py`: digest, reminder, milestone countdown, streak protection, anomaly alert
+  - `backend/services/scheduler.py`: APScheduler cron jobs gated by `SCHEDULER_ENABLED`
+  - Wiring:
+    - `backend/main.py` starts/stops the scheduler in lifespan
+    - `backend/routers/reports.py` updates streak on check-in
+    - `backend/routers/payments.py` fires anomaly alerts as background tasks
+    - `backend/routers/admin.py` exposes localhost trigger + engagement/dedup inspection endpoints
+- Env:
+  - `backend/.env`: `SCHEDULER_ENABLED=true`
+
+### Current gaps / risks
+- Real `ANTHROPIC_API_KEY` is required for Haiku-generated questions; if unset/placeholder, dev mode falls back to generic content.
+- Migration success needs final confirmation on Supabase after schema-specific adjustments.
+- Admin engagement endpoints and dedup status need full end-to-end validation on the running localhost instance (verification attempt observed missing routes during curl testing).
+- Email “sending” is dev-mode only: `backend/logs/emails.log` is the source of truth; Resend is not enabled yet.
+
+### Upgrade path to production (planned, not done)
+- Add `REDIS_URL` in `.env` to switch dedup from in-memory to Redis.
+- Add `RESEND_API_KEY` in `.env` to switch from local logger to Resend Batch email sending.
