@@ -398,7 +398,7 @@ async def require_paid_subscription(
     
     Paid plans: starter, founder, studio, vc_portfolio
     Valid statuses: active, trialing
-
+    
     Example:
         @router.post("/checkin")
         async def submit_checkin(
@@ -414,18 +414,27 @@ async def require_paid_subscription(
         HTTPException: 401 if not authenticated
         HTTPException: 403 if not subscribed or subscription expired
     """
-    # Paid plans list
+    from services.logging_service import auth_logger, log_auth_event
+    
+    # Paid plans list - includes all paid tiers
     PAID_PLANS = ['starter', 'founder', 'studio', 'vc_portfolio']
+    # Valid subscription statuses - trialing users get full access
     ACTIVE_STATUSES = ['active', 'trialing']
 
     # First verify authentication
     user = await require_auth(credentials)
+    user_id = user['id']
     
     # Fetch subscription status from database
-    subscription = await supabase_service.get_subscription(user['id'])
+    subscription = await supabase_service.get_subscription(user_id)
     
     if not subscription:
-        logger.info(f"No subscription found for user {user['id']}")
+        log_auth_event(
+            "subscription_check_failed",
+            user_id=user_id,
+            success=False,
+            reason="no_subscription"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
@@ -435,25 +444,43 @@ async def require_paid_subscription(
             }
         )
     
+    plan = subscription.get('plan', '').lower()
+    status_value = subscription.get('status', '').lower()
+    
     # Check plan is a paid plan
-    if subscription.get('plan') not in PAID_PLANS:
-        logger.info(f"User {user['id']} on free plan: {subscription.get('plan')}")
+    if plan not in PAID_PLANS:
+        log_auth_event(
+            "subscription_check_failed",
+            user_id=user_id,
+            success=False,
+            reason="free_plan",
+            plan=plan
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 'error': 'subscription_required',
                 'message': 'This feature requires a paid subscription.',
+                'current_plan': plan,
                 'upgrade_url': '/pricing'
             }
         )
 
-    if subscription.get('status') not in ACTIVE_STATUSES:
-        logger.info(f"Subscription not active for user {user['id']}: {subscription.get('status')}")
+    # Check subscription status (active or trialing)
+    if status_value not in ACTIVE_STATUSES:
+        log_auth_event(
+            "subscription_check_failed",
+            user_id=user_id,
+            success=False,
+            reason="inactive_status",
+            status=status_value
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 'error': 'subscription_inactive',
                 'message': 'Your subscription is not active. Please renew to continue.',
+                'status': status_value,
                 'upgrade_url': '/pricing'
             }
         )
@@ -462,21 +489,40 @@ async def require_paid_subscription(
     expires_at = subscription.get('expires_at')
     if expires_at:
         try:
-            expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if isinstance(expires_at, str):
+                expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            else:
+                expiry = expires_at
+            
             if expiry < datetime.now(timezone.utc):
-                logger.info(f"Subscription expired for user {user['id']}")
+                log_auth_event(
+                    "subscription_check_failed",
+                    user_id=user_id,
+                    success=False,
+                    reason="expired",
+                    expires_at=str(expires_at)
+                )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
                         'error': 'subscription_expired',
                         'message': 'Your subscription has expired. Please renew to continue.',
+                        'expired_at': str(expires_at),
                         'upgrade_url': '/pricing'
                     }
                 )
-        except ValueError:
-            pass  # Invalid date format, skip expiry check
+        except ValueError as e:
+            logger.warning(f"Invalid expiry date format for user {user_id}: {expires_at}")
     
-    # Attach subscription info to user
+    # Success - attach subscription info to user
+    log_auth_event(
+        "subscription_check_passed",
+        user_id=user_id,
+        success=True,
+        plan=plan,
+        status=status_value
+    )
+    
     user['subscription'] = subscription
     return user
 

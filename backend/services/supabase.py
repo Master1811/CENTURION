@@ -192,15 +192,44 @@ class SupabaseService:
         return result.data[0] if result.data else None
     
     async def create_subscription(self, data: dict):
+        """
+        Create or update a subscription record.
+        
+        Args:
+            data: Subscription data including:
+                - user_id: User UUID
+                - plan: Plan name (starter, founder, etc.)
+                - status: Subscription status (active, trialing, cancelled)
+                - payment_ref: Payment ID for idempotency
+                - billing_cycle: monthly, annual, trial_7d
+                - amount_paid: Amount in paise
+                - currency: INR
+                - expires_at: ISO timestamp of expiration
+                
+        Returns:
+            Created subscription record
+        """
         if not self.is_configured:
             return data
+        
+        subscription_record = {
+            "user_id": data["user_id"],
+            "plan": data["plan"],
+            "status": data["status"],
+            "payment_ref": data.get("payment_ref"),
+            "billing_cycle": data.get("billing_cycle", "monthly"),
+            "amount_paid": data.get("amount_paid"),
+            "currency": data.get("currency", "INR"),
+            "expires_at": data.get("expires_at"),
+            "created_at": data.get("created_at", datetime.now(timezone.utc).isoformat()),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        # Remove None values
+        subscription_record = {k: v for k, v in subscription_record.items() if v is not None}
+        
         result = self._client.table("subscriptions")\
-            .upsert({
-                "user_id": data["user_id"],
-                "plan": data["plan"],
-                "status": data["status"],
-                "payment_ref": data["payment_ref"],
-            })\
+            .upsert(subscription_record, on_conflict="user_id")\
             .execute()
         return result.data
     

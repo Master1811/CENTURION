@@ -97,9 +97,9 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Admin Panel (Protected - auth required, admin check on page) */}
+            {/* Admin Panel (Protected - requires admin role, hidden from regular users) */}
             <Route path="/admin" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />

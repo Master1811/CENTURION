@@ -469,15 +469,90 @@ app.include_router(
 # ============================================================================
 
 @app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    """Add unique request ID for tracing."""
+async def request_logging_middleware(request: Request, call_next):
+    """
+    Comprehensive request logging middleware.
+    
+    Features:
+    - Unique request ID for tracing
+    - Request/response timing
+    - User context extraction
+    - Structured logging output
+    - Performance metrics collection
+    """
+    import time
+    from services.logging_service import log_api_request, metrics, api_logger
+    
+    # Generate unique request ID
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
     
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
+    # Extract user ID if available (will be None for unauthenticated requests)
+    user_id = None
+    auth_header = request.headers.get('authorization', '')
+    if auth_header.startswith('Bearer '):
+        try:
+            import jwt
+            token = auth_header.split(' ')[1]
+            # Decode without verification just to get user ID for logging
+            unverified = jwt.decode(token, options={"verify_signature": False})
+            user_id = unverified.get('sub')
+        except Exception:
+            pass
     
-    return response
+    # Record start time
+    start_time = time.perf_counter()
+    
+    # Log request start (DEBUG level to avoid noise)
+    api_logger.debug(
+        f"Request started: {request.method} {request.url.path}",
+        request_id=request_id,
+        method=request.method,
+        path=str(request.url.path),
+        user_id=user_id,
+        client_ip=request.client.host if request.client else None
+    )
+    
+    # Process request
+    try:
+        response = await call_next(request)
+        
+        # Calculate duration
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        
+        # Log successful response
+        log_api_request(
+            request_id=request_id,
+            endpoint=str(request.url.path),
+            method=request.method,
+            user_id=user_id,
+            duration_ms=duration_ms,
+            status_code=response.status_code
+        )
+        
+        # Add headers
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Response-Time"] = f"{duration_ms:.2f}ms"
+        
+        return response
+        
+    except Exception as e:
+        # Calculate duration for failed request
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        
+        # Log error
+        api_logger.error(
+            f"Request failed: {request.method} {request.url.path}",
+            error=e,
+            request_id=request_id,
+            method=request.method,
+            path=str(request.url.path),
+            user_id=user_id,
+            duration_ms=duration_ms
+        )
+        
+        metrics.increment_counter("api.errors")
+        raise
 
 # ============================================================================
 # ERROR HANDLERS

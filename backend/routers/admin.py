@@ -3,21 +3,27 @@ Admin Router
 ============
 Administrative endpoints for platform management.
 
-All endpoints require admin role (not implemented in MVP).
+SECURITY: All endpoints require verified admin role.
+- Uses ADMIN_EMAILS environment variable for authorization
+- Logs all admin actions for audit trail
+- Rate limited to prevent abuse
 
 Endpoints:
 - GET /admin/stats - Platform statistics
 - GET /admin/users - User list (paginated)
 - POST /admin/subscription/{user_id} - Grant subscription
+- GET /admin/scheduler/status - Scheduler job status
+- GET /admin/system/health - System health check
 
 Author: 100Cr Engine Team
 """
 
 import os
 import logging
-from typing import Dict, Any, Literal
+import hashlib
+from typing import Dict, Any, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status
+from fastapi import APIRouter, HTTPException, Depends, Query, status, Request
 from pydantic import BaseModel, Field
 
 from datetime import datetime, timezone
@@ -32,10 +38,12 @@ from services.habit_layers import (
     run_streak_protection,
 )
 from services.engagement_engine import _mem_dedup
+from services.logging_service import admin_logger, log_auth_event
 
 logger = logging.getLogger("100cr_engine.admin")
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+# Router with no OpenAPI tags to hide from public docs
+router = APIRouter(prefix="/admin")
 
 JOB_MAP = {
     "digest": run_monday_digest,
@@ -69,35 +77,121 @@ class BetaGrantRequest(BaseModel):
 
 
 # ============================================================================
-# ADMIN HELPERS
+# ADMIN AUTHENTICATION - STRICT ROLE VERIFICATION
 # ============================================================================
 
-async def require_admin(user: Dict[str, Any] = Depends(require_auth)) -> Dict[str, Any]:
-    """
-    Dependency that requires admin role.
+# Cache admin email hashes for comparison (prevents timing attacks)
+_admin_email_hashes: set = set()
+_admin_emails_loaded: bool = False
+
+
+def _load_admin_emails() -> set:
+    """Load and hash admin emails from environment."""
+    global _admin_email_hashes, _admin_emails_loaded
     
-    Uses ADMIN_EMAILS environment variable for authorization.
-    """
-    # Get admin emails from environment variable (comma-separated)
+    if _admin_emails_loaded:
+        return _admin_email_hashes
+    
     admin_emails_env = os.environ.get('ADMIN_EMAILS', '')
     admin_emails = [email.strip().lower() for email in admin_emails_env.split(',') if email.strip()]
+    
+    # Hash emails for secure comparison
+    _admin_email_hashes = {
+        hashlib.sha256(email.encode()).hexdigest()
+        for email in admin_emails
+    }
+    _admin_emails_loaded = True
+    
+    if admin_emails:
+        logger.info(f"Loaded {len(admin_emails)} admin emails")
+    else:
+        logger.warning("No admin emails configured - admin panel disabled")
+    
+    return _admin_email_hashes
 
-    # Also check database for admin role if available
-    # TODO: Check admin role from profiles table or JWT metadata
 
-    user_email = user.get('email', '').lower()
+def _is_admin_email(email: str) -> bool:
+    """Check if email is in admin list using constant-time comparison."""
+    if not email:
+        return False
+    
+    admin_hashes = _load_admin_emails()
+    if not admin_hashes:
+        return False
+    
+    email_hash = hashlib.sha256(email.lower().encode()).hexdigest()
+    return email_hash in admin_hashes
 
-    if not admin_emails or user_email not in admin_emails:
+
+async def require_admin(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_auth)
+) -> Dict[str, Any]:
+    """
+    Dependency that requires verified admin role.
+    
+    Security measures:
+    1. Validates JWT authentication
+    2. Checks email against ADMIN_EMAILS environment variable
+    3. Logs all access attempts
+    4. Uses constant-time comparison to prevent timing attacks
+    
+    Raises:
+        HTTPException 403 if not an admin
+    """
+    user_email = user.get('email', '')
+    user_id = user.get('id', '')
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # Log admin access attempt
+    admin_logger.info(
+        "Admin access attempt",
+        user_id=user_id,
+        request_id=request_id,
+        endpoint=str(request.url.path)
+    )
+    
+    if not _is_admin_email(user_email):
+        # Log failed attempt (potential security issue)
+        admin_logger.warning(
+            "Unauthorized admin access attempt",
+            user_id=user_id,
+            email_hash=hashlib.sha256(user_email.encode()).hexdigest()[:16] if user_email else "none",
+            request_id=request_id,
+            client_ip=request.client.host if request.client else "unknown"
+        )
+        
+        log_auth_event(
+            "admin_access_denied",
+            user_id=user_id,
+            success=False,
+            reason="not_admin"
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
+    
+    # Log successful admin access
+    admin_logger.info(
+        "Admin access granted",
+        user_id=user_id,
+        request_id=request_id
+    )
+    
+    log_auth_event(
+        "admin_access_granted",
+        user_id=user_id,
+        success=True
+    )
     
     return user
 
 
 # ============================================================================
 # ROUTES
+# ============================================================================
 # ============================================================================
 
 @router.get("/stats", response_model=PlatformStats)

@@ -4,6 +4,7 @@ Reports Router
 Dashboard data and reporting endpoints.
 
 All endpoints require authentication.
+Most endpoints require paid subscription (starter/founder/trialing).
 
 Endpoints:
 - GET /dashboard/overview - Command Centre data
@@ -19,13 +20,14 @@ import math
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Depends, Query, status
+from fastapi import APIRouter, HTTPException, Depends, Query, status, BackgroundTasks
 
 from models.checkin import CheckInData, CheckInResponse, CheckInHistory
 from models.projection import ProjectionInputs, CRORE
 from services.auth import require_auth, require_paid_subscription
 from services.supabase import supabase_service
 from services.rate_limiter import rate_limiter
+from services.logging_service import api_logger, log_habit_engine_event
 from routers.engine import predict_trajectory
 
 logger = logging.getLogger("100cr_engine.reports")
@@ -258,15 +260,27 @@ check_router = APIRouter(tags=["Check-ins"])
 @check_router.post("/checkin", response_model=CheckInResponse)
 async def submit_checkin(
     checkin: CheckInData,
+    background_tasks: BackgroundTasks,
     user: Dict[str, Any] = Depends(require_paid_subscription)
 ):
     """
     Submit a monthly revenue check-in.
     
     Tracks actual vs projected revenue over time.
-    Requires Founder Plan subscription.
+    Requires Founder Plan subscription (starter or founder, active or trialing).
+    
+    Also triggers:
+    - Streak update
+    - Anomaly detection (if significant revenue drop)
     """
     user_id = user['id']
+    
+    api_logger.info(
+        "Check-in submission started",
+        user_id=user_id,
+        month=checkin.month,
+        revenue=checkin.actual_revenue
+    )
     
     # Validate month format
     try:
@@ -279,7 +293,8 @@ async def submit_checkin(
     
     # Get baseline for deviation calculation
     profile = await supabase_service.get_profile(user_id)
-    projected_revenue = profile.get('current_mrr', checkin.actual_revenue) if profile else checkin.actual_revenue
+    previous_mrr = profile.get('current_mrr', checkin.actual_revenue) if profile else checkin.actual_revenue
+    projected_revenue = previous_mrr
     
     deviation_pct = None
     if projected_revenue > 0:
@@ -299,13 +314,11 @@ async def submit_checkin(
     saved = await supabase_service.upsert_checkin(checkin_data)
 
     # Update streak using habit engine fields (streak_count + last_checkin_at)
+    new_streak = 1
     try:
-        from datetime import datetime, timezone
-
-        profile = await supabase_service.get_profile_by_id(user_id)
-
-        current_streak = (profile or {}).get("streak_count") or 0
-        last_checkin = (profile or {}).get("last_checkin_at")
+        profile_data = await supabase_service.get_profile_by_id(user_id)
+        current_streak = (profile_data or {}).get("streak_count") or 0
+        last_checkin = (profile_data or {}).get("last_checkin_at")
         now = datetime.now(timezone.utc)
 
         if last_checkin:
@@ -315,25 +328,62 @@ async def submit_checkin(
                 )
             days_since = (now - last_checkin).days
             new_streak = current_streak + 1 if days_since <= 35 else 1
-        else:
-            new_streak = 1
-
+        
         await supabase_service.update_streak(
             user_id=user_id,
             streak_count=new_streak,
             last_checkin_at=now.isoformat(),
         )
+        
+        api_logger.info(
+            "Streak updated",
+            user_id=user_id,
+            new_streak=new_streak,
+            previous_streak=current_streak
+        )
+        
     except Exception as e:
-        print(f"[STREAK] Update failed: {e}")
+        api_logger.error(f"Streak update failed", error=e, user_id=user_id)
     
     # Update user profile with latest MRR
     await supabase_service.update_profile(user_id, {
         'current_mrr': checkin.actual_revenue,
-        'last_checkin_month': checkin.month
+        'last_checkin_month': checkin.month,
+        'current_streak': new_streak
     })
     
-    # Update streak
-    await _update_streak(user_id)
+    # Check for anomaly (significant revenue drop) and trigger alert
+    if previous_mrr > 0 and checkin.actual_revenue < previous_mrr:
+        drop_pct = ((previous_mrr - checkin.actual_revenue) / previous_mrr) * 100
+        
+        # Trigger anomaly alert if drop is > 10%
+        if drop_pct > 10:
+            api_logger.warning(
+                "Revenue anomaly detected",
+                user_id=user_id,
+                previous_mrr=previous_mrr,
+                new_mrr=checkin.actual_revenue,
+                drop_pct=drop_pct
+            )
+            
+            # Fire anomaly alert in background
+            try:
+                from services.habit_layers import fire_anomaly_alert
+                background_tasks.add_task(
+                    fire_anomaly_alert,
+                    user_id=user_id,
+                    new_mrr=checkin.actual_revenue,
+                    previous_mrr=previous_mrr
+                )
+                
+                log_habit_engine_event(
+                    "anomaly_alert_triggered",
+                    job_id="checkin_anomaly",
+                    users_processed=1,
+                    drop_pct=drop_pct
+                )
+            except Exception as e:
+                api_logger.error(f"Failed to trigger anomaly alert", error=e)
     
     logger.info(f"Check-in submitted for user {user_id}: {checkin.month}")
     
