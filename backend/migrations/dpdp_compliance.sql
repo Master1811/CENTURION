@@ -56,6 +56,17 @@ CREATE INDEX IF NOT EXISTS idx_waitlist_referral ON waitlist(referral_source);
 -- RLS Policies for waitlist (admin-only read, public insert)
 ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
 
+-- Add referral_count column if it doesn't exist (for existing tables)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'waitlist' AND column_name = 'referral_count'
+    ) THEN
+        ALTER TABLE waitlist ADD COLUMN referral_count INTEGER NOT NULL DEFAULT 0;
+    END IF;
+END $$;
+
 -- Allow anyone to insert (for public signup)
 DROP POLICY IF EXISTS "Allow public waitlist signup" ON waitlist;
 CREATE POLICY "Allow public waitlist signup" ON waitlist

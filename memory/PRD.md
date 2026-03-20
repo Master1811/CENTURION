@@ -268,6 +268,7 @@ Tables defined in `/docs/supabase_schema.sql`:
   - Shareable referral URL with email slug (e.g., `?ref=user-email`)
   - GET /api/admin/waitlist endpoint for admin management
   - PUT /api/admin/waitlist/{email}/convert for conversion tracking
+  - **Referral Position Boosting**: Each successful referral boosts the referrer's position
 - **DPDP Compliance (Digital Personal Data Protection Act 2023)**:
   - `backend/migrations/dpdp_compliance.sql` with waitlist table and profile columns
   - `dpdp_consent_given` and `dpdp_consent_at` fields in both tables
@@ -287,12 +288,41 @@ Tables defined in `/docs/supabase_schema.sql`:
   - If declined, analytics scripts are not loaded
   - Timestamp recorded for compliance audit
 
+### Phase 13 - Sentry Integration & Pre-Production Testing (Complete - March 20, 2026)
+- **Sentry Backend Integration**:
+  - `services/sentry_config.py` with FastAPI/Starlette integrations
+  - PII filtering before sending events
+  - Performance monitoring with configurable sample rates
+  - Release and environment tracking
+  - Health check filtering (skip /health endpoints)
+- **Sentry Frontend Integration**:
+  - `lib/sentry.js` with React error boundary
+  - Session replay (masked for privacy)
+  - Breadcrumbs for debugging
+  - User context set on authentication
+  - Context cleared on sign out
+- **Configuration**:
+  - ADMIN_EMAILS=mastertmh841@gmail.com
+  - FRONTEND_URL set for correct share URLs
+  - Sentry DSN ready for production (shows warning when not configured)
+- **Pre-Production Test Results**:
+  - 27/27 backend tests passed (100%)
+  - All critical frontend flows verified
+  - Auth modal with consent ✓
+  - Calculator engine ✓
+  - Pricing page ✓
+  - Checkout page ✓
+  - Privacy page ✓
+  - Cookie consent ✓
+  - Admin protection ✓
+
 ## Testing Status
-- **Backend**: 100% (31/31 tests passed + waitlist endpoints verified)
-- **Frontend**: 100% (all features verified)
-- **Waitlist**: POST returns position number, consent validation works
-- **Privacy Page**: Loads at /privacy without errors
-- **Cookie Banner**: Appears, stores choice correctly
+- **Backend**: 100% (27/27 tests passed)
+- **Frontend**: 95% (minor Recharts warning)
+- **Waitlist**: Position number returned, consent validation works
+- **Privacy Page**: All 6 DPDP disclosures present
+- **Cookie Banner**: Accept/Decline works correctly
+- **Sentry**: Initialized (shows warning when DSN not configured)
 - **Last Test**: March 20, 2026
 
 ## Scalability Notes (10,000+ Users)
@@ -316,12 +346,12 @@ The habit engine is designed for scale:
 - [x] Admin Control Panel with monitoring
 
 ### P1 (High) - Next Sprint
-- [ ] Run `backend/migrations/dpdp_compliance.sql` in Supabase SQL Editor
-- [ ] Set ADMIN_EMAILS environment variable in backend/.env
-- [ ] Set REACT_APP_ADMIN_EMAILS in frontend/.env
+- [ ] Run updated `backend/migrations/dpdp_compliance.sql` in Supabase SQL Editor (adds referral_count column)
+- [ ] Configure SENTRY_DSN in backend/.env for production error tracking
+- [ ] Configure REACT_APP_SENTRY_DSN in frontend/.env
 - [ ] Enable Google OAuth in Supabase project settings
 - [ ] Set ANTHROPIC_API_KEY for AI features
-- [ ] Configure FRONTEND_URL env variable for correct share URLs
+- [ ] Configure Razorpay keys for payment testing
 
 ### P2 (Medium)
 - [ ] Configure Resend for production email delivery
