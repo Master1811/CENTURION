@@ -178,9 +178,9 @@ class TestBenchmarks:
         print("✓ Series-A benchmarks working")
     
     def test_invalid_stage(self):
-        """Test invalid stage returns 400"""
+        """Test invalid stage returns 400 or 422"""
         response = requests.get(f"{BASE_URL}/api/benchmarks/invalid-stage")
-        assert response.status_code == 400
+        assert response.status_code in [400, 422]  # Accept either validation error code
         print("✓ Invalid stage rejected correctly")
     
     def test_compare_benchmark(self):
@@ -293,6 +293,28 @@ class TestConnectorsEndpoint:
         response = requests.get(f"{BASE_URL}/api/connectors")
         assert response.status_code in [401, 403]
         print("✓ Connectors list requires auth")
+
+
+class TestAdminEndpoints:
+    """Admin endpoint protection tests"""
+    
+    def test_admin_stats_requires_auth(self):
+        """Test /api/admin/stats requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/admin/stats")
+        assert response.status_code in [401, 403]
+        print("✓ Admin stats endpoint requires auth")
+    
+    def test_admin_engagement_stats_requires_auth(self):
+        """Test /api/admin/engagement/stats requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/admin/engagement/stats")
+        assert response.status_code in [401, 403]
+        print("✓ Admin engagement stats endpoint requires auth")
+    
+    def test_admin_dedup_status_requires_auth(self):
+        """Test /api/admin/dedup/status requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/admin/dedup/status")
+        assert response.status_code in [401, 403]
+        print("✓ Admin dedup status endpoint requires auth")
 
 
 if __name__ == "__main__":

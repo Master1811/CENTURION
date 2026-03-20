@@ -142,6 +142,41 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Sign in with Google OAuth
+   * 
+   * @returns {Object} - { error?: Error }
+   */
+  const signInWithGoogle = async () => {
+    if (!isSupabaseConfigured()) {
+      console.log('Mock Google OAuth - Supabase not configured');
+      return { error: new Error('Supabase not configured') };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Google OAuth error:', error);
+        return { error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      return { error };
+    }
+  };
+
+  /**
    * Sign out the current user
    */
   const signOut = async () => {
@@ -236,6 +271,7 @@ export const AuthProvider = ({ children }) => {
     
     // Methods
     signInWithMagicLink,
+    signInWithGoogle,
     signOut,
     getAccessToken,
     hasCompletedOnboarding,

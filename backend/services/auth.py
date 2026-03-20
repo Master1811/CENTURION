@@ -115,11 +115,14 @@ class AuthConfig:
         Get the JWT secret for token verification.
         
         Priority:
-        1. SUPABASE_JWT_SECRET if set
+        1. SUPABASE_JWT_SECRET if set and not a placeholder
         2. Derive from SUPABASE_ANON_KEY (base64 decode)
         3. Return empty string (will fail verification)
         """
-        if cls.JWT_SECRET and cls.JWT_SECRET != 'placeholder':
+        # Common placeholder values to ignore
+        placeholder_values = {'placeholder', 'your-jwt-secret', 'your_jwt_secret', ''}
+        
+        if cls.JWT_SECRET and cls.JWT_SECRET.lower() not in placeholder_values:
             return cls.JWT_SECRET
         
         # Supabase uses the same secret for all JWTs in a project
