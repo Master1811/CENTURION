@@ -296,7 +296,7 @@ class TestConnectorsEndpoint:
 
 
 class TestAdminEndpoints:
-    """Admin endpoint protection tests"""
+    """Admin endpoint protection tests - all admin endpoints require auth + admin role"""
     
     def test_admin_stats_requires_auth(self):
         """Test /api/admin/stats requires authentication"""
@@ -315,6 +315,24 @@ class TestAdminEndpoints:
         response = requests.get(f"{BASE_URL}/api/admin/dedup/status")
         assert response.status_code in [401, 403]
         print("✓ Admin dedup status endpoint requires auth")
+    
+    def test_admin_scheduler_status_requires_auth(self):
+        """Test /api/admin/scheduler/status requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/admin/scheduler/status")
+        assert response.status_code in [401, 403]
+        print("✓ Admin scheduler status endpoint requires auth")
+    
+    def test_admin_system_health_requires_auth(self):
+        """Test /api/admin/system/health requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/admin/system/health")
+        assert response.status_code in [401, 403]
+        print("✓ Admin system health endpoint requires auth")
+    
+    def test_admin_trigger_job_requires_auth(self):
+        """Test /api/admin/trigger/{job_name} requires authentication"""
+        response = requests.post(f"{BASE_URL}/api/admin/trigger/digest")
+        assert response.status_code in [401, 403, 422]
+        print("✓ Admin trigger job endpoint requires auth")
 
 
 if __name__ == "__main__":

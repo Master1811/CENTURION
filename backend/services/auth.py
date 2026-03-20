@@ -25,8 +25,10 @@ import json
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from enum import Enum
+from functools import lru_cache
 
 import jwt
+from jwt import PyJWKClient
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -37,6 +39,9 @@ logger = logging.getLogger("100cr_engine.auth")
 # HTTP Bearer token extractor
 security = HTTPBearer(auto_error=False)
 security_required = HTTPBearer(auto_error=True)
+
+# JWKS client cache (singleton)
+_jwks_client: Optional[PyJWKClient] = None
 
 
 class PlanTier(str, Enum):
@@ -98,47 +103,95 @@ class AuthConfig:
     """
     Authentication configuration loaded from environment.
     
-    Required environment variables:
-    - SUPABASE_JWT_SECRET: JWT secret for token verification
-    - SUPABASE_URL: Supabase project URL (for issuer validation)
+    Supports two verification modes:
+    1. JWKS (recommended): Fetches public keys from Supabase JWKS endpoint
+    2. HS256 (legacy): Uses JWT_SECRET for symmetric verification
     """
     JWT_SECRET: str = os.environ.get('SUPABASE_JWT_SECRET', '')
     SUPABASE_URL: str = os.environ.get('SUPABASE_URL', '')
-    
-    # If JWT secret not provided, try to decode from anon key
-    # Supabase JWTs can be verified with the anon key's secret
     ANON_KEY: str = os.environ.get('SUPABASE_ANON_KEY', '')
+    
+    # Placeholder values to ignore
+    PLACEHOLDER_VALUES = {'placeholder', 'your-jwt-secret', 'your_jwt_secret', ''}
+    
+    @classmethod
+    def get_project_ref(cls) -> str:
+        """Extract project reference from Supabase URL."""
+        if cls.SUPABASE_URL:
+            # URL format: https://<project-ref>.supabase.co
+            try:
+                return cls.SUPABASE_URL.split('//')[1].split('.')[0]
+            except (IndexError, AttributeError):
+                pass
+        return ''
+    
+    @classmethod
+    def get_jwks_url(cls) -> str:
+        """Get the JWKS endpoint URL for this Supabase project."""
+        project_ref = cls.get_project_ref()
+        if project_ref:
+            return f"https://{project_ref}.supabase.co/auth/v1/.well-known/jwks.json"
+        return ''
     
     @classmethod
     def get_jwt_secret(cls) -> str:
         """
-        Get the JWT secret for token verification.
+        Get the JWT secret for HS256 token verification (legacy mode).
         
         Priority:
         1. SUPABASE_JWT_SECRET if set and not a placeholder
-        2. Derive from SUPABASE_ANON_KEY (base64 decode)
-        3. Return empty string (will fail verification)
+        2. SUPABASE_ANON_KEY (works for some Supabase configurations)
+        3. Return empty string (will use JWKS fallback)
         """
-        # Common placeholder values to ignore
-        placeholder_values = {'placeholder', 'your-jwt-secret', 'your_jwt_secret', ''}
-        
-        if cls.JWT_SECRET and cls.JWT_SECRET.lower() not in placeholder_values:
+        if cls.JWT_SECRET and cls.JWT_SECRET.lower() not in cls.PLACEHOLDER_VALUES:
             return cls.JWT_SECRET
         
-        # Supabase uses the same secret for all JWTs in a project
-        # The anon key itself can be used for verification
         if cls.ANON_KEY:
             return cls.ANON_KEY
             
         return ''
+    
+    @classmethod
+    def use_jwks(cls) -> bool:
+        """Determine if JWKS verification should be used."""
+        # Use JWKS if we have a project URL and no valid HS256 secret
+        has_valid_secret = cls.JWT_SECRET and cls.JWT_SECRET.lower() not in cls.PLACEHOLDER_VALUES
+        has_project_url = bool(cls.get_project_ref())
+        
+        # Prefer JWKS if available, unless a valid secret is explicitly set
+        return has_project_url and not has_valid_secret
+
+
+def get_jwks_client() -> Optional[PyJWKClient]:
+    """Get or create the JWKS client singleton."""
+    global _jwks_client
+    
+    if _jwks_client is not None:
+        return _jwks_client
+    
+    jwks_url = AuthConfig.get_jwks_url()
+    if not jwks_url:
+        return None
+    
+    try:
+        _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=3600)
+        logger.info(f"JWKS client initialized for {jwks_url}")
+        return _jwks_client
+    except Exception as e:
+        logger.warning(f"Failed to initialize JWKS client: {e}")
+        return None
 
 
 async def verify_jwt_token(token: str) -> Dict[str, Any]:
     """
     Verify a Supabase JWT token and return the decoded payload.
     
+    Supports two verification modes:
+    1. JWKS (RS256) - Recommended for production
+    2. HS256 - Legacy symmetric verification
+    
     Verification checks:
-    1. Signature is valid (using project's JWT secret)
+    1. Signature is valid
     2. Token has not expired
     3. Audience claim matches 'authenticated'
     
@@ -151,18 +204,62 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
     Raises:
         HTTPException: 401 if token is invalid, expired, or missing
     """
+    # First, try to decode without verification to get the algorithm
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        algorithm = unverified_header.get('alg', 'HS256')
+    except jwt.exceptions.DecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token format",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    # Try JWKS verification for RS256 tokens
+    if algorithm == 'RS256':
+        jwks_client = get_jwks_client()
+        if jwks_client:
+            try:
+                signing_key = jwks_client.get_signing_key_from_jwt(token)
+                payload = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=['RS256'],
+                    audience='authenticated',
+                    options={'verify_exp': True, 'verify_aud': True}
+                )
+                logger.debug(f"JWT verified via JWKS for user: {payload.get('sub')}")
+                return payload
+            except jwt.ExpiredSignatureError:
+                logger.warning("JWT token expired (JWKS)")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has expired. Please sign in again.",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            except jwt.InvalidAudienceError:
+                logger.warning("JWT audience mismatch (JWKS)")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token audience",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            except Exception as e:
+                logger.warning(f"JWKS verification failed, trying HS256: {e}")
+                # Fall through to HS256 verification
+    
+    # HS256 verification (legacy or fallback)
     jwt_secret = AuthConfig.get_jwt_secret()
     
     if not jwt_secret:
-        logger.error("JWT secret not configured")
+        logger.error("No JWT secret configured and JWKS unavailable")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication not configured"
         )
     
     try:
-        # Decode and verify the JWT
-        # Note: Supabase uses HS256 algorithm
+        # Decode and verify the JWT with HS256
         payload = jwt.decode(
             token,
             jwt_secret,
@@ -174,7 +271,7 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
             }
         )
         
-        logger.debug(f"JWT verified for user: {payload.get('sub')}")
+        logger.debug(f"JWT verified via HS256 for user: {payload.get('sub')}")
         return payload
         
     except jwt.ExpiredSignatureError:
@@ -186,24 +283,8 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
         )
         
     except jwt.InvalidAudienceError:
-        # Best-effort: log unverified claims (alg/aud/iss/sub) for debugging.
-        unverified_header = {}
-        unverified_payload = {}
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            _, payload_b64, _ = token.split(".", 2)
-            padded = payload_b64 + "=="
-            unverified_payload = json.loads(base64.urlsafe_b64decode(padded))
-        except Exception:
-            pass
-
-        logger.warning(
-            "JWT audience mismatch | alg=%s aud=%s iss=%s sub=%s",
-            unverified_header.get("alg"),
-            unverified_payload.get("aud"),
-            unverified_payload.get("iss"),
-            unverified_payload.get("sub"),
-        )
+        # Log unverified claims for debugging
+        _log_token_debug_info(token, "JWT audience mismatch")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token audience",
@@ -211,30 +292,32 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
         )
         
     except jwt.InvalidTokenError as e:
-        # Best-effort: log unverified header + payload claims (no signature verification).
-        unverified_header = {}
-        unverified_payload = {}
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            _, payload_b64, _ = token.split(".", 2)
-            padded = payload_b64 + "=="
-            unverified_payload = json.loads(base64.urlsafe_b64decode(padded))
-        except Exception:
-            pass
-
-        logger.warning(
-            "Invalid JWT token: %s | alg=%s aud=%s iss=%s sub=%s",
-            str(e),
-            unverified_header.get("alg"),
-            unverified_payload.get("aud"),
-            unverified_payload.get("iss"),
-            unverified_payload.get("sub"),
-        )
+        _log_token_debug_info(token, f"Invalid JWT token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+
+def _log_token_debug_info(token: str, message: str) -> None:
+    """Log debug information about a failed token verification."""
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+        _, payload_b64, _ = token.split(".", 2)
+        padded = payload_b64 + "=="
+        unverified_payload = json.loads(base64.urlsafe_b64decode(padded))
+        
+        logger.warning(
+            "%s | alg=%s aud=%s iss=%s sub=%s",
+            message,
+            unverified_header.get("alg"),
+            unverified_payload.get("aud"),
+            unverified_payload.get("iss"),
+            unverified_payload.get("sub"),
+        )
+    except Exception:
+        logger.warning(message)
 
 
 async def get_current_user(

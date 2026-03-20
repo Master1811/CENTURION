@@ -108,7 +108,33 @@ async def get_platform_stats(admin: Dict[str, Any] = Depends(require_admin)):
     Returns:
         Counts of users, subscriptions, projections, etc.
     """
-    # TODO: Implement actual counts from database
+    try:
+        # Fetch actual counts from Supabase
+        if supabase_service.is_configured:
+            # Count users
+            users_result = supabase_service._client.table("profiles").select("id", count="exact").execute()
+            total_users = users_result.count or 0
+            
+            # Count active subscriptions
+            subs_result = supabase_service._client.table("subscriptions").select("id", count="exact").eq("status", "active").execute()
+            active_subs = subs_result.count or 0
+            
+            # Count projections
+            proj_result = supabase_service._client.table("projection_runs").select("id", count="exact").execute()
+            total_projections = proj_result.count or 0
+            
+            # Count checkins
+            checkins_result = supabase_service._client.table("checkins").select("id", count="exact").execute()
+            total_checkins = checkins_result.count or 0
+            
+            return PlatformStats(
+                total_users=total_users,
+                active_subscriptions=active_subs,
+                total_projections=total_projections,
+                total_checkins=total_checkins
+            )
+    except Exception as e:
+        logger.warning(f"Failed to fetch platform stats: {e}")
     
     return PlatformStats(
         total_users=0,
@@ -292,4 +318,63 @@ async def get_dedup_status(
     items.sort(key=lambda x: x["expires_at"], reverse=True)
     return items
 
+
+@router.get("/scheduler/status")
+async def get_scheduler_status(
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """
+    Get current scheduler status and job information.
+    """
+    from services.scheduler import get_scheduler
+    
+    scheduler = get_scheduler()
+    jobs = []
+    
+    for job in scheduler.get_jobs():
+        next_run = job.next_run_time.isoformat() if job.next_run_time else None
+        jobs.append({
+            "id": job.id,
+            "name": job.name or job.id,
+            "next_run": next_run,
+            "trigger": str(job.trigger),
+            "pending": job.pending,
+        })
+    
+    return {
+        "running": scheduler.running,
+        "jobs": jobs,
+        "timezone": str(scheduler.timezone),
+    }
+
+
+@router.get("/system/health")
+async def get_system_health(
+    admin: Dict[str, Any] = Depends(require_admin),
+):
+    """
+    Get comprehensive system health information for monitoring.
+    """
+    import sys
+    import platform
+    
+    health = {
+        "api": "ok",
+        "supabase": supabase_service.is_configured and "connected" or "not_configured",
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "scheduler": "unknown",
+        "dedup_entries": len(_mem_dedup),
+    }
+    
+    # Check scheduler
+    try:
+        from services.scheduler import get_scheduler
+        scheduler = get_scheduler()
+        health["scheduler"] = "running" if scheduler.running else "stopped"
+        health["scheduled_jobs"] = len(scheduler.get_jobs())
+    except Exception as e:
+        health["scheduler"] = f"error: {str(e)}"
+    
+    return health
 

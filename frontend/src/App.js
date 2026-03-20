@@ -16,6 +16,9 @@ import PricingPage from "@/pages/PricingPage";
 import AuthCallback from "@/pages/AuthCallback";
 import CheckoutPage from "@/pages/CheckoutPage";
 
+// Admin Pages
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+
 // Dashboard Pages
 import DashboardLayout from "@/pages/dashboard/DashboardLayout";
 import CommandCentre from "@/pages/dashboard/CommandCentre";
@@ -91,6 +94,13 @@ function App() {
             <Route path="/checkout" element={
               <ProtectedRoute>
                 <CheckoutPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin Panel (Protected - auth required, admin check on page) */}
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
             
