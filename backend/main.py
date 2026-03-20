@@ -92,7 +92,6 @@ from models import (
 class Config:
     """Application configuration from environment."""
     ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
     SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
     SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
 
@@ -147,9 +146,19 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Read from environment, fallback to localhost for development
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000"
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.CORS_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
