@@ -1,8 +1,8 @@
-# CENTURION — 100Cr Engine: Complete Project Analysis
+# CENTURION - 100Cr Engine: Complete Project Analysis
 
-**Analysis Date:** March 19, 2026  
-**Version:** Production v3.0.0  
-**Status:** Pre-Launch Audit Complete
+**Analysis Date:** March 20, 2026  
+**Version:** Production v4.0.0  
+**Status:** Production Ready - 28/28 Tests Passed
 
 ---
 
@@ -10,24 +10,28 @@
 
 ### 1.1 System Overview
 
-The **100Cr Engine** is a revenue milestone prediction platform for Indian founders. It answers: *"When will I reach ₹100 Crore in annual revenue?"*
+The **100Cr Engine** is a revenue milestone prediction platform for Indian founders. It answers: *"When will I reach 100 Crore in annual revenue?"*
 
 **Architecture:**
-- **Frontend:** React 18 + Tailwind CSS + Framer Motion (CRA + Craco)
-- **Backend:** FastAPI (Python 3.11) with async patterns
+- **Frontend:** React 18 + Tailwind CSS + Framer Motion (CRA + Craco) + Sentry
+- **Backend:** FastAPI (Python 3.11) with async patterns + APScheduler
 - **Database:** Supabase PostgreSQL with RLS
-- **Auth:** Supabase Magic Link (passwordless)
-- **Payments:** Razorpay integration
+- **Auth:** Supabase Magic Link + Google OAuth (JWKS RS256 + HS256 verification)
+- **Payments:** Razorpay integration with HMAC webhook verification
 - **AI:** Anthropic Claude (Sonnet/Haiku)
+- **Observability:** Sentry + Structured JSON Logging
+- **Compliance:** DPDP Act 2023 (India Data Privacy)
 
-### 1.2 Access Control Summary
+### 1.2 Access Control Summary (Updated)
 
-| User Type | Dashboard Access | Condition |
-|-----------|-----------------|-----------|
-| **Paid User** | ✅ Full | `subscription.plan` in ['founder', 'studio', 'vc_portfolio'] AND `status === 'active'` |
-| **Beta User** | ✅ Time-Limited | `beta_status === 'active'` AND `beta_expires_at > now()` |
-| **Standard User** | ❌ Hard Paywall | Redirect to `/pricing` or `/checkout` |
-| **Anonymous** | ❌ Landing Only | Tools are public, dashboard protected |
+| User Type | Dashboard Access | Admin Access | Condition |
+|-----------|-----------------|--------------|-----------|
+| **Admin User** | Full | Full | Email in `ADMIN_EMAILS` AND authenticated |
+| **Paid User** | Full | None | `subscription.plan` in ['starter', 'founder', 'studio'] AND `status` in ['active', 'trialing'] |
+| **Beta User** | Time-Limited | None | `beta_status === 'active'` AND `beta_expires_at > now()` |
+| **Trial User** | Time-Limited | None | `subscription.status === 'trialing'` AND `expires_at > now()` |
+| **Standard User** | Hard Paywall | None | Redirect to `/pricing` or `/checkout` |
+| **Anonymous** | Landing Only | None | Tools are public, dashboard protected |
 
 ---
 

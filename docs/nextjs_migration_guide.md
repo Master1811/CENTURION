@@ -1,12 +1,18 @@
-# 100Cr Engine – Next.js Migration Guide
+# 100Cr Engine - Next.js Migration Guide
+
+**Last Updated:** March 20, 2026  
+**Current State:** React 18 CRA + Craco  
+**Target State:** Next.js 14+ App Router
+
+---
 
 ## Current State (as of this guide)
 
 - **Frontend**: Create React App (CRA) with **CRACO** (`craco start` / `craco build`), not plain `react-scripts`.
 - **Routing**: React Router v7 (`react-router-dom`); no Next.js exists in the repo.
-- **Auth**: Supabase (magic link); session in memory + `AuthContext`; API client uses `localStorage.getItem('auth_token')` (not currently set by AuthContext — fix during migration).
+- **Auth**: Supabase (Magic Link + Google OAuth); session in memory + `AuthContext`; API client uses `localStorage.getItem('auth_token')`.
 - **Styling**: Tailwind + `src/index.css` (fonts, Tailwind, `@import './styles/tokens.css'`); `App.css` is effectively empty.
-- **Path alias**: `@/` → `src/` via `jsconfig.json`.
+- **Path alias**: `@/` -> `src/` via `jsconfig.json`.
 - **Backend**: FastAPI at `REACT_APP_BACKEND_URL`; all API calls go to `${BACKEND_URL}/api/...`. Keep backend separate; do not move engine logic into Next.js API routes for this migration.
 
 ### Exact route map (from `frontend/src/App.js`)
@@ -15,13 +21,16 @@
 |-------|----------------|------|
 | `/` | `LandingPage` | Public |
 | `/pricing` | `PricingPage` | Public |
-| `/auth/callback` | `AuthCallback` (from `@/pages/AuthCallback`) | Public |
-| `/tools` | Redirect → `/tools/100cr-calculator` | Public |
+| `/privacy` | `PrivacyPage` | Public (NEW) |
+| `/auth/callback` | `AuthCallback` | Public |
+| `/tools` | Redirect -> `/tools/100cr-calculator` | Public |
 | `/tools/100cr-calculator` | `HundredCrCalculator` | Public |
 | `/tools/arr-calculator` | `ARRCalculator` | Public |
 | `/tools/runway-calculator` | `RunwayCalculator` | Public |
 | `/tools/growth-calculator` | `GrowthCalculator` | Public |
-| `/preview/command-centre` … `/preview/settings` | `PreviewPages` exports | Public (screenshots) |
+| `/preview/*` | `PreviewPages` exports | Public (screenshots) |
+| `/checkout` | `CheckoutPage` | Auth Only |
+| `/admin` | `AdminDashboard` | Admin Only (NEW) |
 | `/dashboard` | `DashboardLayout` + `CommandCentre` (index) | Protected |
 | `/dashboard/revenue` | `RevenueIntelligence` | Protected |
 | `/dashboard/forecasting` | `ForecastingEngine` | Protected |
@@ -32,27 +41,29 @@
 | `/dashboard/investors` | `InvestorRelations` | Protected |
 | `/dashboard/connectors` | `Connectors` | Protected |
 | `/dashboard/settings` | `Settings` | Protected |
-| `*` | Redirect → `/` | — |
+| `*` | Redirect -> `/` | - |
 
-### Environment variables (current → Next.js)
+### Environment variables (current -> Next.js)
 
 | Current (CRA) | Next.js | Used in |
 |---------------|---------|--------|
 | `REACT_APP_SUPABASE_URL` | `NEXT_PUBLIC_SUPABASE_URL` | `lib/supabase/client.js` |
 | `REACT_APP_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `lib/supabase/client.js` |
-| `REACT_APP_BACKEND_URL` | `NEXT_PUBLIC_BACKEND_URL` | `lib/api/client.js`, `lib/api/dashboard.js`, `context/AuthContext.jsx`, `pages/auth/AuthCallback.jsx` |
+| `REACT_APP_BACKEND_URL` | `NEXT_PUBLIC_BACKEND_URL` | `lib/api/client.js`, `lib/api/dashboard.js`, `context/AuthContext.jsx` |
+| `REACT_APP_ADMIN_EMAILS` | `NEXT_PUBLIC_ADMIN_EMAILS` | `components/auth/ProtectedRoute.jsx` (NEW) |
+| `REACT_APP_SENTRY_DSN` | `NEXT_PUBLIC_SENTRY_DSN` | `lib/sentry.js` (NEW) |
 
 ### Files that use React Router (must switch to Next.js navigation)
 
-- `App.js` – remove; replaced by `app/` routes and layout.
-- `pages/dashboard/DashboardLayout.jsx` – `Outlet`, `Link`, `useLocation`, `Navigate`.
-- `components/dashboard/DashboardSidebar.jsx` – `Link`, `useLocation`.
-- `components/auth/ProtectedRoute.jsx` – `Navigate`, `useLocation`.
-- `components/layout/Navbar.jsx` – `Link`, `useNavigate`, `useLocation`.
-- `components/layout/Footer.jsx` – `Link`.
-- `components/landing/TeaserLockedSection.jsx`, `PricingSection.jsx`, `HeroSection.jsx`, `HeroSectionNew.jsx`, `CTASection.jsx`, `CTASectionNew.jsx`, `UpgradeModal.jsx` – `useNavigate`.
-- `pages/AuthCallback.jsx`, `pages/auth/AuthCallback.jsx` – `useNavigate`, `useSearchParams`.
-- `pages/tools/HundredCrCalculator.jsx` – `useNavigate`.
+- `App.js` - remove; replaced by `app/` routes and layout.
+- `pages/dashboard/DashboardLayout.jsx` - `Outlet`, `Link`, `useLocation`, `Navigate`.
+- `components/dashboard/DashboardSidebar.jsx` - `Link`, `useLocation`.
+- `components/auth/ProtectedRoute.jsx` - `Navigate`, `useLocation`, `useMemo` for admin check.
+- `components/layout/Navbar.jsx` - `Link`, `useNavigate`, `useLocation`.
+- `components/layout/Footer.jsx` - `Link`.
+- `components/landing/*.jsx` - Various `useNavigate` usage.
+- `pages/AuthCallback.jsx` - `useNavigate`, `useSearchParams`.
+- `pages/admin/AdminDashboard.jsx` - `useNavigate` (NEW).
 
 ---
 
@@ -69,20 +80,21 @@
 **1.1 Create the app (from repo root)**
 
 ```bash
-cd "c:\Users\shresth_agarwal\Documents\devforge\New folder\CENTURION"
 npx create-next-app@latest frontend-next --typescript --tailwind --eslint --app --src-dir
 ```
 
-When prompted for the import alias, choose `@/*` → `./src/*` so it matches the current `frontend` setup.
+When prompted for the import alias, choose `@/*` -> `./src/*` so it matches the current `frontend` setup.
 
 **1.2 Environment variables**
 
-Create `frontend-next/.env.local` and copy from `frontend/.env` (or `.env.local`), then rename keys:
+Create `frontend-next/.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=<same value as REACT_APP_SUPABASE_URL>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<same value as REACT_APP_SUPABASE_ANON_KEY>
 NEXT_PUBLIC_BACKEND_URL=<same value as REACT_APP_BACKEND_URL>
+NEXT_PUBLIC_ADMIN_EMAILS=<same value as REACT_APP_ADMIN_EMAILS>
+NEXT_PUBLIC_SENTRY_DSN=<same value as REACT_APP_SENTRY_DSN>
 ```
 
 Do not use `REACT_APP_*` in the Next app.
@@ -97,32 +109,27 @@ Ensure `frontend-next/tsconfig.json` has:
 }
 ```
 
-`jsconfig.json` is not used by Next/TypeScript; path alias is in `tsconfig.json`.
-
 ---
 
 ## Phase 2: Global styles and tokens
 
 **2.1 Copy global CSS**
 
-- Copy `frontend/src/index.css` → `frontend-next/src/app/globals.css` (or merge into the existing `globals.css`).
-- Copy `frontend/src/styles/tokens.css` → `frontend-next/src/styles/tokens.css`.
-- In `globals.css`, keep the `@import './styles/tokens.css'` (or equivalent path from `src/app`). Use `@tailwind base; components; utilities;` as in the current file; remove any CRA-specific imports.
+- Copy `frontend/src/index.css` -> `frontend-next/src/app/globals.css`
+- Copy `frontend/src/styles/tokens.css` -> `frontend-next/src/styles/tokens.css`
+- Update import paths as needed
 
 **2.2 Fonts**
 
-Current `index.css` uses Google Fonts (Manrope, Inter, JetBrains Mono) via `@import url('https://fonts.googleapis.com/...')`. For Next.js, prefer `next/font` in the root layout:
-
-In `app/layout.tsx`:
+Current `index.css` uses Google Fonts (Manrope, Inter, JetBrains Mono). For Next.js, prefer `next/font`:
 
 ```tsx
+// app/layout.tsx
 import { Inter, Manrope } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 ```
-
-Then in `globals.css`, use `var(--font-inter)` and `var(--font-manrope)` where you currently use `'Inter'` and `'Manrope'`. You can do this incrementally and keep the Google `@import` until fonts are switched.
 
 ---
 
@@ -130,18 +137,13 @@ Then in `globals.css`, use `var(--font-inter)` and `var(--font-manrope)` where y
 
 **3.1 Root layout (`app/layout.tsx`)**
 
-- Import `globals.css` in the layout (e.g. `import '../globals.css'` or the path that matches your `src/app` setup).
-- Wrap children with `AuthProvider` (from `@/context/AuthContext`) so the whole app has auth state.
-- Add metadata (title, description) for SEO.
-
-Example structure:
-
 ```tsx
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { Toaster } from '@/components/ui/sonner';
 
 export const metadata = {
-  title: '100Cr Engine - When Will You Reach ₹100 Crore?',
+  title: '100Cr Engine - When Will You Reach 100 Crore?',
   description: 'Revenue milestone prediction for Indian founders',
 };
 
@@ -149,7 +151,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
@@ -158,54 +163,53 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 **3.2 AuthProvider and Supabase client**
 
-- Copy `frontend/src/context/AuthContext.jsx` to `frontend-next/src/context/AuthContext.jsx`.
-- Replace every `process.env.REACT_APP_BACKEND_URL` with `process.env.NEXT_PUBLIC_BACKEND_URL`.
-- Replace every `process.env.REACT_APP_SUPABASE_*` with `process.env.NEXT_PUBLIC_SUPABASE_*`.
-- For Next.js, prefer `@supabase/ssr` and create a **browser** client for client components (used by AuthContext). Keep the existing auth flow (getSession, onAuthStateChange, fetchUserData) the same; only the Supabase client creation should use the SSR package’s `createBrowserClient` with `NEXT_PUBLIC_*` env vars. Install: `npm i @supabase/ssr`.
-- Ensure the API client (see Phase 5) sends the Supabase access token (from AuthContext) on requests and, if you currently rely on `localStorage.getItem('auth_token')`, either set `auth_token` from `session.access_token` in AuthContext when session exists or stop using `auth_token` and pass the token from context into the API client.
+- Copy `frontend/src/context/AuthContext.jsx` to `frontend-next/src/context/AuthContext.jsx`
+- Replace `process.env.REACT_APP_*` with `process.env.NEXT_PUBLIC_*`
+- For Next.js, prefer `@supabase/ssr` and create a **browser** client for client components
+- Install: `npm i @supabase/ssr`
 
 ---
 
 ## Phase 4: File-based routes (App Router)
 
-Create the following **pages** so URLs match the current app. Use the existing page components once they are migrated (Link/router, env).
+Create the following **pages** so URLs match the current app:
 
 **4.1 Public pages**
 
-- `app/page.tsx` → render `<LandingPage />` (or inline the current `LandingPage` content).
-- `app/pricing/page.tsx` → `<PricingPage />`.
-- `app/auth/callback/page.tsx` → `<AuthCallback />` (use the callback that creates profile on first login, i.e. logic from `pages/auth/AuthCallback.jsx`; unify if you have two callbacks).
+- `app/page.tsx` -> `<LandingPage />`
+- `app/pricing/page.tsx` -> `<PricingPage />`
+- `app/privacy/page.tsx` -> `<PrivacyPage />` (NEW)
+- `app/auth/callback/page.tsx` -> `<AuthCallback />`
 
 **4.2 Tools (public)**
 
-- `app/tools/page.tsx` – redirect to `/tools/100cr-calculator` (e.g. `redirect()` from `next/navigation`).
-- `app/tools/100cr-calculator/page.tsx` → `<HundredCrCalculator />`.
-- `app/tools/arr-calculator/page.tsx` → `<ARRCalculator />`.
-- `app/tools/runway-calculator/page.tsx` → `<RunwayCalculator />`.
-- `app/tools/growth-calculator/page.tsx` → `<GrowthCalculator />`.
+- `app/tools/page.tsx` - redirect to `/tools/100cr-calculator`
+- `app/tools/100cr-calculator/page.tsx` -> `<HundredCrCalculator />`
+- `app/tools/arr-calculator/page.tsx` -> `<ARRCalculator />`
+- `app/tools/runway-calculator/page.tsx` -> `<RunwayCalculator />`
+- `app/tools/growth-calculator/page.tsx` -> `<GrowthCalculator />`
 
-**4.3 Preview (public)**
+**4.3 Admin (protected - NEW)**
 
-- `app/preview/command-centre/page.tsx` → `<PreviewCommandCentre />`.
-- Same for: `revenue`, `forecasting`, `coach`, `reports`, `benchmarks`, `connectors`, `settings` (match `PreviewPages` exports).
+- `app/admin/page.tsx` -> `<AdminDashboard />`
 
 **4.4 Dashboard (protected)**
 
-- `app/dashboard/layout.tsx` – layout with `<DashboardSidebar />` and main content area; render `children`. Do not put auth redirect here if you use middleware (see Phase 6).
-- `app/dashboard/page.tsx` → `<CommandCentre />`.
-- `app/dashboard/revenue/page.tsx` → `<RevenueIntelligence />`.
-- `app/dashboard/forecasting/page.tsx` → `<ForecastingEngine />`.
-- `app/dashboard/benchmarks/page.tsx` → `<BenchmarkIntelligence />`.
-- `app/dashboard/reports/page.tsx` → `<ReportingEngine />`.
-- `app/dashboard/coach/page.tsx` → `<AIGrowthCoach />`.
-- `app/dashboard/goals/page.tsx` → `<GoalArchitecture />`.
-- `app/dashboard/investors/page.tsx` → `<InvestorRelations />`.
-- `app/dashboard/connectors/page.tsx` → `<Connectors />`.
-- `app/dashboard/settings/page.tsx` → `<Settings />`.
+- `app/dashboard/layout.tsx` - layout with `<DashboardSidebar />` and main content area
+- `app/dashboard/page.tsx` -> `<CommandCentre />`
+- `app/dashboard/revenue/page.tsx` -> `<RevenueIntelligence />`
+- `app/dashboard/forecasting/page.tsx` -> `<ForecastingEngine />`
+- `app/dashboard/benchmarks/page.tsx` -> `<BenchmarkIntelligence />`
+- `app/dashboard/reports/page.tsx` -> `<ReportingEngine />`
+- `app/dashboard/coach/page.tsx` -> `<AIGrowthCoach />`
+- `app/dashboard/goals/page.tsx` -> `<GoalArchitecture />`
+- `app/dashboard/investors/page.tsx` -> `<InvestorRelations />`
+- `app/dashboard/connectors/page.tsx` -> `<Connectors />`
+- `app/dashboard/settings/page.tsx` -> `<Settings />`
 
-**4.5 Catch-all**
+**4.5 Checkout (auth-only)**
 
-- In a suitable place (e.g. a not-found route or middleware), redirect unknown paths to `/`. Next.js 13+ uses `app/not-found.tsx` for 404; for “any other path → /” you can do `redirect('/')` inside a page that matches a dynamic catch-all or handle in middleware.
+- `app/checkout/page.tsx` -> `<CheckoutPage />`
 
 ---
 
@@ -213,19 +217,16 @@ Create the following **pages** so URLs match the current app. Use the existing p
 
 **5.1 API and env renames**
 
-- Copy `frontend/src/lib/api/client.js` and `frontend/src/lib/api/dashboard.js` into `frontend-next/src/lib/api/`.
-- Replace `REACT_APP_BACKEND_URL` with `NEXT_PUBLIC_BACKEND_URL` and use it for the base URL.
-- Ensure the client sends the Supabase access token: either get it from `AuthContext.getAccessToken()` and set it on the axios instance (or fetch headers) when making requests, or sync `session.access_token` to a place the client reads (e.g. set `localStorage.setItem('auth_token', token)` in AuthContext when session is set, and keep using the interceptor). Prefer passing token from context to avoid localStorage if you use middleware/SSR later.
+- Copy `frontend/src/lib/api/client.js` and `frontend/src/lib/api/dashboard.js`
+- Replace `REACT_APP_BACKEND_URL` with `NEXT_PUBLIC_BACKEND_URL`
 
 **5.2 Supabase client**
 
-- Copy `frontend/src/lib/supabase/client.js` → `frontend-next/src/lib/supabase/client.js`.
-- Replace `REACT_APP_SUPABASE_URL` / `REACT_APP_SUPABASE_ANON_KEY` with `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- For App Router, use `@supabase/ssr` and in client components use `createBrowserClient` from it (with the same env vars). Replace the current `createClient` from `@supabase/supabase-js` with that browser client so cookies can be used later if you add server components or middleware that need the session.
+- Copy `frontend/src/lib/supabase/client.js`
+- Replace env vars with `NEXT_PUBLIC_*` versions
+- Use `@supabase/ssr` `createBrowserClient`
 
-**5.3 React Router → Next.js navigation**
-
-Update these in place in the copied components:
+**5.3 React Router -> Next.js navigation**
 
 | Current | Next.js |
 |---------|---------|
@@ -234,47 +235,80 @@ Update these in place in the copied components:
 | `import { Link, useLocation } from 'react-router-dom'` | `import Link from 'next/link'; import { usePathname } from 'next/navigation'` |
 | `<Link to="/path">` | `<Link href="/path">` |
 | `useLocation().pathname` | `usePathname()` |
-| `useLocation().state` | Use searchParams or context; Next.js Link does not support `state` — pass query params or store in sessionStorage if needed |
-| `import { Navigate } from 'react-router-dom'; return <Navigate to="/" replace />` | `import { redirect } from 'next/navigation'` in server components, or `router.replace('/')` in client components |
+| `useLocation().state` | Use searchParams or context |
+| `<Navigate to="/" replace />` | `redirect()` (server) or `router.replace('/')` (client) |
 
 **5.4 Client components**
 
-Any component that uses `useState`, `useEffect`, `useRouter`, `usePathname`, or event handlers must be a Client Component. Add at the top of the file:
+Any component that uses `useState`, `useEffect`, `useRouter`, `usePathname`, or event handlers must be a Client Component. Add at top:
 
 ```tsx
 'use client';
 ```
 
-Apply to: `AuthContext` (and its consumer components), `Navbar`, `Footer`, `DashboardSidebar`, `ProtectedRoute`, `AuthCallback`, all landing sections that use `useNavigate`, all dashboard pages, tools pages, and any component using hooks or browser APIs.
-
 **5.5 ProtectedRoute behavior**
 
-- Remove dependency on React Router’s `Navigate` and `useLocation`.
-- In the dashboard layout (or a wrapper component), use `useAuth()` and `useRouter()`: if `!isAuthenticated && !loading`, call `router.replace('/')` (and optionally set a query like `?login=true` for the landing page to open the auth modal). If `requirePaid && !hasPaidSubscription()`, `router.replace('/pricing')`.
-- Alternatively, protect routes in **middleware** (Phase 6) and keep a minimal client-side guard only where needed (e.g. subscription gate).
+- Remove dependency on React Router's `Navigate` and `useLocation`
+- Use `useAuth()` and `useRouter()` for redirects
+- Admin check: Compare user email against `NEXT_PUBLIC_ADMIN_EMAILS`
+- Silent redirect for non-admins (security through obscurity)
 
 **5.6 Dashboard layout**
 
-- Replace `<Outlet />` with `{children}` in `app/dashboard/layout.tsx`.
-- Use `usePathname()` instead of `useLocation().pathname` in `DashboardSidebar` for active link styling.
-- Sidebar links: use `<Link href={item.href}>` and the same `href` list as today (`/dashboard`, `/dashboard/revenue`, …).
-
-**5.7 Auth callback**
-
-- Use a single auth callback page at `app/auth/callback/page.tsx`. Prefer the logic from `pages/auth/AuthCallback.jsx` (profile creation with backend, `exchangeCodeForSession`). Use `useSearchParams()` from `next/navigation` and `useRouter()` for `router.replace('/dashboard')` or `router.push('/')` on error.
-- Magic link redirect URL in Supabase and in `signInWithMagicLink` must stay `{origin}/auth/callback`.
+- Replace `<Outlet />` with `{children}` in `app/dashboard/layout.tsx`
+- Use `usePathname()` instead of `useLocation().pathname`
 
 ---
 
 ## Phase 6: Middleware (protected routes)
 
-Create `frontend-next/src/middleware.ts` (or `middleware.ts` at project root if not using `src`).
+Create `frontend-next/src/middleware.ts`:
 
-- Use `@supabase/ssr`: create a response and get the session (e.g. `createServerClient` and `getSession`).
-- If the request path is under `/dashboard` and there is no session, redirect to `/?login=true` (or `/`) with `NextResponse.redirect`.
-- Export a `config` with `matcher: ['/dashboard/:path*']` so only dashboard routes are checked.
+```typescript
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-This keeps protection consistent and avoids flashing dashboard content before client-side redirect.
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => request.cookies.get(name)?.value,
+        set: (name, value, options) => response.cookies.set({ name, value, ...options }),
+        remove: (name, options) => response.cookies.set({ name, value: '', ...options }),
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Protect /dashboard routes
+  if (request.nextUrl.pathname.startsWith('/dashboard') && !session) {
+    return NextResponse.redirect(new URL('/?login=true', request.url));
+  }
+
+  // Protect /admin routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!session) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    if (!adminEmails.includes(session.user.email?.toLowerCase() || '')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/admin/:path*', '/checkout'],
+};
+```
 
 ---
 
@@ -282,23 +316,51 @@ This keeps protection consistent and avoids flashing dashboard content before cl
 
 **7.1 Copy in order**
 
-1. **lib**: `lib/utils.js`, `lib/copy.js`, `lib/engine/*` (constants, projection, benchmarks), then `lib/api/*` and `lib/supabase/*` (already updated in Phase 5).
-2. **context**: `AuthContext.jsx` (already updated in Phase 3).
-3. **components**: Copy `components/layout`, `components/landing`, `components/dashboard`, `components/auth`, `components/ui`, `components/upgrade`, `components/tour` — then apply router/link/pathname and `'use client'` where needed.
-4. **pages**: Already mapped to `app/*` in Phase 4; copy page components into `src` (e.g. `src/pages/` or colocate under `app/...` and import) and fix imports and client directives.
+1. **lib**: `lib/utils.js`, `lib/copy.js`, `lib/engine/*`, `lib/sentry.js`
+2. **context**: `AuthContext.jsx`
+3. **components**: All folders - update router/link/pathname and add `'use client'`
+4. **pages**: Map to `app/*` structure
 
-**7.2 Dependencies**
+**7.2 New components to migrate**
 
-- Install the same Radix, Framer Motion, Lucide, Recharts, etc. as in `frontend/package.json`. Remove `react-router-dom`, `react-scripts`, `craco`, `cra-template`. Add `next`, `@supabase/ssr`.
-- `next-themes` is already in the project; you can keep it for a future theme toggle.
+| Component | Purpose | Notes |
+|-----------|---------|-------|
+| `CookieConsentBanner.jsx` | DPDP compliance | Client component |
+| `WaitlistSection.jsx` | Beta waitlist | Client component |
+| `AdminDashboard.jsx` | Super admin panel | Client component, admin-only |
+| `PrivacyPage.jsx` | Privacy policy | Can be server component |
 
-**7.3 Health check / CRACO**
+**7.3 Dependencies**
 
-- The current app uses a custom health check plugin and CRACO. Next.js does not use CRACO. Omit the health check plugin in the Next app unless you reimplement it as a Next API route or separate endpoint.
+- Install: Radix, Framer Motion, Lucide, Recharts, `@supabase/ssr`, `@sentry/nextjs`
+- Remove: `react-router-dom`, `react-scripts`, `craco`, `cra-template`
 
 ---
 
-## Phase 8: Build and test
+## Phase 8: Sentry Integration
+
+**8.1 Install**
+
+```bash
+npx @sentry/wizard@latest -i nextjs
+```
+
+**8.2 Configure**
+
+```javascript
+// sentry.client.config.ts
+import * as Sentry from '@sentry/nextjs';
+
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  tracesSampleRate: 0.1,
+  replaysSessionSampleRate: 0.1,
+});
+```
+
+---
+
+## Phase 9: Build and test
 
 ```bash
 cd frontend-next
@@ -306,8 +368,18 @@ npm run build
 npm run start
 ```
 
-- Fix any missing imports, wrong paths, or server/client boundary issues (e.g. using `window` or `useRouter` in a file without `'use client'`).
-- Test: `/`, `/pricing`, `/auth/callback` (magic link), `/tools/100cr-calculator`, `/dashboard` (redirect when logged out, load when logged in), and each dashboard sub-route. Verify API calls use `NEXT_PUBLIC_BACKEND_URL` and the backend receives the correct `Authorization` header.
+**Test checklist:**
+- [ ] `/` - Landing page loads
+- [ ] `/pricing` - Pricing page loads
+- [ ] `/privacy` - Privacy page loads (NEW)
+- [ ] `/auth/callback` - Magic link works
+- [ ] `/tools/100cr-calculator` - Calculator works
+- [ ] `/checkout` - Redirects when logged out
+- [ ] `/admin` - Redirects non-admins (NEW)
+- [ ] `/dashboard` - Redirects when logged out, loads when logged in
+- [ ] All dashboard sub-routes work
+- [ ] Cookie consent banner appears
+- [ ] DPDP consent checkbox required in auth modal
 
 ---
 
@@ -317,37 +389,49 @@ npm run start
 |------|--------------------|---------|
 | Env | `REACT_APP_*` | `NEXT_PUBLIC_*` (client-visible) |
 | Routing | `<Routes>`, `<Link to="">`, `useNavigate`, `useLocation` | File-based under `app/`, `<Link href="">`, `useRouter`, `usePathname` |
-| Auth redirect | `<Navigate to="/" />` | `redirect()` (server) or `router.replace('/')` (client); middleware for /dashboard |
+| Auth redirect | `<Navigate to="/" />` | `redirect()` (server) or `router.replace('/')` (client); middleware for protected routes |
 | Entry | `index.js` + `App.js` | `app/layout.tsx` + `app/**/page.tsx` |
-| Styles | Single `index.css` + Tailwind | Import in `app/layout.tsx`; Tailwind in `tailwind.config` |
-| Supabase | `@supabase/supabase-js` only | Prefer `@supabase/ssr` + `createBrowserClient` for client, `createServerClient` in middleware |
+| Styles | Single `index.css` + Tailwind | Import in `app/layout.tsx` |
+| Supabase | `@supabase/supabase-js` only | Prefer `@supabase/ssr` |
+| Error tracking | Manual Sentry init | `@sentry/nextjs` with auto-instrumentation |
+
+---
+
+## New routes to add (March 2026 updates)
+
+| Route | Component | Protection | Purpose |
+|-------|-----------|------------|---------|
+| `/privacy` | `PrivacyPage` | Public | DPDP compliance |
+| `/admin` | `AdminDashboard` | Admin-only | System monitoring |
 
 ---
 
 ## Checklist (implementation order)
 
-- [ ] Phase 1: Create `frontend-next`, `.env.local` with `NEXT_PUBLIC_*`, path alias.
-- [ ] Phase 2: Copy and adapt `globals.css` and `styles/tokens.css`; optional `next/font` for Inter/Manrope.
-- [ ] Phase 3: Root layout with `AuthProvider`; copy and update `AuthContext` and Supabase client (env + `@supabase/ssr`).
-- [ ] Phase 4: Add all `app/**/page.tsx` and `app/dashboard/layout.tsx` (structure only; components can be stubs initially).
-- [ ] Phase 5: API client and dashboard API env renames; Supabase client; replace React Router with Next navigation and add `'use client'` where needed; update `ProtectedRoute` and auth callback.
-- [ ] Phase 6: Middleware for `/dashboard` protection using Supabase session.
-- [ ] Phase 7: Copy all components and pages; fix imports and client boundaries; install/remove deps.
-- [ ] Phase 8: Build, fix errors, and test all routes and auth flow.
+- [ ] Phase 1: Create `frontend-next`, `.env.local` with `NEXT_PUBLIC_*`, path alias
+- [ ] Phase 2: Copy and adapt `globals.css` and `styles/tokens.css`; `next/font` for Inter/Manrope
+- [ ] Phase 3: Root layout with `AuthProvider`; copy and update `AuthContext` and Supabase client
+- [ ] Phase 4: Add all `app/**/page.tsx` including `/privacy` and `/admin`
+- [ ] Phase 5: API client env renames; Supabase client; replace React Router; add `'use client'`
+- [ ] Phase 6: Middleware for `/dashboard` and `/admin` protection
+- [ ] Phase 7: Copy all components including `CookieConsentBanner`, `WaitlistSection`, `AdminDashboard`
+- [ ] Phase 8: Configure Sentry with `@sentry/nextjs`
+- [ ] Phase 9: Build, fix errors, and test all routes and auth flow
 
 ---
 
-## Timeline (estimate)
+## Estimated effort
 
 | Phase | Focus | Estimate |
-|-------|--------|----------|
-| 1–2 | Setup + styles | 0.5 day |
-| 3–4 | Layout + routes skeleton | 0.5 day |
-| 5 | API, auth, router replacement | 1–2 days |
+|-------|-------|----------|
+| 1-2 | Setup + styles | 0.5 day |
+| 3-4 | Layout + routes skeleton | 0.5 day |
+| 5 | API, auth, router replacement | 1-2 days |
 | 6 | Middleware | 0.25 day |
-| 7 | Components and pages | 2–3 days |
-| 8 | Build and test | 1 day |
-| **Total** | | **5–8 days** |
+| 7 | Components and pages | 2-3 days |
+| 8 | Sentry | 0.25 day |
+| 9 | Build and test | 1 day |
+| **Total** | | **5-8 days** |
 
 ---
 
@@ -356,3 +440,8 @@ npm run start
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [Supabase Auth with Next.js (SSR)](https://supabase.com/docs/guides/auth/server-side/nextjs)
 - [Next.js Tailwind](https://tailwindcss.com/docs/guides/nextjs)
+- [Sentry Next.js SDK](https://docs.sentry.io/platforms/javascript/guides/nextjs/)
+
+---
+
+*Last updated: March 20, 2026*
