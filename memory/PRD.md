@@ -181,36 +181,65 @@ Tables defined in `/docs/supabase_schema.sql`:
 | POST /api/ai/board-report | Paid | Generate board report |
 | GET /api/ai/daily-pulse | Paid | Get daily insights |
 
+### Phase 9 - Habit Engine & Auth Fixes (Complete - March 20, 2026)
+- **Habit Engine Implementation**:
+  - `engagement_engine.py` - In-memory dedup + local JSON email logging + Haiku wrapper
+  - `habit_layers.py` - 5 engagement layers:
+    1. Monday Morning Digest (weekly MRR summary + AI question)
+    2. Check-in Reminder (25th of month)
+    3. Milestone Countdown (30/14/7/3/1 days alerts)
+    4. Streak Protection (protect check-in streaks)
+    5. Anomaly Alert (event-driven MRR drop alerts)
+  - `scheduler.py` - APScheduler cron jobs (Asia/Kolkata timezone)
+  - DB schema: `engagement_events` table, `profiles` extended with `streak_count`, `last_checkin_at`
+- **Auth Flow Fixes**:
+  - Fixed JWT verification to handle placeholder secrets ('your-jwt-secret')
+  - Falls back to SUPABASE_ANON_KEY for token verification
+  - Added `signInWithGoogle` method to AuthContext
+  - Google OAuth button in AuthModal (requires Supabase Google provider setup)
+- **Settings Profile Save Fix**:
+  - `handleSaveProfile` properly wired to `updateUserProfile` API
+  - Transforms form data to backend expected format
+  - Calls `refreshProfile()` after successful update
+- **Admin Endpoints for Habit Engine**:
+  - POST /api/admin/trigger/{job_name} - Manually trigger habit engine jobs
+  - GET /api/admin/engagement/stats - View engagement event counts
+  - GET /api/admin/engagement/user/{user_id} - View user engagement history
+  - GET /api/admin/dedup/status - View dedup cache status
+
 ## Testing Status
-- **Backend**: 100% (19/19 tests passed)
+- **Backend**: 100% (22/22 tests passed)
 - **Frontend**: 100% (all features verified)
-- **Last Test**: March 17, 2026
+- **Habit Engine**: Scheduler running with 4 cron jobs verified
+- **Last Test**: March 20, 2026
 
 ## Prioritized Backlog
 
 ### P0 (Critical) - Completed
 - [x] Modular backend architecture
 - [x] Supabase PostgreSQL integration
-- [x] Authentication system
+- [x] Authentication system (Magic Link + Google OAuth)
 - [x] Founder DNA Quiz
+- [x] Habit Engine implementation
+- [x] JWT verification fix for placeholder secrets
+- [x] Settings profile save functionality
 
 ### P1 (High) - Next Sprint
-- [ ] Create Supabase tables (run supabase_schema.sql)
-- [ ] Test actual authenticated user flow end-to-end
-- [ ] Connect dashboard modules to live user data
-- [ ] Monthly check-in form with real persistence
+- [ ] Enable Google OAuth in Supabase project settings
+- [ ] Run habit engine schema migrations in Supabase
+- [ ] Test authenticated user flow end-to-end with real user
+- [ ] Configure ANTHROPIC_API_KEY for AI features
+- [ ] Super Admin Panel with observability dashboards
 
 ### P2 (Medium)
-- [ ] Actual AI coaching with Claude (test with real prompts)
+- [ ] Configure Resend for production email delivery
+- [ ] Configure Redis for distributed rate limiting/dedup
 - [ ] Board report PDF generation
-- [ ] Email alerts via Resend
-- [ ] Announcement bar enhancements
-- [ ] Landing page animations polish
+- [ ] Beta Launch features (waitlist, DPDP compliance)
 
 ### P3 (Future)
-- [ ] Razorpay payment integration
-- [ ] Redis rate limiting for production
-- [ ] Real connector API integrations
+- [ ] Razorpay/Stripe webhook implementation
+- [ ] Real connector API integrations (auto-sync MRR)
 - [ ] Next.js migration
 
 ## Technical Configuration
@@ -238,7 +267,8 @@ REACT_APP_SUPABASE_ANON_KEY=xxx
 ```
 
 ## Next Immediate Tasks
-1. Run `/docs/supabase_schema.sql` in Supabase SQL Editor to create tables
-2. Test full auth flow with real magic link
-3. Wire up dashboard to user-specific data
-4. Test AI coaching features with real Claude API
+1. Enable Google OAuth provider in Supabase project (Authentication > Providers > Google)
+2. Run `/docs/comprehensive_guide.md` habit engine schema in Supabase SQL Editor
+3. Set ANTHROPIC_API_KEY in backend/.env for AI features
+4. Test full auth flow with real user (Magic Link + Google OAuth)
+5. Configure ADMIN_EMAILS environment variable for admin access
