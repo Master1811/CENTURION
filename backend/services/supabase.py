@@ -198,10 +198,10 @@ class SupabaseService:
         Args:
             data: Subscription data including:
                 - user_id: User UUID
-                - plan: Plan name (starter, founder, etc.)
-                - status: Subscription status (active, trialing, cancelled)
+                - plan: Plan name (founder, studio, vc_portfolio)
+                - status: Subscription status (active, cancelled, expired)
                 - payment_ref: Payment ID for idempotency
-                - billing_cycle: monthly, annual, trial_7d
+                - billing_cycle: annual
                 - amount_paid: Amount in paise
                 - currency: INR
                 - expires_at: ISO timestamp of expiration
@@ -217,7 +217,7 @@ class SupabaseService:
             "plan": data["plan"],
             "status": data["status"],
             "payment_ref": data.get("payment_ref"),
-            "billing_cycle": data.get("billing_cycle", "monthly"),
+            "billing_cycle": data.get("billing_cycle", "annual"),
             "amount_paid": data.get("amount_paid"),
             "currency": data.get("currency", "INR"),
             "expires_at": data.get("expires_at"),

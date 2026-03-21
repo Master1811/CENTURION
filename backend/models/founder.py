@@ -96,7 +96,7 @@ class OnboardingData(BaseModel):
 class SubscriptionStatus(BaseModel):
     """Subscription status response."""
     user_id: str
-    status: str  # 'active', 'cancelled', 'expired', 'trialing'
+    status: str  # 'active', 'cancelled', 'expired'
     plan: str  # 'founder'
     starts_at: Optional[str] = None
     expires_at: Optional[str] = None

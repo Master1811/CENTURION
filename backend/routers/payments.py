@@ -7,7 +7,6 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Literal
-import razorpay
 from services.auth import require_auth
 from services.supabase import supabase_service
 from services.logging_service import payment_logger, log_payment_event
@@ -16,9 +15,20 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 
 logger = logging.getLogger("100cr_engine.payments")
 
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
-RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+
+def get_razorpay_client():
+    """
+    Lazy Razorpay client initialization.
+    Returns None if keys are not configured — server never crashes without them.
+    Add RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET env vars to enable payments.
+    """
+    import razorpay
+    key_id = os.getenv("RAZORPAY_KEY_ID")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
+    if not key_id or not key_secret:
+        logger.warning("Payments not configured: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing")
+        return None
+    return razorpay.Client(auth=(key_id, key_secret))
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PRICING — SOURCE OF TRUTH (March 2026)
@@ -47,20 +57,16 @@ async def create_razorpay_order(
     user=Depends(require_auth)
 ):
     if body.plan not in PLAN_PRICING:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid plan"
-        )
-    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=400, detail="Invalid plan. Only 'founder' is accepted.")
+
+    client = get_razorpay_client()
+    if client is None:
         raise HTTPException(
             status_code=503,
-            detail="Payment service not configured"
+            detail="Payments not configured. Add Razorpay keys to enable checkout."
         )
 
     plan = PLAN_PRICING[body.plan]
-    client = razorpay.Client(
-        auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
-    )
 
     try:
         order = client.order.create({
@@ -126,25 +132,32 @@ async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks):
         payment_logger.warning("Webhook received without signature")
         raise HTTPException(status_code=400, detail="Missing webhook signature")
 
-    if not RAZORPAY_WEBHOOK_SECRET:
-        raise HTTPException(
-            status_code=503,
-            detail="Webhook secret not configured"
+    webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+    if not webhook_secret:
+        payment_logger.warning(
+            "RAZORPAY_WEBHOOK_SECRET not set — skipping signature verification (dev mode)"
         )
+        # In dev/staging allow unsigned webhooks; never allow in prod
+        if os.getenv("PAYMENTS_MODE", "disabled") == "live":
+            raise HTTPException(
+                status_code=503,
+                detail="Webhook secret not configured for live mode"
+            )
 
-    # Verify signature using constant-time comparison
-    expected = hmac.new(
-        RAZORPAY_WEBHOOK_SECRET.encode(),
-        body,
-        hashlib.sha256
-    ).hexdigest()
+    # Verify signature using constant-time comparison (only when secret is set)
+    if webhook_secret:
+        expected = hmac.new(
+            webhook_secret.encode(),
+            body,
+            hashlib.sha256
+        ).hexdigest()
 
-    if not hmac.compare_digest(expected, signature):
-        payment_logger.warning("Invalid webhook signature received")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid webhook signature"
-        )
+        if not hmac.compare_digest(expected, signature):
+            payment_logger.warning("Invalid webhook signature received")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid webhook signature"
+            )
 
     event = json.loads(body)
     event_type = event.get("event", "")
@@ -159,7 +172,7 @@ async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks):
     if event_type == "payment.captured":
         payment = event["payload"]["payment"]["entity"]
         user_id = payment.get("notes", {}).get("user_id")
-        plan_key = payment.get("notes", {}).get("plan", "starter")
+        plan_key = payment.get("notes", {}).get("plan", "founder")
         payment_id = payment.get("id")
         amount = payment.get("amount", 0)
 

@@ -438,8 +438,8 @@ async def require_paid_subscription(
     2. User has an active subscription in the database
     3. Subscription has not expired
     
-    Paid plans: starter, founder, studio, vc_portfolio
-    Valid statuses: active, trialing
+    Paid plans: founder, studio, vc_portfolio
+    Valid statuses: active
     
     Example:
         @router.post("/checkin")
@@ -458,10 +458,10 @@ async def require_paid_subscription(
     """
     from services.logging_service import auth_logger, log_auth_event
     
-    # Paid plans list - includes all paid tiers
-    PAID_PLANS = ['starter', 'founder', 'studio', 'vc_portfolio']
-    # Valid subscription statuses - trialing users get full access
-    ACTIVE_STATUSES = ['active', 'trialing']
+    # Paid plans list — only active annual plans
+    PAID_PLANS = ['founder', 'studio', 'vc_portfolio']
+    # Valid subscription statuses
+    ACTIVE_STATUSES = ['active']
 
     # First verify authentication
     user = await require_auth(credentials)
@@ -508,7 +508,7 @@ async def require_paid_subscription(
             }
         )
 
-    # Check subscription status (active or trialing)
+    # Check subscription status
     if status_value not in ACTIVE_STATUSES:
         log_auth_event(
             "subscription_check_failed",

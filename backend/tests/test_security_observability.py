@@ -2,8 +2,8 @@
 Security Audit & Observability Tests for Project Centurion
 ============================================================
 Tests for iteration 9 features:
-- require_paid_subscription accepts starter, founder, trialing statuses
-- Payments webhook handles starter/founder/trial plans with expires_at
+- require_paid_subscription accepts founder, studio, vc_portfolio (active only)
+- Payments webhook handles founder plan with expires_at (365 days)
 - Check-in endpoint triggers anomaly alert on >10% revenue drop
 - Check-in endpoint updates streak correctly
 - Admin endpoints protected - returns 403 without admin email

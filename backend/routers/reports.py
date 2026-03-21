@@ -4,7 +4,7 @@ Reports Router
 Dashboard data and reporting endpoints.
 
 All endpoints require authentication.
-Most endpoints require paid subscription (starter/founder/trialing).
+Most endpoints require paid subscription (founder / studio / vc_portfolio, status=active).
 
 Endpoints:
 - GET /dashboard/overview - Command Centre data
@@ -286,7 +286,7 @@ async def submit_checkin(
     Submit a monthly revenue check-in.
     
     Tracks actual vs projected revenue over time.
-    Requires Founder Plan subscription (starter or founder, active or trialing).
+    Requires Founder Plan subscription (founder/studio/vc_portfolio, status=active).
     
     Also triggers:
     - Streak update
