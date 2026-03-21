@@ -41,7 +41,7 @@ import {
   CRORE, LAKH, STAGES,
 } from '@/lib/engine/constants';
 
-// ─── Color tokens (matches HeroSection) ──────────────────────────────────────
+// ─── Color tokens (matches HeroSection + Light mode) ─────────────────────────
 const C = {
   brightCyan:  '#00BFFF',
   brightCyan2: '#00C8E8',
@@ -49,6 +49,12 @@ const C = {
   tealEdge:    '#006080',
   darkCorner:  '#050A10',
   darkCorner2: '#0A0F14',
+  // Light mode
+  bgLight:     '#FAFAFA',
+  bgWhite:     '#FFFFFF',
+  textPrimary: '#09090B',
+  textSecondary: '#52525B',
+  textTertiary: '#71717A',
 };
 
 // ─── Liquid Glass card primitive ─────────────────────────────────────────────
@@ -399,36 +405,30 @@ export const HundredCrCalculator = () => {
   return (
     <div
       className="min-h-screen relative overflow-hidden centurion-tool-typography"
-      style={{ background: C.darkCorner }}
+      style={{ background: C.bgLight }}
       data-testid="calculator-page"
     >
 
-      {/* ── Ambient atmosphere (matches hero) ── */}
+      {/* ── Subtle light background pattern ── */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            radial-gradient(ellipse 65% 40% at 50% -8%,
-              rgba(0,191,255,0.22) 0%, transparent 55%),
-            radial-gradient(ellipse 40% 35% at 8%  30%,
-              rgba(0,96,128,0.14) 0%, transparent 55%),
-            radial-gradient(ellipse 40% 35% at 92% 30%,
-              rgba(0,96,128,0.14) 0%, transparent 55%),
-            radial-gradient(ellipse 55% 45% at 50% 100%,
-              rgba(0,30,50,0.60)  0%, transparent 60%)
+            radial-gradient(ellipse 60% 40% at 50% 0%,
+              rgba(0,191,255,0.06) 0%, transparent 50%),
+            radial-gradient(ellipse 40% 30% at 100% 0%,
+              rgba(0,191,255,0.04) 0%, transparent 50%)
           `,
         }}
       />
-      {/* Dot grid */}
+      {/* Subtle dot grid */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.16]"
+        className="absolute inset-0 pointer-events-none opacity-[0.25]"
         style={{
-          backgroundImage: `radial-gradient(circle, rgba(0,191,255,0.28) 1px, transparent 1px)`,
-          backgroundSize: '22px 22px',
-          maskImage:
-            'radial-gradient(ellipse 75% 50% at 50% 15%, black 30%, transparent 75%)',
-          WebkitMaskImage:
-            'radial-gradient(ellipse 75% 50% at 50% 15%, black 30%, transparent 75%)',
+          backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          maskImage: 'linear-gradient(to bottom, black 0%, transparent 60%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 60%)',
         }}
       />
 
@@ -450,10 +450,10 @@ export const HundredCrCalculator = () => {
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full
                              text-xs font-semibold tracking-widest uppercase"
                   style={{
-                    background: 'rgba(0,191,255,0.10)',
-                    border: '1px solid rgba(0,191,255,0.28)',
-                    color: `${C.brightCyan2}cc`,
-                    backdropFilter: 'blur(8px)',
+                    background: 'rgba(0,191,255,0.08)',
+                    border: '1px solid rgba(0,191,255,0.18)',
+                    color: C.midCyan,
+                    letterSpacing: '0.12em',
                   }}
                 >
                   <span
@@ -465,7 +465,8 @@ export const HundredCrCalculator = () => {
               </motion.div>
 
               <motion.h1
-                className="mb-3 text-3xl sm:text-4xl md:text-5xl font-bold text-white"
+                className="mb-3 text-3xl sm:text-4xl md:text-5xl font-bold"
+                style={{ color: C.textPrimary, fontFamily: "'Georgia', serif" }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
@@ -476,7 +477,7 @@ export const HundredCrCalculator = () => {
                   className="italic"
                   style={{
                     background: `linear-gradient(
-                      90deg, #fff 0%, ${C.brightCyan2} 55%, #fff 100%
+                      90deg, ${C.midCyan} 0%, ${C.brightCyan} 50%, ${C.midCyan} 100%
                     )`,
                     backgroundSize: '200% auto',
                     WebkitBackgroundClip: 'text',
@@ -490,7 +491,7 @@ export const HundredCrCalculator = () => {
 
               <motion.p
                 className="text-lg"
-                style={{ color: 'rgba(255,255,255,0.55)' }}
+                style={{ color: C.textTertiary }}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.22 }}
@@ -1036,7 +1037,7 @@ export const HundredCrCalculator = () => {
         <Footer />
         
         {/* Help Widget */}
-        <HelpWidget variant="dark" />
+        <HelpWidget variant="light" />
       </div>
     </div>
   );

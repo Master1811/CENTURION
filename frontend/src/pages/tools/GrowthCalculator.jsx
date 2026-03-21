@@ -16,6 +16,10 @@ const C = {
   tealEdge:    '#006080',
   darkCorner:  '#050A10',
   midTone:     '#007BA0',
+  bgLight:     '#FAFAFA',
+  textPrimary: '#09090B',
+  textSecondary: '#52525B',
+  textTertiary: '#71717A',
 };
 
 const T2D3_STATUS = {
@@ -235,27 +239,21 @@ export const GrowthCalculator = () => {
   return (
     <div
       className="min-h-screen centurion-tool-typography"
-      style={{ background: C.darkCorner }}
+      style={{ background: C.bgLight }}
       data-testid="growth-calculator-page"
     >
       <Navbar />
 
       <main className="pt-28 pb-20 relative overflow-hidden">
 
-        {/* ── Background ── */}
+        {/* ── Light mode Background ── */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: `radial-gradient(ellipse 70% 45% at 50% 0%, rgba(0,191,255,0.18) 0%, rgba(0,153,204,0.08) 35%, transparent 58%)` }} />
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: `
-            radial-gradient(ellipse 40% 40% at 5%  70%, rgba(0,96,128,0.20) 0%, transparent 55%),
-            radial-gradient(ellipse 40% 40% at 95% 70%, rgba(0,96,128,0.20) 0%, transparent 55%)
-          `,
-        }} />
-        <div className="absolute inset-0 pointer-events-none opacity-[0.08]" style={{
-          backgroundImage: `radial-gradient(circle, rgba(0,191,255,0.6) 1px, transparent 1px)`,
-          backgroundSize: '28px 28px',
-          maskImage: 'radial-gradient(ellipse 80% 60% at 50% 20%, black 20%, transparent 75%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 20%, black 20%, transparent 75%)',
+          style={{ backgroundImage: `radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,191,255,0.06) 0%, transparent 50%)` }} />
+        <div className="absolute inset-0 pointer-events-none opacity-[0.25]" style={{
+          backgroundImage: `radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          maskImage: 'linear-gradient(to bottom, black 0%, transparent 60%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 60%)',
         }} />
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-8">
@@ -270,21 +268,18 @@ export const GrowthCalculator = () => {
           >
             <motion.span
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-5"
-              style={{ background: 'rgba(0,191,255,0.10)', border: '1px solid rgba(0,191,255,0.28)', color: `${C.brightCyan2}cc`, letterSpacing: '0.14em' }}
+              style={{ background: 'rgba(0,191,255,0.08)', border: '1px solid rgba(0,191,255,0.18)', color: C.midCyan, letterSpacing: '0.12em' }}
             >
               <TrendingUp className="w-3.5 h-3.5" />
               Growth Analytics
             </motion.span>
             <h1
               className="text-3xl md:text-5xl font-bold mb-4"
-              style={{
-                background: `linear-gradient(135deg, #fff 30%, ${C.brightCyan2} 100%)`,
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}
+              style={{ color: C.textPrimary, fontFamily: "'Georgia', serif" }}
             >
-              Growth Rate Calculator
+              <span style={{ background: `linear-gradient(90deg, ${C.midCyan} 0%, ${C.brightCyan} 50%, ${C.midCyan} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Growth Rate</span> Calculator
             </h1>
-            <p className="text-base md:text-lg" style={{ color: 'rgba(255,255,255,0.52)' }}>
+            <p className="text-base md:text-lg" style={{ color: C.textTertiary }}>
               Calculate your month-over-month and annualized growth rate
             </p>
           </motion.div>
@@ -473,7 +468,7 @@ export const GrowthCalculator = () => {
       <Footer />
       
       {/* Help Widget */}
-      <HelpWidget variant="dark" />
+      <HelpWidget variant="light" />
     </div>
   );
 };

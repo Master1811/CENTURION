@@ -1,6 +1,4 @@
-// Navbar component - Unified navigation with adaptive light/dark theming
-// Same structure everywhere, style adapts to page context
-
+// Navbar component - centered floating pill with glassmorphism
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +9,6 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { storeAuthIntent } from '@/lib/auth/intent';
 
-// ─── Tools Navigation Items ─────────────────────────────────────────────────────
 const toolsItems = [
   { 
     label: copy.tools.hundredCr.name, 
@@ -39,33 +36,7 @@ const toolsItems = [
   },
 ];
 
-// ─── Theme Configuration ─────────────────────────────────────────────────────────
-// Determines which pages use light vs dark navbar
-const getNavTheme = (pathname) => {
-  // Dark theme pages (landing hero, specific marketing pages)
-  const darkPages = ['/'];
-  
-  // Pages that start with these paths should be dark
-  const darkPrefixes = ['/preview'];
-  
-  // Check if current path matches dark pages
-  if (darkPages.includes(pathname)) {
-    return 'dark';
-  }
-  
-  // Check for dark prefixes
-  for (const prefix of darkPrefixes) {
-    if (pathname.startsWith(prefix)) {
-      return 'dark';
-    }
-  }
-  
-  // Tools pages, pricing, dashboard - all use light theme
-  // This creates a cohesive app experience with light surfaces
-  return 'light';
-};
-
-export const Navbar = ({ forceTheme }) => {
+export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -78,10 +49,6 @@ export const Navbar = ({ forceTheme }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, signOut, loading } = useAuth();
-  
-  // Determine theme based on page or forced override
-  const theme = forceTheme || getNavTheme(location.pathname);
-  const isDark = theme === 'dark';
   const isLanding = location.pathname === '/';
 
   useEffect(() => {
@@ -122,7 +89,7 @@ export const Navbar = ({ forceTheme }) => {
     }
   }, [location.state, isAuthenticated, loading]);
 
-  // Listen for centurion:open-auth event
+  // Listen for centurion:open-auth (e.g. from ResultGate, Share button)
   useEffect(() => {
     const handler = (e) => {
       if (e.detail?.headline) {
@@ -152,75 +119,6 @@ export const Navbar = ({ forceTheme }) => {
     }
   };
 
-  // ─── Theme-based styles ─────────────────────────────────────────────────────────
-  const styles = {
-    nav: {
-      dark: cn(
-        isLanding
-          ? 'top-0 left-0 right-0 w-full h-[72px] px-6 md:px-12 rounded-none border-0 bg-transparent'
-          : 'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full',
-        !isLanding && 'bg-[rgba(5,10,16,0.85)] backdrop-blur-xl border border-[rgba(0,191,255,0.12)]',
-        !isLanding && scrolled && 'shadow-[0_8px_32px_rgba(0,191,255,0.12)]',
-        !isLanding && !scrolled && 'shadow-[0_4px_16px_rgba(0,191,255,0.08)]'
-      ),
-      light: cn(
-        'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full',
-        'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.06)]',
-        scrolled
-          ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]'
-          : 'shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
-      ),
-    },
-    logo: {
-      dark: 'text-white',
-      light: 'text-[#09090B]',
-    },
-    logoSub: {
-      dark: 'text-white/70',
-      light: 'text-[#71717A]',
-    },
-    link: {
-      dark: 'text-white/70 hover:text-white hover:bg-white/10',
-      light: 'text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.04)]',
-    },
-    linkActive: {
-      dark: 'text-white bg-white/10',
-      light: 'text-[#09090B] bg-[rgba(0,0,0,0.04)]',
-    },
-    dropdown: {
-      dark: 'bg-[rgba(5,15,24,0.95)] backdrop-blur-xl border border-[rgba(0,191,255,0.15)] shadow-[0_16px_48px_rgba(0,191,255,0.08),0_4px_16px_rgba(0,0,0,0.3)]',
-      light: 'bg-white/95 backdrop-blur-xl border border-[rgba(0,0,0,0.06)] shadow-[0_16px_48px_rgba(0,0,0,0.10)]',
-    },
-    dropdownItem: {
-      dark: 'hover:bg-white/10',
-      light: 'hover:bg-[rgba(0,0,0,0.03)]',
-    },
-    dropdownText: {
-      dark: 'text-white/90',
-      light: 'text-[#09090B]',
-    },
-    dropdownSubtext: {
-      dark: 'text-white/60',
-      light: 'text-[#71717A]',
-    },
-    dropdownIcon: {
-      dark: 'bg-white/10',
-      light: 'bg-[rgba(0,191,255,0.08)]',
-    },
-    dropdownIconColor: {
-      dark: 'text-white/90',
-      light: 'text-[#0099CC]',
-    },
-    cta: {
-      dark: 'bg-white text-[#09090B] hover:bg-white/90',
-      light: 'bg-[#09090B] text-white hover:bg-[#18181B]',
-    },
-    userBtn: {
-      dark: 'bg-white/10 text-white/90 border border-white/20 hover:bg-white/20',
-      light: 'bg-[rgba(0,0,0,0.04)] text-[#09090B] border border-[rgba(0,0,0,0.08)] hover:bg-[rgba(0,0,0,0.08)]',
-    },
-  };
-
   return (
     <>
       <motion.nav
@@ -229,12 +127,19 @@ export const Navbar = ({ forceTheme }) => {
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
           'fixed z-50 transition-all duration-300',
+          isLanding
+            ? 'top-0 left-0 right-0 w-full h-[72px] px-6 md:px-12 rounded-none border-0 bg-transparent'
+            : 'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full glass-dark',
           'flex items-center',
           isLanding ? 'justify-between' : 'justify-center gap-1',
-          styles.nav[theme]
+          // Glassmorphism (non-landing)
+          !isLanding && scrolled
+            ? 'shadow-[0_8px_32px_rgba(0,191,255,0.12)]'
+            : !isLanding
+              ? 'shadow-[0_4px_16px_rgba(0,191,255,0.08)]'
+              : 'bg-transparent'
         )}
         data-testid="navbar"
-        data-theme={theme}
       >
         {/* Logo */}
         <Link 
@@ -242,10 +147,15 @@ export const Navbar = ({ forceTheme }) => {
           className="flex items-center gap-1 px-4 shrink-0"
           data-testid="navbar-logo"
         >
-          <span className={cn("font-heading font-bold", styles.logo[theme])}>
+          <span className={cn("font-heading font-bold", "text-white")}>
             100Cr
           </span>
-          <span className={cn("font-heading font-medium", styles.logoSub[theme])}>
+          <span
+            className={cn(
+              "font-heading font-medium",
+              'text-white/70'
+            )}
+          >
             Engine
           </span>
         </Link>
@@ -264,8 +174,12 @@ export const Navbar = ({ forceTheme }) => {
                 'text-sm font-medium',
                 'transition-colors duration-150',
                 toolsOpen || location.pathname.includes('/tools')
-                  ? styles.linkActive[theme]
-                  : styles.link[theme]
+                  ? isLanding
+                    ? 'text-white bg-white/10'
+                    : 'text-white bg-white/10'
+                  : isLanding
+                    ? 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
               )}
               data-testid="tools-dropdown-trigger"
             >
@@ -287,13 +201,18 @@ export const Navbar = ({ forceTheme }) => {
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{
                     duration: 0.25,
-                    ease: [0.22, 1, 0.36, 1]
+                    ease: [0.22, 1, 0.36, 1] // --ease-luxury
                   }}
                   className={cn(
                     'absolute top-full left-0 mt-2',
                     'w-72 p-2',
+                    isLanding
+                      ? 'glass-card-elevated'
+                      : 'glass-dark',
                     'rounded-2xl',
-                    styles.dropdown[theme]
+                    isLanding
+                      ? ''
+                      : 'shadow-[0_16px_48px_rgba(0,191,255,0.08),0_4px_16px_rgba(0,0,0,0.3)]'
                   )}
                   onClick={(e) => e.stopPropagation()}
                   data-testid="tools-dropdown-menu"
@@ -316,23 +235,44 @@ export const Navbar = ({ forceTheme }) => {
                           onClick={() => setToolsOpen(false)}
                           className={cn(
                             'flex items-start gap-3 p-3 rounded-xl',
-                            'transition-all duration-200',
-                            styles.dropdownItem[theme],
-                            location.pathname === item.href && (isDark ? 'bg-white/10' : 'bg-[rgba(0,191,255,0.06)]')
+                            'transition-all duration-200 ease-[var(--ease-luxury)]',
+                            isLanding
+                              ? 'hover:bg-[rgba(0,0,0,0.04)] hover:translate-x-1'
+                              : 'hover:bg-white/10 hover:translate-x-1',
+                            location.pathname === item.href &&
+                              (isLanding ? 'bg-[rgba(0,0,0,0.06)]' : 'bg-white/10')
                           )}
                           data-testid={`tool-link-${item.href.split('/').pop()}`}
                         >
-                          <div className={cn('p-2 rounded-lg', styles.dropdownIcon[theme])}>
+                          <div
+                            className={cn(
+                              'p-2 rounded-lg transition-transform duration-200 group-hover:scale-110',
+                              isLanding ? 'bg-[rgba(0,0,0,0.04)]' : 'bg-white/10'
+                            )}
+                          >
                             <Icon
-                              className={cn('w-4 h-4', styles.dropdownIconColor[theme])}
+                              className={cn(
+                                'w-4 h-4',
+                                isLanding ? 'text-[#09090B]' : 'text-white/90'
+                              )}
                               strokeWidth={1.5}
                             />
                           </div>
                           <div>
-                            <p className={cn('text-sm font-medium mt-0.5', styles.dropdownText[theme])}>
+                            <p
+                              className={cn(
+                                'text-sm font-medium mt-0.5',
+                                isLanding ? 'text-[#09090B]' : 'text-white/90'
+                              )}
+                            >
                               {item.label}
                             </p>
-                            <p className={cn('text-xs mt-0.5', styles.dropdownSubtext[theme])}>
+                            <p
+                              className={cn(
+                                'text-xs mt-0.5',
+                                isLanding ? 'text-[#71717A]' : 'text-white/60'
+                              )}
+                            >
                               {item.description}
                             </p>
                           </div>
@@ -348,8 +288,8 @@ export const Navbar = ({ forceTheme }) => {
           <Link
             to="/tools/100cr-calculator#benchmarks"
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors rounded-full',
-              styles.link[theme]
+              'px-4 py-2 text-sm font-medium transition-colors',
+              'text-white/70 hover:text-white'
             )}
           >
             {copy.nav.benchmarks}
@@ -358,8 +298,8 @@ export const Navbar = ({ forceTheme }) => {
           <Link
             to="/pricing"
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors rounded-full',
-              styles.link[theme]
+              'px-4 py-2 text-sm font-medium transition-colors',
+              'text-white/70 hover:text-white'
             )}
           >
             {copy.nav.pricing}
@@ -377,9 +317,8 @@ export const Navbar = ({ forceTheme }) => {
               className={cn(
                 'flex items-center gap-2',
                 'h-10 px-4 ml-2 rounded-full',
-                'text-sm font-medium',
-                'transition-all duration-200',
-                styles.userBtn[theme]
+                  'bg-white/10 text-white/90 text-sm font-medium border border-white/20 hover:bg-white/20',
+                'transition-all duration-200'
               )}
               data-testid="user-menu-trigger"
             >
@@ -398,20 +337,32 @@ export const Navbar = ({ forceTheme }) => {
                   className={cn(
                     'absolute top-full right-0 mt-2',
                     'w-56 p-2',
+                    isLanding
+                      ? 'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.08)]'
+                      : 'glass-dark',
                     'rounded-2xl',
-                    styles.dropdown[theme]
+                    isLanding
+                      ? 'shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                      : 'shadow-[0_16px_48px_rgba(0,191,255,0.10)]'
                   )}
                   onClick={(e) => e.stopPropagation()}
                   data-testid="user-menu-dropdown"
                 >
-                  <div className={cn(
-                    'px-3 py-2 mb-2',
-                    isDark ? 'border-b border-white/10' : 'border-b border-[rgba(0,0,0,0.06)]'
-                  )}>
-                    <p className={cn('text-sm font-medium truncate', styles.dropdownText[theme])}>
+                  <div className="px-3 py-2 border-b border-[rgba(0,0,0,0.06)] mb-2">
+                    <p
+                      className={cn(
+                        'text-sm font-medium truncate',
+                        isLanding ? 'text-[#09090B]' : 'text-white/90'
+                      )}
+                    >
                       {user?.email}
                     </p>
-                    <p className={cn('text-xs', styles.dropdownSubtext[theme])}>
+                    <p
+                      className={cn(
+                        'text-xs',
+                        isLanding ? 'text-[#71717A]' : 'text-white/60'
+                      )}
+                    >
                       Founder Plan
                     </p>
                   </div>
@@ -420,9 +371,10 @@ export const Navbar = ({ forceTheme }) => {
                     to="/dashboard"
                     onClick={() => setUserMenuOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm',
-                      styles.dropdownSubtext[theme],
-                      styles.dropdownItem[theme]
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                      isLanding
+                        ? 'text-sm text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                        : 'text-sm text-white/70 hover:bg-white/10'
                     )}
                     data-testid="user-menu-dashboard"
                   >
@@ -434,9 +386,10 @@ export const Navbar = ({ forceTheme }) => {
                     to="/dashboard/settings"
                     onClick={() => setUserMenuOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm',
-                      styles.dropdownSubtext[theme],
-                      styles.dropdownItem[theme]
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                      isLanding
+                        ? 'text-sm text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                        : 'text-sm text-white/70 hover:bg-white/10'
                     )}
                   >
                     <User className="w-4 h-4" strokeWidth={1.5} />
@@ -465,9 +418,8 @@ export const Navbar = ({ forceTheme }) => {
             className={cn(
               'hidden md:flex items-center gap-2',
               'h-10 px-5 ml-2 rounded-full',
-              'text-sm font-medium border-none',
-              'transition-all duration-200',
-              styles.cta[theme]
+              'bg-white text-[#09090B] text-sm font-medium border border-white/20 shadow-none hover:bg-white/90',
+              'transition-all duration-200'
             )}
             data-testid="navbar-cta"
           >
@@ -478,10 +430,7 @@ export const Navbar = ({ forceTheme }) => {
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className={cn(
-            "md:hidden p-3 rounded-lg transition-colors",
-            isDark ? "text-white/90 hover:bg-white/10" : "text-[#09090B] hover:bg-[rgba(0,0,0,0.04)]"
-          )}
+          className={cn("md:hidden p-3 text-white/90")}
           data-testid="mobile-menu-toggle"
           aria-label="Toggle menu"
         >
@@ -503,13 +452,20 @@ export const Navbar = ({ forceTheme }) => {
             transition={{ duration: 0.2 }}
             className={cn(
               'fixed top-[80px] left-4 right-4 z-40',
-              'p-3 rounded-2xl',
-              'md:hidden',
-              styles.dropdown[theme]
+              isLanding
+                ? 'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.08)] shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+                : 'glass-dark shadow-[0_16px_48px_rgba(0,191,255,0.10)]',
+              'p-3',
+              'md:hidden'
             )}
             data-testid="mobile-menu"
           >
-            <p className={cn('type-label px-3 py-2', styles.dropdownSubtext[theme])}>
+            <p
+              className={cn(
+                'type-label px-3 py-2',
+                isLanding ? 'text-[#A1A1AA]' : 'text-white/60'
+              )}
+            >
               {copy.tools.dropdown}
             </p>
             <div className="space-y-1 mb-3">
@@ -522,11 +478,22 @@ export const Navbar = ({ forceTheme }) => {
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors",
-                      styles.dropdownItem[theme]
+                      isLanding ? "hover:bg-[rgba(0,0,0,0.04)]" : "hover:bg-white/10"
                     )}
                   >
-                    <Icon className={cn('w-4 h-4', styles.dropdownSubtext[theme])} strokeWidth={1.5} />
-                    <span className={cn('text-sm', styles.dropdownSubtext[theme])}>
+                    <Icon
+                      className={cn(
+                        'w-4 h-4',
+                        isLanding ? 'text-[#52525B]' : 'text-white/70'
+                      )}
+                      strokeWidth={1.5}
+                    />
+                    <span
+                      className={cn(
+                        'text-sm',
+                        isLanding ? 'text-[#52525B]' : 'text-white/70'
+                      )}
+                    >
                       {item.label}
                     </span>
                   </Link>
@@ -534,17 +501,20 @@ export const Navbar = ({ forceTheme }) => {
               })}
             </div>
             
-            <div className={cn(
-              'pt-3 space-y-1',
-              isDark ? 'border-t border-white/10' : 'border-t border-[rgba(0,0,0,0.06)]'
-            )}>
+            <div
+              className={cn(
+                'pt-3 space-y-1',
+                isLanding ? 'border-t border-[rgba(0,0,0,0.06)]' : 'border-t border-white/10'
+              )}
+            >
               <Link
                 to="/pricing"
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   'block px-3 py-3 text-sm rounded-xl transition-colors',
-                  styles.dropdownSubtext[theme],
-                  styles.dropdownItem[theme]
+                  isLanding
+                    ? 'text-[#52525B] hover:bg-[rgba(0,0,0,0.04)]'
+                    : 'text-white/70 hover:bg-white/10'
                 )}
               >
                 {copy.nav.pricing}
@@ -566,9 +536,10 @@ export const Navbar = ({ forceTheme }) => {
               }}
               className={cn(
                 'mt-3 w-full h-11 rounded-full',
-                'text-sm font-medium',
-                'transition-colors',
-                styles.cta[theme]
+                isLanding
+                  ? 'bg-[#09090B] text-white text-sm font-medium hover:bg-[#18181B]'
+                  : 'bg-white text-[#09090B] text-sm font-medium hover:bg-white/90',
+                'transition-colors'
               )}
             >
               {isAuthenticated ? copy.nav.dashboard : copy.nav.ctaButton}
