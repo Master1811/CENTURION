@@ -23,19 +23,10 @@ RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 # ═══════════════════════════════════════════════════════════════════════════
 # PRICING — SOURCE OF TRUTH (March 2026)
 # ═══════════════════════════════════════════════════════════════════════════
-# Starter:  ₹499/mo   (paise: 49900)
-# Founder:  ₹3,999/yr (paise: 399900)
-# Trial:    ₹99/7d    (paise: 9900) → then ₹499/mo
+# Founder:  ₹3,999/yr (paise: 399900) — ONLY paid tier
 # ═══════════════════════════════════════════════════════════════════════════
 
 PLAN_PRICING = {
-    "starter": {
-        "amount": 49900,
-        "currency": "INR",
-        "description": "Centurion Starter Plan — Monthly",
-        "billing": "monthly",
-        "expires_days": 30,
-    },
     "founder": {
         "amount": 399900,
         "currency": "INR",
@@ -43,18 +34,11 @@ PLAN_PRICING = {
         "billing": "annual",
         "expires_days": 365,
     },
-    "trial": {
-        "amount": 9900,
-        "currency": "INR",
-        "description": "Centurion 7-Day Trial",
-        "billing": "trial_7d",
-        "expires_days": 7,
-    },
 }
 
 
 class CreateOrderRequest(BaseModel):
-    plan: Literal["starter", "founder", "trial"] = "starter"
+    plan: Literal["founder"] = "founder"
 
 
 @router.post("/razorpay/create-order")
@@ -190,29 +174,16 @@ async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks):
             return {"status": "ok"}
 
         # Get plan configuration
-        plan_config = PLAN_PRICING.get(plan_key, PLAN_PRICING["starter"])
+        plan_config = PLAN_PRICING.get(plan_key, PLAN_PRICING["founder"])
         
         # Calculate subscription details based on plan
         now = datetime.now(timezone.utc)
         
-        if plan_key == "trial":
-            # Trial: 7 days, then reverts to free
-            activated_plan = "starter"  # Trial unlocks starter features
-            status = "trialing"
-            expires_at = now + timedelta(days=7)
-            billing_cycle = "trial_7d"
-        elif plan_key == "founder":
-            # Annual founder plan
-            activated_plan = "founder"
-            status = "active"
-            expires_at = now + timedelta(days=365)
-            billing_cycle = "annual"
-        else:
-            # Monthly starter plan
-            activated_plan = "starter"
-            status = "active"
-            expires_at = now + timedelta(days=30)
-            billing_cycle = "monthly"
+        # Annual founder plan (only paid tier)
+        activated_plan = "founder"
+        status = "active"
+        expires_at = now + timedelta(days=365)
+        billing_cycle = "annual"
 
         # Create subscription record
         subscription_data = {

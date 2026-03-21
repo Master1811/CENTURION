@@ -56,21 +56,25 @@ def calculate_health_score(
 ) -> tuple:
     """
     Calculate health score and signals.
+    Only uses verified (API-sourced) check-ins for growth signals.
     
     Returns:
         Tuple of (score: int, signals: Dict[str, str])
     """
     signals = {
         'growth': 'good',
-        'retention': 'good',  # Would need cohort data
-        'runway': 'good',     # Would need burn rate data
+        'retention': 'good',
+        'runway': 'good',
         'engagement': 'good' if len(checkins) >= 2 else 'warning'
     }
     
-    # Check growth vs benchmark
-    if len(checkins) >= 2:
-        current = checkins[0].get('actual_revenue', 0)
-        previous = checkins[1].get('actual_revenue', 0)
+    # Filter to only verified (API) sources for growth calculation
+    verified_checkins = [c for c in checkins if c.get('source') not in ('csv', 'manual')]
+    
+    # Check growth vs benchmark using verified data only
+    if len(verified_checkins) >= 2:
+        current = verified_checkins[0].get('actual_revenue', 0)
+        previous = verified_checkins[1].get('actual_revenue', 0)
         if previous > 0:
             growth = (current - previous) / previous
             stage = profile.get('stage', 'pre-seed') if profile else 'pre-seed'
@@ -80,6 +84,9 @@ def calculate_health_score(
                 signals['growth'] = 'critical'
             elif growth < benchmark['median']:
                 signals['growth'] = 'warning'
+    elif len(checkins) >= 2 and len(verified_checkins) < 2:
+        # Has check-ins but none are verified
+        signals['growth'] = 'warning'
     
     # Calculate score (0-100)
     score_map = {'good': 25, 'warning': 15, 'critical': 5}
@@ -227,10 +234,11 @@ async def get_revenue_intelligence(user: Dict[str, Any] = Depends(require_paid_s
                 'month': checkin['month'],
                 'actual': checkin['actual_revenue'],
                 'baseline': base_revenue * math.pow(1 + base_growth, months_elapsed),
-                'benchmark': base_revenue * math.pow(1 + benchmark['median'], months_elapsed)
+                'benchmark': base_revenue * math.pow(1 + benchmark['median'], months_elapsed),
+                'source': checkin.get('source', 'manual'),
             })
     
-    # Calculate actual growth rate
+    # Calculate actual growth rate (using all checkins for display)
     calculated_growth = None
     if len(checkins) >= 2:
         recent = checkins[0]['actual_revenue']
@@ -238,15 +246,26 @@ async def get_revenue_intelligence(user: Dict[str, Any] = Depends(require_paid_s
         if previous > 0:
             calculated_growth = (recent - previous) / previous
     
+    # Calculate verified growth rate (excluding csv/manual)
+    verified_checkins = [c for c in checkins if c.get('source') not in ('csv', 'manual')]
+    verified_growth = None
+    if len(verified_checkins) >= 2:
+        recent = verified_checkins[0]['actual_revenue']
+        previous = verified_checkins[1]['actual_revenue']
+        if previous > 0:
+            verified_growth = (recent - previous) / previous
+    
     return {
         'revenue_data': revenue_data,
         'calculated_growth': calculated_growth,
+        'verified_growth': verified_growth,
         'benchmark': {
             'stage': stage,
             'median': benchmark['median'],
             'p75': benchmark['p75']
         },
-        'total_checkins': len(checkins)
+        'total_checkins': len(checkins),
+        'verified_checkins': len(verified_checkins),
     }
 
 
