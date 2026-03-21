@@ -102,71 +102,122 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Fix production readiness issues identified in PRODUCTION_READINESS_REPORT.md"
+user_problem_statement: "Design and implement floating chatbot/help widget across landing page, free tools pages, and paid dashboard with support section enhancements"
 
 backend:
-  - task: "Import status from fastapi in main.py"
+  - task: "No backend changes required for this feature"
     implemented: true
     working: "NA"
-    file: "backend/main.py"
+    file: "N/A"
     stuck_count: 0
-    priority: "high"
-    needs_retesting: true
+    priority: "low"
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Added 'status' import from fastapi to fix NameError in delete_user_account error handler (line 285-295)"
+        comment: "Help widget is frontend-only with email-based bug reports (mailto links)"
 
-  - task: "Add rate limiting to quiz submit endpoint"
+frontend:
+  - task: "HelpWidget floating component"
     implemented: true
-    working: "NA"
-    file: "backend/main.py"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Added rate limiting using projection limits to prevent spam quiz submissions"
-
-  - task: "Add rate limiting to get projection by slug endpoint"
-    implemented: true
-    working: "NA"
-    file: "backend/routers/engine.py"
-    stuck_count: 0
-    priority: "medium"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Added rate limiting to prevent abuse of shared projection retrieval"
-
-  - task: "Update admin check to use environment variable"
-    implemented: true
-    working: "NA"
-    file: "backend/routers/admin.py"
-    stuck_count: 0
-    priority: "medium"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Changed admin check from hardcoded email list to ADMIN_EMAILS environment variable"
-
-  - task: "Create backend .env.example"
-    implemented: true
-    working: "NA"
-    file: "backend/.env.example"
+    working: true
+    file: "frontend/src/components/help/HelpWidget.jsx"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created .env.example with all required and optional environment variables documented"
+        comment: "Created floating help widget with main menu, docs, FAQs, bug report, contact support, and AI placeholder views"
+      - working: true
+        agent: "testing"
+        comment: "Tested successfully. All 5 menu options visible and working (Documentation, FAQs, Report a Bug, Contact Support, Ask AI with 'Soon' badge). Documentation view shows all 6 doc links. FAQs view has working search functionality. Bug report form has all required fields (subject, description, email). Contact support shows email and support hours. Panel opens/closes smoothly with cyan-themed glassmorphic design."
 
-frontend:
-  - task: "Fix Settings profile save to call API"
+  - task: "Static FAQs data file"
+    implemented: true
+    working: true
+    file: "frontend/src/lib/faqs.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created static FAQs with 10 questions, search functionality, and category filtering"
+      - working: true
+        agent: "testing"
+        comment: "Tested successfully. FAQ search functionality working correctly. Search filters FAQs by question and answer text. All 10 FAQs accessible."
+
+  - task: "HelpWidget on Landing Page"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LandingPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added HelpWidget component to landing page"
+      - working: true
+        agent: "testing"
+        comment: "Tested successfully. Help widget button visible in bottom-right corner. Panel opens/closes correctly. All menu options accessible and functional."
+
+  - task: "HelpWidget on Free Tools (100Cr Calculator)"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/tools/HundredCrCalculator.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added HelpWidget with dark variant to 100Cr Calculator page"
+      - working: true
+        agent: "testing"
+        comment: "Tested successfully. Help widget visible with dark variant on calculator page. Panel opens/closes correctly. All functionality working as expected."
+
+  - task: "HelpWidget on Free Tools (ARR, Runway, Growth Calculators)"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/tools/ARRCalculator.jsx, RunwayCalculator.jsx, GrowthCalculator.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added HelpWidget with dark variant to all calculator pages"
+
+  - task: "HelpWidget on Dashboard Layout"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/dashboard/DashboardLayout.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added HelpWidget with dashboard variant to dashboard layout"
+
+  - task: "HelpWidget on Pricing Page"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/PricingPage.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added HelpWidget to pricing page"
+      - working: true
+        agent: "testing"
+        comment: "Tested successfully. Help widget visible on pricing page. Panel opens/closes correctly. All functionality working."
+
+  - task: "Enhanced Settings Support Section"
     implemented: true
     working: "NA"
     file: "frontend/src/pages/dashboard/Settings.jsx"
@@ -176,43 +227,68 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Updated handleSaveProfile to call updateUserProfile API instead of just logging to console"
+        comment: "Enhanced Support tab with prominent Documentation Guide section, inline bug report form, and better contact support layout"
 
-  - task: "Add refreshProfile method to AuthContext"
+  - task: "OnboardingChecklist component"
     implemented: true
     working: "NA"
-    file: "frontend/src/context/AuthContext.jsx"
+    file: "frontend/src/components/dashboard/OnboardingChecklist.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created sticky onboarding checklist for new users with progress tracking"
+
+  - task: "MicroFeedback component"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/dashboard/MicroFeedback.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created micro-feedback component for feature feedback collection"
+
+  - task: "ContextualHelp components"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/dashboard/ContextualHelp.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created SmartNudge, InlineHelp, FeatureHighlight, and EmptyStateHelper components"
+
+  - task: "OnboardingChecklist in CommandCentre"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/pages/dashboard/CommandCentre.jsx"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Added refreshProfile method to allow components to refresh user data after updates"
-
-  - task: "Create frontend .env.example"
-    implemented: true
-    working: "NA"
-    file: "frontend/.env.example"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Created .env.example with all required environment variables documented"
+        comment: "Added OnboardingChecklist component to Command Centre dashboard"
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
   test_sequence: 1
-  run_ui: false
+  run_ui: true
 
 test_plan:
   current_focus:
-    - "Import status from fastapi in main.py"
-    - "Fix Settings profile save to call API"
-    - "Add rate limiting to quiz submit endpoint"
+    - "HelpWidget on Free Tools (ARR, Runway, Growth Calculators)"
+    - "HelpWidget on Dashboard Layout"
+    - "Enhanced Settings Support Section"
+    - "OnboardingChecklist in CommandCentre"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -220,14 +296,77 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      Fixed 5 critical production readiness issues identified in PRODUCTION_READINESS_REPORT.md:
+      Implemented floating help widget and dashboard enhancements:
       
-      1. FIXED: backend/main.py - Added 'status' import from fastapi to prevent NameError in user deletion error handler
-      2. FIXED: frontend/Settings.jsx - Implemented profile save by calling updateUserProfile API
-      3. FIXED: Created .env.example files for both backend and frontend
-      4. IMPROVED: Added rate limiting to quiz submit and get projection by slug endpoints
-      5. IMPROVED: Admin check now uses ADMIN_EMAILS environment variable instead of hardcoded list
+      1. CREATED: HelpWidget component with:
+         - Floating button (bottom-right, cyan theme)
+         - Expandable panel with structured options
+         - Documentation Guide view with doc links
+         - FAQs view with search functionality
+         - Bug Report view (opens mailto for email submission)
+         - Contact Support view
+         - Ask AI placeholder (Coming Soon)
       
-      CORS configuration is already handled via environment variable (CORS_ORIGINS) - users need to set it in production.
-      Payment webhooks are not implemented yet (requires design decision on payment provider).
+      2. INTEGRATED: HelpWidget on all pages:
+         - Landing Page
+         - All 4 Free Tools pages (100Cr, ARR, Runway, Growth calculators)
+         - Dashboard Layout (for paid users)
+         - Pricing Page
+      
+      3. ENHANCED: Settings Support section:
+         - Prominent Documentation Guide with 6 categorized doc links
+         - Inline bug report form with mailto submission
+         - Better contact support layout with support hours
+      
+      4. CREATED: Dashboard enhancement components:
+         - OnboardingChecklist (sticky checklist for new users)
+         - MicroFeedback (thumbs up/down feedback collection)
+         - ContextualHelp (SmartNudge, InlineHelp, FeatureHighlight)
+      
+      5. FIXED: React hooks error in HundredCrCalculator.jsx (moved hooks before early return)
+      
+      Please test the HelpWidget functionality on the landing page and verify:
+      - Floating button appears bottom-right
+      - Panel opens on click
+      - All menu options work
+      - FAQ search works
+      - Bug report form opens email client
+  
+  - agent: "testing"
+    message: |
+      ✅ TESTING COMPLETE - HelpWidget Implementation
+      
+      Tested on 3 pages: Landing Page, 100Cr Calculator, Pricing Page
+      
+      ✅ ALL TESTS PASSED:
+      
+      1. Landing Page:
+         - Help widget button visible in bottom-right corner ✓
+         - Panel opens/closes smoothly ✓
+         - All 5 menu options visible and accessible ✓
+         - Documentation view shows 6 doc links ✓
+         - FAQs view with working search functionality ✓
+         - Bug report form has all required fields (subject, description, email) ✓
+         - Contact support shows email (support@100crengine.in) and support hours ✓
+         - Ask AI shows "Soon" badge (disabled as expected) ✓
+      
+      2. 100Cr Calculator Page:
+         - Help widget visible with dark variant ✓
+         - Panel opens/closes correctly ✓
+         - All functionality working ✓
+      
+      3. Pricing Page:
+         - Help widget visible ✓
+         - Panel opens/closes correctly ✓
+         - All functionality working ✓
+      
+      UI/UX Observations:
+      - Cyan-themed glassmorphic design looks great ✓
+      - Fixed positioning at bottom-right works well ✓
+      - Panel animations are smooth ✓
+      - data-testid="help-widget" present for testing ✓
+      
+      No critical issues found. Implementation is production-ready.
+      
+      Next: Test remaining pages (ARR/Runway/Growth calculators, Dashboard Layout, Settings Support Section)
 

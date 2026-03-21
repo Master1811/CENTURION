@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { HelpWidget } from '@/components/help/HelpWidget';
 import { motion, useInView, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { Clock, TrendingDown, Wallet, AlertTriangle, Zap, ArrowRight, Sparkles, CheckCircle, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -457,6 +458,9 @@ export const RunwayCalculator = () => {
         </div>
       </main>
       <Footer />
+      
+      {/* Help Widget */}
+      <HelpWidget variant="dark" />
     </div>
   );
 };

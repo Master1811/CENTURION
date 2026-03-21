@@ -24,6 +24,7 @@ import { storeAuthIntent } from '@/lib/auth/intent';
 import { ResultGate } from '@/components/calculator/ResultGate';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { HelpWidget } from '@/components/help/HelpWidget';
 import { SliderInput } from '@/components/ui/SliderInput';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import {
@@ -312,22 +313,13 @@ export const HundredCrCalculator = () => {
     [mrr, growthRate]
   );
 
-  // Guard: ensure projection has milestones
-  if (!projection || !projection.milestones || projection.milestones.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <p className="text-white/50 text-sm mb-4">Unable to generate projection</p>
-          <p className="text-white/30 text-xs">Please check your inputs</p>
-        </div>
-      </div>
-    );
-  }
-
   const chartData = useMemo(() => {
+    if (!projection || !projection.milestones || projection.milestones.length === 0) {
+      return [];
+    }
     const benchmark = getBenchmarkData(selectedStage);
     return generateChartData({ currentMRR: mrr, growthRate }, benchmark.median);
-  }, [mrr, growthRate, selectedStage]);
+  }, [mrr, growthRate, selectedStage, projection]);
 
   const benchmarkResult = useMemo(
     () => compareToBenchmark(growthRate, selectedStage),
@@ -343,6 +335,18 @@ export const HundredCrCalculator = () => {
   const formatGrowth = useCallback(
     (v) => `${(v * 100).toFixed(0)}%`, []
   );
+
+  // Guard: ensure projection has milestones (placed AFTER all hooks)
+  if (!projection || !projection.milestones || projection.milestones.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-white/50 text-sm mb-4">Unable to generate projection</p>
+          <p className="text-white/30 text-xs">Please check your inputs</p>
+        </div>
+      </div>
+    );
+  }
 
   const hundredCrMilestone = projection.milestones.find(
     (m) => m.value === 100 * CRORE
@@ -1030,6 +1034,9 @@ export const HundredCrCalculator = () => {
         </main>
 
         <Footer />
+        
+        {/* Help Widget */}
+        <HelpWidget variant="dark" />
       </div>
     </div>
   );

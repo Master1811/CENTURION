@@ -15,6 +15,7 @@ import { TeaserLockedSection } from '@/components/landing/TeaserLockedSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { WaitlistSection } from '@/components/landing/WaitlistSection';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
+import { HelpWidget } from '@/components/help/HelpWidget';
 
 export const LandingPage = () => {
   return (
@@ -61,6 +62,9 @@ export const LandingPage = () => {
       
       {/* Cookie Consent Banner */}
       <CookieConsentBanner />
+      
+      {/* Help Widget */}
+      <HelpWidget />
     </div>
   );
 };

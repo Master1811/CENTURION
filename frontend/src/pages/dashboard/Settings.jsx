@@ -6,7 +6,7 @@ import {
   Trash2, Check, Crown, FileText, MessageCircle, Book,
   ExternalLink, ChevronRight, AlertTriangle, Sparkles, Zap,
   Receipt, Download, Loader2, Info, CheckCircle, XCircle,
-  Globe, Phone
+  Globe, Phone, Plug, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -393,10 +393,13 @@ const BillingSettings = ({ subscription, onUpgrade }) => {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
-// SUPPORT TAB
+// SUPPORT TAB - Enhanced with Documentation Guide & Contextual Help
 // ════════════════════════════════════════════════════════════════════════════
 const SupportSettings = () => {
   const [openFaq, setOpenFaq] = useState(null);
+  const [bugForm, setBugForm] = useState({ subject: '', description: '' });
+  const [bugStatus, setBugStatus] = useState('idle');
+  
   const faqs = [
     { q: "How do I update my monthly revenue?", a: "Go to the Command Centre and click 'Monthly Check-in'. Enter your actual revenue for the month and any notes." },
     { q: "What does the Health Score mean?",    a: "Your Health Score (0-100) is calculated from growth consistency, revenue quality, check-in frequency, and benchmark performance." },
@@ -404,16 +407,87 @@ const SupportSettings = () => {
     { q: "Can I export my data?",               a: "Yes! Go to Reporting Engine to generate board reports, investor updates, or data room exports as PDF." },
     { q: "How accurate are the projections?",   a: "Projections are based on your current growth rate and historical data. Regular check-ins improve accuracy significantly." },
   ];
-  const resources = [
-    { title: 'Getting Started Guide', icon: Book },
-    { title: 'API Documentation',     icon: FileText },
-    { title: 'Video Tutorials',       icon: Globe },
+  
+  const docLinks = [
+    { title: 'Getting Started', description: 'Quick setup guide for new users', icon: Sparkles, url: '/docs/getting-started', color: '#22C55E' },
+    { title: 'Projection Engine', description: 'Understanding revenue projections', icon: TrendingUp, url: '/docs/projections', color: C.brightCyan },
+    { title: 'API Connectors', description: 'Connect Razorpay, Stripe & more', icon: Plug, url: '/docs/connectors', color: '#8B5CF6' },
+    { title: 'AI Growth Coach', description: 'Get the most from AI insights', icon: Sparkles, url: '/docs/ai-coach', color: '#EC4899' },
+    { title: 'Reports & Export', description: 'Generate board-ready reports', icon: FileText, url: '/docs/reports', color: '#F59E0B' },
+    { title: 'API Documentation', description: 'For developers & integrations', icon: Globe, url: '/docs/api', color: '#06B6D4' },
   ];
+
+  const handleBugSubmit = (e) => {
+    e.preventDefault();
+    if (!bugForm.subject || !bugForm.description) return;
+    setBugStatus('sending');
+    
+    const mailtoBody = `Subject: Bug Report - ${bugForm.subject}\n\nDescription:\n${bugForm.description}\n\nPage: ${window.location.href}\nUser Agent: ${navigator.userAgent}`;
+    window.location.href = `mailto:support@100crengine.in?subject=${encodeURIComponent('Bug Report: ' + bugForm.subject)}&body=${encodeURIComponent(mailtoBody)}`;
+    
+    setTimeout(() => {
+      setBugStatus('success');
+      setTimeout(() => {
+        setBugForm({ subject: '', description: '' });
+        setBugStatus('idle');
+      }, 2000);
+    }, 500);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
 
-      {/* Contact */}
+      {/* Documentation Guide - Prominent Section */}
+      <GlassCard accentColor='#22C55E' style={{
+        background: `linear-gradient(145deg, rgba(34,197,94,0.15) 0%, rgba(5,15,24,0.80) 100%)`,
+        border: `1px solid rgba(34,197,94,0.25)`,
+      }}>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <SectionHeader icon={Book} title="Documentation Guide" subtitle="Everything you need to get started" accentColor='#22C55E' />
+            <motion.a
+              href="/docs"
+              target="_blank"
+              className="hidden sm:flex items-center gap-2 h-9 px-4 rounded-lg text-xs font-semibold"
+              style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.30)', color: '#22C55E' }}
+              whileHover={{ background: 'rgba(34,197,94,0.25)', scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              View All Docs
+              <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </motion.a>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {docLinks.map((doc, idx) => {
+              const DocIcon = doc.icon;
+              return (
+                <motion.a
+                  key={idx}
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 p-4 rounded-xl transition-all group"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  whileHover={{ background: `${doc.color}10`, borderColor: `${doc.color}30`, y: -2 }}
+                >
+                  <div 
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${doc.color}15`, border: `1px solid ${doc.color}30` }}
+                  >
+                    <DocIcon className="w-4 h-4" style={{ color: doc.color }} strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white group-hover:text-white">{doc.title}</p>
+                    <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>{doc.description}</p>
+                  </div>
+                </motion.a>
+              );
+            })}
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Contact Support */}
       <GlassCard accentColor={C.brightCyan2} style={{
         background: `linear-gradient(145deg, rgba(0,96,128,0.30) 0%, rgba(5,15,24,0.75) 100%)`,
         border: `1px solid rgba(0,191,255,0.22)`,
@@ -429,19 +503,25 @@ const SupportSettings = () => {
               Our support team is here to help you succeed. Average response time: 2 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <CyanButton>
-                <Mail className="w-4 h-4" strokeWidth={1.5} />
-                Email Support
-              </CyanButton>
-              <motion.button
-                className="h-11 px-5 rounded-xl text-sm font-semibold flex items-center gap-2"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.80)' }}
-                whileHover={{ background: 'rgba(255,255,255,0.10)', color: '#fff', scale: 1.02 }}
+              <motion.a
+                href="mailto:support@100crengine.in?subject=Support Request"
+                className="h-11 px-6 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+                style={{
+                  background: `linear-gradient(135deg, ${C.brightCyan} 0%, ${C.midCyan} 60%, ${C.tealEdge} 100%)`,
+                  color: C.darkCorner,
+                  boxShadow: `0 0 0 1px rgba(0,191,255,0.30), 0 6px 20px rgba(0,191,255,0.22)`,
+                }}
+                whileHover={{ scale: 1.02, boxShadow: `0 0 0 1px rgba(0,191,255,0.45), 0 10px 28px rgba(0,191,255,0.30)` }}
                 whileTap={{ scale: 0.97 }}
               >
-                <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
-                Live Chat
-              </motion.button>
+                <Mail className="w-4 h-4" strokeWidth={1.5} />
+                Email Support
+              </motion.a>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.50)' }}>Support hours:</span>
+                <span className="text-xs font-medium text-white">Mon-Fri, 9AM-6PM IST</span>
+              </div>
             </div>
           </div>
         </div>
@@ -483,45 +563,67 @@ const SupportSettings = () => {
         </div>
       </GlassCard>
 
-      {/* Resources */}
-      <GlassCard accentColor='#22C55E'>
+      {/* Report Bug - Inline Form */}
+      <GlassCard accentColor='#F59E0B'>
         <div className="p-6">
-          <SectionHeader icon={Book} title="Resources" subtitle="Guides and documentation" accentColor='#22C55E' />
-          <div className="grid sm:grid-cols-3 gap-3">
-            {resources.map(r => (
-              <motion.a key={r.title} href="#"
-                className="flex items-center gap-3 p-4 rounded-xl transition-all group"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-                whileHover={{ background: 'rgba(0,191,255,0.07)', borderColor: 'rgba(0,191,255,0.25)', y: -2 }}
-              >
-                <r.icon className="w-5 h-5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }} strokeWidth={1.5} />
-                <span className="text-sm flex-1" style={{ color: 'rgba(255,255,255,0.65)' }}>{r.title}</span>
-                <ExternalLink className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} strokeWidth={1.5} />
-              </motion.a>
-            ))}
-          </div>
+          <SectionHeader icon={AlertTriangle} title="Report an Issue" subtitle="Found a bug? Let us know and we'll fix it" accentColor='#F59E0B' />
+          <form onSubmit={handleBugSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.55)' }}>Subject *</label>
+              <input
+                type="text"
+                value={bugForm.subject}
+                onChange={(e) => setBugForm({ ...bugForm, subject: e.target.value })}
+                placeholder="Brief description of the issue"
+                required
+                className="w-full h-10 px-3 rounded-xl text-sm focus:outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(245,158,11,0.25)',
+                  color: '#fff',
+                }}
+                onFocus={e => { e.target.style.borderColor = 'rgba(245,158,11,0.50)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(245,158,11,0.25)'; }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.55)' }}>Description *</label>
+              <textarea
+                value={bugForm.description}
+                onChange={(e) => setBugForm({ ...bugForm, description: e.target.value })}
+                placeholder="What happened? What did you expect to happen?"
+                required
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none transition-all resize-none"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(245,158,11,0.25)',
+                  color: '#fff',
+                }}
+                onFocus={e => { e.target.style.borderColor = 'rgba(245,158,11,0.50)'; }}
+                onBlur={e => { e.target.style.borderColor = 'rgba(245,158,11,0.25)'; }}
+              />
+            </div>
+            <motion.button
+              type="submit"
+              disabled={bugStatus === 'sending' || bugStatus === 'success'}
+              className="h-10 px-5 rounded-xl text-sm font-semibold flex items-center gap-2"
+              style={{
+                background: bugStatus === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+                border: bugStatus === 'success' ? '1px solid rgba(34,197,94,0.30)' : '1px solid rgba(245,158,11,0.30)',
+                color: bugStatus === 'success' ? '#22C55E' : '#F59E0B',
+              }}
+              whileHover={bugStatus === 'idle' ? { background: 'rgba(245,158,11,0.25)', scale: 1.02 } : {}}
+              whileTap={bugStatus === 'idle' ? { scale: 0.97 } : {}}
+            >
+              {bugStatus === 'sending' && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} />}
+              {bugStatus === 'success' && <CheckCircle className="w-4 h-4" strokeWidth={1.5} />}
+              {bugStatus === 'idle' && <AlertTriangle className="w-4 h-4" strokeWidth={1.5} />}
+              {bugStatus === 'sending' ? 'Opening email...' : bugStatus === 'success' ? 'Report Sent!' : 'Report Bug'}
+            </motion.button>
+          </form>
         </div>
       </GlassCard>
-
-      {/* Report bug */}
-      <div className="flex items-start gap-4 p-5 rounded-xl"
-        style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.22)' }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.28)' }}>
-          <AlertTriangle className="w-5 h-5" style={{ color: '#F59E0B' }} strokeWidth={1.5} />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-white mb-1">Report an Issue</h3>
-          <p className="text-sm mb-3" style={{ color: 'rgba(255,255,255,0.50)' }}>
-            Found a bug? Let us know and we'll fix it.
-          </p>
-          <motion.button className="h-9 px-4 rounded-lg text-xs font-semibold"
-            style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.28)', color: '#F59E0B' }}
-            whileHover={{ background: 'rgba(245,158,11,0.20)', scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-            Report Bug
-          </motion.button>
-        </div>
-      </div>
     </motion.div>
   );
 };

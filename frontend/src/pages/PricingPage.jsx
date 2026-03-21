@@ -3,6 +3,7 @@ import React from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { HelpWidget } from '@/components/help/HelpWidget';
 
 export const PricingPage = () => {
   return (
@@ -15,6 +16,9 @@ export const PricingPage = () => {
         <PricingSection />
       </main>
       <Footer />
+      
+      {/* Help Widget */}
+      <HelpWidget />
     </div>
   );
 };

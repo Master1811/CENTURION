@@ -29,6 +29,7 @@ import { UpgradeModal, useUpgradeModal } from '@/components/upgrade/UpgradeModal
 import { OnboardingTour, useTour } from '@/components/tour/OnboardingTour';
 import { FreeTierBanner } from '@/components/dashboard/FreeTierBanner';
 import { OnboardingModal } from '@/components/dashboard/OnboardingModal';
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 
 // Fallback mock data
 const fallbackData = {
@@ -328,6 +329,9 @@ export const CommandCentre = () => {
 
       {/* Beta/Free Tier Banner */}
       <FreeTierBanner />
+      
+      {/* Onboarding Checklist for new users */}
+      <OnboardingChecklist />
 
       {/* Top Row - Key Metrics */}
       <div className="grid md:grid-cols-3 gap-4">

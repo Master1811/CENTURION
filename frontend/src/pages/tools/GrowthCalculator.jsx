@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { HelpWidget } from '@/components/help/HelpWidget';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Calendar, Target, Zap, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -470,6 +471,9 @@ export const GrowthCalculator = () => {
       </main>
 
       <Footer />
+      
+      {/* Help Widget */}
+      <HelpWidget variant="dark" />
     </div>
   );
 };

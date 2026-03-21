@@ -4,6 +4,7 @@ import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { HelpWidget } from '@/components/help/HelpWidget';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -75,6 +76,9 @@ export const DashboardLayout = () => {
           );
         })}
       </nav>
+      
+      {/* Help Widget */}
+      <HelpWidget variant="dashboard" />
     </div>
   );
 };

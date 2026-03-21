@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { HelpWidget } from '@/components/help/HelpWidget';
 import { motion, useSpring, useMotionValue, AnimatePresence, useInView } from 'framer-motion';
 import { Info, TrendingUp, Users, DollarSign, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -472,6 +473,9 @@ export const ARRCalculator = () => {
       </main>
 
       <Footer />
+      
+      {/* Help Widget */}
+      <HelpWidget variant="dark" />
     </div>
   );
 };
