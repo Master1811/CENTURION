@@ -25,8 +25,8 @@ const faqs = [
     a: "You enter your current monthly revenue and growth rate. We generate a time-based forecast for key milestones (for example, ₹1 Crore, ₹10 Crore, ₹100 Crore) and keep the plan actionable.",
   },
   {
-    q: 'Is there a free trial?',
-    a: 'Yes. You can start with a 7-day free trial. No credit card required. You can cancel anytime before the trial ends.',
+    q: 'Is the Free plan really free?',
+    a: 'Yes. The Free plan is ₹0 forever — no credit card, no trial, no expiry. You get the calculator, benchmarks, quiz, and share link. Upgrade to Founder (₹3,999/year) when you want full dashboard access.',
   },
   {
     q: 'Do I need to connect payment accounts?',

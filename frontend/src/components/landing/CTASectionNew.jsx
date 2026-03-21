@@ -70,8 +70,8 @@ export const CTASection = () => {
   const navigate = useNavigate();
 
   const benefits = [
-    'No credit card required',
-    '7-day free trial',
+    'Free forever — no credit card',
+    'Upgrade anytime to Founder',
     'Cancel anytime',
   ];
 

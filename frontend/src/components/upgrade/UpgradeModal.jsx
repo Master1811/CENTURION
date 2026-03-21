@@ -216,12 +216,12 @@ export const UpgradeModal = ({
               whileTap={{ scale: 0.99 }}
             >
               <Rocket className="w-5 h-5" strokeWidth={1.5} />
-              Upgrade to Founder Plan — ₹899/year
+              Become a Founder — ₹3,999/year
               <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
             </motion.button>
             
             <p className="text-center text-xs text-[#A1A1AA] mt-3">
-              7-day free trial • Cancel anytime • No credit card required
+              ₹333/month · Cancel anytime · Early founder pricing
             </p>
           </div>
         </motion.div>

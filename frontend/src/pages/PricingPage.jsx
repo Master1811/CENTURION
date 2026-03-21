@@ -1,396 +1,396 @@
-// PricingPage - Standalone light-themed pricing page
-// Carries brand DNA while using light mode design system
+// PricingPage — Free + Founder, premium light-mode design
+// Two plans only. No trial. No starter. Simple and obvious to upgrade.
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
-import { Check, Sparkles, ArrowRight, Zap, Crown, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { copy } from '@/lib/copy';
+import { motion, useInView } from 'framer-motion';
+import { Check, Crown, Sparkles, ArrowRight, Zap } from 'lucide-react';
 import { storeAuthIntent } from '@/lib/auth/intent';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { HelpWidget } from '@/components/help/HelpWidget';
 
-// ─── Brand Colors ─────────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  cyan500: '#00BFFF',
-  cyan600: '#0099CC',
-  cyan700: '#007399',
-  textPrimary: '#09090B',
-  textSecondary: '#52525B',
-  textTertiary: '#71717A',
-  textMuted: '#A1A1AA',
-  bgPrimary: '#FAFAFA',
-  bgSecondary: '#FFFFFF',
+  bg: '#FAFAFA',
+  white: '#FFFFFF',
+  gold: '#B8962E',
+  goldLight: '#D4A853',
+  text: '#09090B',
+  textSub: '#52525B',
+  textMuted: '#71717A',
+  border: 'rgba(0,0,0,0.07)',
+  borderGold: '#B8962E55',
 };
 
-// ─── Pricing Data ─────────────────────────────────────────────────────────────
-const plans = [
-  {
-    name: 'Free',
-    price: '₹0',
-    period: 'forever',
-    description: 'Perfect for exploring the platform',
-    features: [
-      '3 projections/month',
-      'Basic growth insights',
-      '1 payment connector',
-      'Community support',
-    ],
-    cta: 'Get Started',
-    variant: 'default',
-  },
-  {
-    name: 'Founder',
-    price: '₹899',
-    period: '/year',
-    description: 'Everything you need to scale',
-    badge: 'Most Popular',
-    features: [
-      'Unlimited projections',
-      'Full AI Growth Coach',
-      '2 board reports/month',
-      'Unlimited connectors',
-      'Data room export',
-      'Priority support',
-    ],
-    cta: 'Start Founder Plan',
-    variant: 'accent',
-    isPrimary: true,
-  },
-  {
-    name: 'Scale',
-    price: '₹4,999',
-    period: '/year',
-    description: 'For fast-growing startups',
-    features: [
-      'Everything in Founder',
-      'Custom benchmarks',
-      'API access',
-      'Team collaboration',
-      'White-label reports',
-      'Dedicated support',
-    ],
-    cta: 'Contact Sales',
-    variant: 'default',
-  },
-];
+// ─── Plan data ────────────────────────────────────────────────────────────────
+const FREE_PLAN = {
+  key: 'free',
+  name: 'Free',
+  price: '₹0',
+  period: 'forever',
+  description: 'Explore and understand your growth trajectory',
+  features: [
+    'Revenue milestone calculator',
+    'Growth quiz',
+    'Stage benchmarks',
+    'Share link',
+    'Basic milestones',
+  ],
+  cta: 'Start free',
+  hint: 'Explore',
+};
 
-// ─── Feature Item ─────────────────────────────────────────────────────────────
-const FeatureItem = ({ feature, accentColor, index }) => (
-  <motion.li
-    className="flex items-start gap-3"
-    initial={{ opacity: 0, x: -10 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay: 0.1 + index * 0.05, duration: 0.3 }}
-  >
-    <div
-      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-      style={{ 
-        background: `${accentColor}12`,
-        border: `1px solid ${accentColor}25`,
-      }}
+const FOUNDER_PLAN = {
+  key: 'founder',
+  name: 'Founder',
+  price: '₹3,999',
+  period: '/year',
+  effectiveLine: '₹333/month',
+  badge: 'Founding member price',
+  urgency: 'Early founder pricing — will increase soon',
+  description: 'Execute your path to ₹100 Crore with clarity',
+  features: [
+    'Everything in Free',
+    'Full dashboard access',
+    'AI Growth Coach',
+    'Habit engine',
+    'Board reports',
+    'Monthly check-ins',
+    'Priority support',
+    'Early access to new features',
+  ],
+  cta: 'Become a Founder — ₹3,999/yr',
+  hint: 'Execute',
+};
+
+// ─── Feature item ─────────────────────────────────────────────────────────────
+function FeatureItem({ feature, isGold, index }) {
+  return (
+    <motion.li
+      className="flex items-center gap-3"
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.15 + index * 0.05, duration: 0.3 }}
     >
-      <Check className="w-3 h-3" style={{ color: accentColor }} strokeWidth={2.5} />
-    </div>
-    <span className="text-sm" style={{ color: C.textSecondary }}>
-      {feature}
-    </span>
-  </motion.li>
-);
+      <span
+        className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{
+          background: isGold ? '#B8962E18' : 'rgba(0,0,0,0.05)',
+          border: `1px solid ${isGold ? '#B8962E35' : 'rgba(0,0,0,0.09)'}`,
+        }}
+      >
+        <Check
+          className="w-2.5 h-2.5"
+          strokeWidth={2.5}
+          style={{ color: isGold ? C.gold : C.textMuted }}
+        />
+      </span>
+      <span className="text-sm" style={{ color: C.textSub }}>
+        {feature}
+      </span>
+    </motion.li>
+  );
+}
 
-// ─── Pricing Card (Light Mode) ────────────────────────────────────────────────
-const PricingCard = ({ plan, isPrimary = false, index }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
+// ─── Free card ────────────────────────────────────────────────────────────────
+function FreeCard({ onCTA }) {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-50px' });
-  
-  const accentColor = isPrimary ? C.cyan500 : C.cyan600;
-
-  const handleCTA = () => {
-    if (plan.name === 'Scale') {
-      window.location.href = 'mailto:team@100crengine.in?subject=Scale Plan Inquiry';
-      return;
-    }
-    
-    storeAuthIntent({
-      intent: plan.name === 'Free' ? 'signup' : 'upgrade',
-      plan: plan.name.toLowerCase(),
-      price: plan.price,
-      billing: plan.period === '/year' ? 'yearly' : 'free',
-      redirectTo: plan.name === 'Free' ? '/dashboard' : `/checkout?plan=${plan.name.toLowerCase()}`,
-    });
-    
-    navigate(
-      plan.name === 'Free' ? '/auth' : `/checkout?plan=${plan.name.toLowerCase()}`,
-      { state: { from: location.pathname } }
-    );
-  };
+  const inView = useInView(ref, { once: true, margin: '-60px' });
 
   return (
     <motion.div
       ref={ref}
       initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className={cn(
-        'relative rounded-2xl overflow-hidden h-full',
-        isPrimary && 'ring-2 ring-offset-4 ring-offset-[#FAFAFA]'
-      )}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl p-8 h-full flex flex-col"
+      style={{ background: C.white, border: `1px solid ${C.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+    >
+      {/* Hint */}
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-4">
+        {FREE_PLAN.hint}
+      </p>
+
+      <h3 className="text-xl font-bold mb-1" style={{ color: C.text }}>
+        {FREE_PLAN.name}
+      </h3>
+      <p className="text-sm mb-6" style={{ color: C.textMuted }}>
+        {FREE_PLAN.description}
+      </p>
+
+      {/* Price */}
+      <div className="flex items-baseline gap-1 mb-8">
+        <span className="text-4xl font-bold" style={{ color: C.text, fontVariantNumeric: 'tabular-nums' }}>
+          {FREE_PLAN.price}
+        </span>
+        <span className="text-sm ml-1" style={{ color: C.textMuted }}>
+          {FREE_PLAN.period}
+        </span>
+      </div>
+
+      {/* Features */}
+      <ul className="space-y-3 mb-8 flex-1">
+        {FREE_PLAN.features.map((f, i) => (
+          <FeatureItem key={f} feature={f} isGold={false} index={i} />
+        ))}
+      </ul>
+
+      <button
+        onClick={onCTA}
+        className="w-full h-11 rounded-xl text-sm font-medium transition-colors"
+        style={{
+          background: 'rgba(0,0,0,0.05)',
+          color: C.text,
+          border: `1px solid ${C.border}`,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
+      >
+        {FREE_PLAN.cta}
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Founder card (hero) ──────────────────────────────────────────────────────
+function FounderCard({ onCTA }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl p-8 h-full flex flex-col relative overflow-hidden"
       style={{
-        background: C.bgSecondary,
-        border: isPrimary 
-          ? `1px solid ${C.cyan500}40`
-          : `1px solid rgba(0,0,0,0.06)`,
-        boxShadow: isPrimary
-          ? `0 4px 16px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.06), 0 0 0 1px ${C.cyan500}15`
-          : '0 1px 3px rgba(0,0,0,0.03), 0 6px 20px rgba(0,0,0,0.04)',
-        ringColor: isPrimary ? `${C.cyan500}35` : 'transparent',
+        background: '#09090B',
+        border: `1px solid ${C.borderGold}`,
+        boxShadow: `0 0 0 1px #B8962E18, 0 20px 56px rgba(0,0,0,0.18), 0 0 60px #B8962E08`,
       }}
     >
-      {/* Top accent line for primary */}
-      {isPrimary && (
-        <div 
-          className="absolute inset-x-0 top-0 h-1"
-          style={{
-            background: `linear-gradient(90deg, ${C.cyan500} 0%, ${C.cyan600} 100%)`,
-          }}
-        />
-      )}
+      {/* Gold top sheen */}
+      <div className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent, #B8962E88, transparent)' }} />
 
-      {/* Badge */}
-      {plan.badge && (
-        <div className="absolute top-4 right-4">
-          <span 
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-            style={{
-              background: `${C.cyan500}12`,
-              color: C.cyan600,
-              border: `1px solid ${C.cyan500}25`,
-            }}
-          >
-            <Star className="w-3 h-3" fill="currentColor" />
-            {plan.badge}
-          </span>
-        </div>
-      )}
-
-      <div className="p-6 md:p-8">
-        {/* Plan name */}
-        <h3 
-          className="text-lg font-semibold mb-1"
-          style={{ color: C.textPrimary }}
-        >
-          {plan.name}
-        </h3>
-        
-        {/* Price */}
-        <div className="flex items-baseline gap-1 mb-2">
-          <span 
-            className="text-4xl font-bold tracking-tight"
-            style={{ 
-              color: isPrimary ? C.cyan600 : C.textPrimary,
-              fontFamily: "'Georgia', serif",
-            }}
-          >
-            {plan.price}
-          </span>
-          <span className="text-sm" style={{ color: C.textMuted }}>
-            {plan.period}
-          </span>
-        </div>
-        
-        {/* Description */}
-        <p 
-          className="text-sm mb-6"
-          style={{ color: C.textTertiary }}
-        >
-          {plan.description}
+      {/* Hint + badge row */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: C.gold }}>
+          {FOUNDER_PLAN.hint}
         </p>
-
-        {/* CTA Button */}
-        <motion.button
-          onClick={handleCTA}
-          className={cn(
-            'w-full h-12 rounded-xl font-semibold text-sm',
-            'transition-all duration-200',
-            'flex items-center justify-center gap-2'
-          )}
-          style={isPrimary ? {
-            background: `linear-gradient(135deg, ${C.cyan500} 0%, ${C.cyan600} 100%)`,
-            color: '#FFFFFF',
-            boxShadow: `0 4px 16px ${C.cyan500}25`,
-          } : {
-            background: C.textPrimary,
-            color: '#FFFFFF',
-          }}
-          whileHover={{ 
-            y: -2, 
-            boxShadow: isPrimary 
-              ? `0 8px 24px ${C.cyan500}35`
-              : '0 6px 20px rgba(0,0,0,0.15)',
-          }}
-          whileTap={{ scale: 0.98 }}
+        <span
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+          style={{ background: C.gold, color: '#09090B' }}
         >
-          {plan.cta}
-          <ArrowRight className="w-4 h-4" strokeWidth={2} />
-        </motion.button>
+          <Crown className="w-3 h-3" strokeWidth={2} />
+          {FOUNDER_PLAN.badge}
+        </span>
+      </div>
 
-        {/* Features */}
-        <ul className="mt-6 space-y-3">
-          {plan.features.map((feature, idx) => (
-            <FeatureItem 
-              key={idx} 
-              feature={feature} 
-              accentColor={accentColor}
-              index={idx}
-            />
-          ))}
-        </ul>
+      <h3 className="text-xl font-bold mb-1 text-white">{FOUNDER_PLAN.name}</h3>
+      <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.50)' }}>
+        {FOUNDER_PLAN.description}
+      </p>
+
+      {/* Price */}
+      <div className="mb-1">
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {FOUNDER_PLAN.price}
+          </span>
+          <span className="text-sm ml-1" style={{ color: 'rgba(255,255,255,0.38)' }}>
+            {FOUNDER_PLAN.period}
+          </span>
+        </div>
+        <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          {FOUNDER_PLAN.effectiveLine} · Cancel anytime
+        </p>
+      </div>
+
+      {/* Urgency */}
+      <p className="text-xs font-medium mb-7 mt-1" style={{ color: C.gold }}>
+        {FOUNDER_PLAN.urgency}
+      </p>
+
+      {/* Features */}
+      <ul className="space-y-3 mb-8 flex-1">
+        {FOUNDER_PLAN.features.map((f, i) => (
+          <motion.li
+            key={f}
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -10 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.2 + i * 0.05, duration: 0.3 }}
+          >
+            <span
+              className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: '#B8962E18', border: '1px solid #B8962E35' }}
+            >
+              <Check className="w-2.5 h-2.5" strokeWidth={2.5} style={{ color: C.gold }} />
+            </span>
+            <span className="text-sm" style={{ color: 'rgba(255,255,255,0.70)' }}>{f}</span>
+          </motion.li>
+        ))}
+      </ul>
+
+      <motion.button
+        onClick={onCTA}
+        className="w-full h-12 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+        style={{ background: C.gold, color: '#09090B' }}
+        whileHover={{ background: C.goldLight }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.15 }}
+        data-testid="pricing-founder-cta"
+      >
+        {FOUNDER_PLAN.cta}
+        <ArrowRight className="w-4 h-4" strokeWidth={2} />
+      </motion.button>
+    </motion.div>
+  );
+}
+
+// ─── ROI framing section ──────────────────────────────────────────────────────
+function ROISection() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+
+  const points = [
+    { icon: Zap, label: 'Plan your path to ₹1Cr revenue with clarity' },
+    { icon: Crown, label: 'Make better decisions, faster' },
+    { icon: Sparkles, label: 'AI coaching that adapts to your stage' },
+  ];
+
+  return (
+    <motion.div
+      ref={ref}
+      className="mt-16 rounded-2xl p-8 md:p-10"
+      style={{
+        background: C.white,
+        border: `1px solid ${C.border}`,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="grid md:grid-cols-3 gap-6">
+        {points.map(({ icon: Icon, label }, i) => (
+          <motion.div
+            key={label}
+            className="flex items-start gap-4"
+            initial={{ opacity: 0, y: 16 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.15 + i * 0.1, duration: 0.4 }}
+          >
+            <span
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: '#B8962E12', border: '1px solid #B8962E25' }}
+            >
+              <Icon className="w-4 h-4" style={{ color: C.gold }} strokeWidth={1.8} />
+            </span>
+            <p className="text-sm font-medium leading-snug pt-1.5" style={{ color: C.textSub }}>
+              {label}
+            </p>
+          </motion.div>
+        ))}
       </div>
     </motion.div>
   );
-};
+}
 
-// ─── Main Pricing Page ────────────────────────────────────────────────────────
-export const PricingPage = () => {
+// ─── Comparison hint ──────────────────────────────────────────────────────────
+function ComparisonHint() {
+  return (
+    <div className="mt-10 flex items-center justify-center gap-3 text-sm" style={{ color: C.textMuted }}>
+      <span className="font-medium text-zinc-400">Free</span>
+      <span style={{ color: C.border }}>→</span>
+      <span className="text-xs uppercase tracking-widest text-zinc-400">Explore</span>
+      <span className="mx-4 text-zinc-300">|</span>
+      <span className="font-medium" style={{ color: C.gold }}>Founder</span>
+      <span style={{ color: C.border }}>→</span>
+      <span className="text-xs uppercase tracking-widest" style={{ color: C.gold }}>Execute</span>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export function PricingPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const headerRef = useRef(null);
-  const isHeaderInView = useInView(headerRef, { once: true });
+  const headerInView = useInView(headerRef, { once: true });
+
+  const handleFreeCTA = () => {
+    storeAuthIntent({ intent: 'signup', plan: 'free', redirectTo: '/dashboard' });
+    navigate('/auth', { state: { from: location.pathname } });
+  };
+
+  const handleFounderCTA = () => {
+    storeAuthIntent({ intent: 'upgrade', plan: 'founder', price: '₹3,999', billing: 'annual', redirectTo: '/checkout?plan=founder' });
+    navigate('/checkout?plan=founder', { state: { from: location.pathname } });
+  };
 
   return (
-    <div 
-      className="min-h-screen"
-      style={{ background: C.bgPrimary }}
-      data-testid="pricing-page"
-    >
+    <div className="min-h-screen" style={{ background: C.bg }}>
       <Navbar />
-      
-      <main className="pt-28 pb-20">
+      <main className="max-w-4xl mx-auto px-4 md:px-8 py-16 md:py-24">
+
         {/* Header */}
-        <motion.div 
+        <motion.div
           ref={headerRef}
-          className="text-center max-w-2xl mx-auto px-6 mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          animate={isHeaderInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 24 }}
+          animate={headerInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* Badge */}
-          <motion.span 
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-5"
-            style={{
-              background: `${C.cyan500}08`,
-              border: `1px solid ${C.cyan500}20`,
-              color: C.cyan600,
-              letterSpacing: '0.12em',
-            }}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+          <span
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-5"
+            style={{ background: '#B8962E0F', border: '1px solid #B8962E28', color: C.gold, letterSpacing: '0.14em' }}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            Simple Pricing
-          </motion.span>
-          
-          {/* Title */}
-          <h1 
+            Simple pricing
+          </span>
+          <h1
             className="text-3xl md:text-4xl font-bold mb-4"
-            style={{ 
-              color: C.textPrimary,
-              fontFamily: "'Georgia', 'Times New Roman', serif",
-            }}
+            style={{ color: C.text }}
           >
-            {copy.pricing.title}
+            Start free. Upgrade when you're ready.
           </h1>
-          
-          {/* Subtitle */}
-          <p 
-            className="text-lg"
-            style={{ color: C.textTertiary }}
-          >
-            {copy.pricing.subtitle}
+          <p className="text-lg max-w-xl mx-auto" style={{ color: C.textMuted }}>
+            Two plans. No complexity. Your path to ₹100 Crore starts here.
           </p>
         </motion.div>
 
-        {/* Pricing Cards */}
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8 items-stretch">
-            {plans.map((plan, index) => (
-              <PricingCard
-                key={plan.name}
-                plan={plan}
-                isPrimary={plan.isPrimary}
-                index={index}
-              />
-            ))}
-          </div>
-
-          {/* Trial Banner */}
-          <motion.div
-            className="mt-12 rounded-2xl overflow-hidden"
-            style={{
-              background: `linear-gradient(135deg, ${C.cyan500}08 0%, ${C.bgSecondary} 100%)`,
-              border: `1px solid ${C.cyan500}15`,
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="grid md:grid-cols-[1.3fr_0.7fr] gap-6 items-center p-6 md:p-8">
-              <div>
-                <p 
-                  className="text-xs uppercase tracking-widest font-semibold mb-2"
-                  style={{ color: C.cyan600, letterSpacing: '0.14em' }}
-                >
-                  7-Day Trial
-                </p>
-                <p 
-                  className="text-xl font-bold mb-2"
-                  style={{ color: C.textPrimary }}
-                >
-                  Try everything for ₹99
-                </p>
-                <p style={{ color: C.textTertiary }} className="text-sm">
-                  Auto-converts to Founder plan. Cancel anytime before day 7 to avoid charges.
-                </p>
-              </div>
-              <div className="flex md:justify-end">
-                <motion.button
-                  className="h-12 px-6 rounded-xl font-semibold text-sm"
-                  style={{
-                    background: C.textPrimary,
-                    color: '#FFFFFF',
-                  }}
-                  whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Start trial for ₹99 →
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Bottom Trust */}
-          <motion.div 
-            className="mt-10 text-center"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-          >
-            <p className="text-sm" style={{ color: C.textMuted }}>
-              ₹99 trial · Cancel anytime · Secure Razorpay checkout
-            </p>
-          </motion.div>
+        {/* Cards — 2 column */}
+        <div className="grid md:grid-cols-2 gap-6 items-stretch">
+          <FreeCard onCTA={handleFreeCTA} />
+          <FounderCard onCTA={handleFounderCTA} />
         </div>
-      </main>
 
+        {/* Free → Founder comparison hint */}
+        <ComparisonHint />
+
+        {/* ROI framing */}
+        <ROISection />
+
+        {/* Bottom trust line */}
+        <motion.p
+          className="text-center text-sm mt-10"
+          style={{ color: C.textMuted }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+        >
+          Secure Razorpay payment · Cancel anytime · No hidden charges
+        </motion.p>
+      </main>
       <Footer />
       <HelpWidget />
     </div>
   );
-};
+}
 
 export default PricingPage;

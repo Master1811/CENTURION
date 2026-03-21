@@ -289,7 +289,7 @@ export const TeaserLockedSection = () => {
           transition={{ delay: 0.3 }}
         >
           <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.38)' }}>
-            Start with a 7-day free trial. No credit card required.
+            Start free. Upgrade to Founder for full access.
           </p>
           <motion.button
             onClick={() => navigate('/pricing')}
