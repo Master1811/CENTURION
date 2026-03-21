@@ -20,13 +20,13 @@ const getAdminEmails = () => {
 
 /**
  * ProtectedRoute Component
- * 
+ *
  * Guards routes that require authentication and optionally dashboard/admin access.
  * Shows loading state while checking auth status.
  *
  * @param {Object} props
  * @param {React.ReactNode} props.children - Child components to render if access granted
- * @param {boolean} props.requireDashboardAccess - If true, requires beta OR trial OR paid subscription
+ * @param {boolean} props.requireDashboardAccess - If true, requires beta OR paid (founder) subscription
  * @param {boolean} props.requireAdmin - If true, requires admin role (silently redirects non-admins)
  */
 export const ProtectedRoute = ({ 
@@ -39,11 +39,8 @@ export const ProtectedRoute = ({
     isAuthenticated,
     loading,
     user,
-    isBetaUser,
-    hasPaidSubscription,
     canAccessDashboard,
     profile,
-    subscription,
   } = useAuth();
 
   // Check if user is admin (memoized for performance)
@@ -88,24 +85,8 @@ export const ProtectedRoute = ({
     return <Navigate to="/" replace />;
   }
 
-  // Dashboard access check (beta OR trial OR paid)
+  // Dashboard access check (beta OR paid founder)
   if (requireDashboardAccess && !canAccessDashboard) {
-    // Trial expired specifically
-    if (
-      subscription?.plan === 'starter' &&
-      subscription?.status === 'trialing' &&
-      subscription?.expires_at &&
-      new Date(subscription.expires_at) <= new Date()
-    ) {
-      return (
-        <Navigate
-          to="/checkout?plan=starter"
-          state={{ reason: 'trial_expired' }}
-          replace
-        />
-      );
-    }
-
     // Beta expired specifically
     if (
       profile?.beta_status === 'active' &&
@@ -114,14 +95,14 @@ export const ProtectedRoute = ({
     ) {
       return (
         <Navigate
-          to="/checkout"
+          to="/checkout?plan=founder"
           state={{ reason: 'beta_expired' }}
           replace
         />
       );
     }
-    
-    // Never had access (standard user, no subscription)
+
+    // No subscription — redirect to pricing
     return (
       <Navigate
         to="/pricing"
