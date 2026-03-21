@@ -3,6 +3,7 @@ import json
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
+import redis.asyncio as redis
 
 from anthropic import AsyncAnthropic
 
@@ -22,7 +23,56 @@ EMAIL_LOG = LOG_DIR / "emails.log"
 
 
 # ============================================================================
-# B — In-memory dedup store
+# REDIS CONFIGURATION
+# ============================================================================
+REDIS_URL = os.getenv("REDIS_URL", "")
+UPSTASH_REDIS_REST_URL = os.getenv("UPSTASH_REDIS_REST_URL", "")
+UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
+
+_redis_client: redis.Redis | None = None
+
+
+async def _init_redis():
+    """Initialize Redis client with auto-detection."""
+    global _redis_client
+
+    if _redis_client is not None:
+        return
+
+    # Try Upstash REST API first (for serverless environments)
+    if UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN:
+        try:
+            from redis.asyncio import Redis
+            _redis_client = Redis.from_url(
+                REDIS_URL or f"redis://:{UPSTASH_REDIS_REST_TOKEN}@{UPSTASH_REDIS_REST_URL.replace('https://', '').replace('http://', '')}",
+                decode_responses=True,
+                ssl=True,
+                ssl_cert_reqs=None,  # Allow self-signed certs
+            )
+            # Test connection
+            await _redis_client.ping()
+            print("✓ Redis connected via Upstash")
+            return
+        except Exception as e:
+            print(f"⚠️ Upstash Redis connection failed: {e}")
+
+    # Try direct Redis URL
+    if REDIS_URL:
+        try:
+            _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+            await _redis_client.ping()
+            print("✓ Redis connected via direct URL")
+            return
+        except Exception as e:
+            print(f"⚠️ Direct Redis connection failed: {e}")
+
+    # Fallback to in-memory
+    print("⚠️ Redis not available, using in-memory deduplication")
+    _redis_client = None
+
+
+# ============================================================================
+# B — In-memory dedup store (fallback)
 # ============================================================================
 _mem_dedup: dict[str, float] = {}
 
@@ -31,7 +81,8 @@ def dedup_key(user_id: str, event_type: str, window: str) -> str:
     return f"eng:{event_type}:{user_id}:{window}"
 
 
-def is_deduped(key: str) -> bool:
+def is_deduped_sync(key: str) -> bool:
+    """Check if key is deduped (in-memory fallback)."""
     expiry = _mem_dedup.get(key)
     if expiry is None:
         return False
@@ -42,7 +93,8 @@ def is_deduped(key: str) -> bool:
     return True
 
 
-def mark_sent(key: str, ttl_seconds: int) -> None:
+def mark_sent_sync(key: str, ttl_seconds: int) -> None:
+    """Mark key as sent (in-memory fallback)."""
     now_ts = datetime.now(timezone.utc).timestamp()
     _mem_dedup[key] = now_ts + ttl_seconds
 
@@ -50,6 +102,74 @@ def mark_sent(key: str, ttl_seconds: int) -> None:
 def mark_sent_pipeline(pairs: list[tuple[str, int]]) -> None:
     for key, ttl in pairs:
         mark_sent(key, ttl)
+
+
+# ============================================================================
+# REDIS DEDUP FUNCTIONS
+# ============================================================================
+async def is_deduped_async(user_id: str, event_type: str, window: str = "day") -> bool:
+    """Check if user event is deduped using Redis or in-memory fallback."""
+    key = dedup_key(user_id, event_type, window)
+
+    if _redis_client is not None:
+        try:
+            exists = await _redis_client.exists(key)
+            return bool(exists)
+        except Exception as e:
+            print(f"⚠️ Redis dedup check failed: {e}, falling back to memory")
+            return is_deduped_sync(key)
+    else:
+        return is_deduped_sync(key)
+
+
+async def mark_sent_async(user_id: str, event_type: str, window: str = "day", ttl_seconds: int = 86400) -> None:
+    """Mark user event as sent using Redis or in-memory fallback."""
+    key = dedup_key(user_id, event_type, window)
+
+    if _redis_client is not None:
+        try:
+            await _redis_client.setex(key, ttl_seconds, "1")
+            return
+        except Exception as e:
+            print(f"⚠️ Redis mark sent failed: {e}, falling back to memory")
+
+    # Fallback to memory
+    mark_sent_sync(key, ttl_seconds)
+
+
+async def get_dedup_stats() -> dict:
+    """Get deduplication statistics."""
+    stats = {
+        "redis_available": _redis_client is not None,
+        "memory_entries": len(_mem_dedup),
+    }
+
+    if _redis_client is not None:
+        try:
+            # Get Redis info
+            info = await _redis_client.info()
+            stats.update({
+                "redis_connected_clients": info.get("connected_clients", 0),
+                "redis_used_memory": info.get("used_memory_human", "unknown"),
+                "redis_keys": await _redis_client.dbsize(),
+            })
+        except Exception as e:
+            stats["redis_error"] = str(e)
+
+    return stats
+
+
+# ============================================================================
+# BACKWARD COMPATIBILITY
+# ============================================================================
+async def is_deduped(user_id: str, event_type: str, window: str = "day") -> bool:
+    """Alias for is_deduped_async for backward compatibility."""
+    return await is_deduped_async(user_id, event_type, window)
+
+
+async def mark_sent(user_id: str, event_type: str, window: str = "day", ttl_seconds: int = 86400) -> None:
+    """Alias for mark_sent_async for backward compatibility."""
+    return await mark_sent_async(user_id, event_type, window, ttl_seconds)
 
 
 # ============================================================================

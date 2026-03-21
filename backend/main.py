@@ -168,34 +168,31 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
-# CORS middleware
-# Build allowed origins from environment
+# Build origins list
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
-# Add Codespace or production URL if set
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
-if FRONTEND_URL:
-    ALLOWED_ORIGINS.append(FRONTEND_URL)
+# Add from environment
+frontend_url = os.getenv("FRONTEND_URL", "")
+if frontend_url:
+    ALLOWED_ORIGINS.append(frontend_url)
 
-# Add CORS_ORIGINS from env (comma-separated)
-CORS_ORIGINS_ENV = os.getenv("CORS_ORIGINS", "")
-for origin in CORS_ORIGINS_ENV.split(","):
-    origin = origin.strip()
-    if origin and origin != "*" and origin not in ALLOWED_ORIGINS:
-        ALLOWED_ORIGINS.append(origin)
-
-# If wildcard is present, use it for broad access
-has_wildcard = "*" in CORS_ORIGINS_ENV
+# Hardcode the current Codespace URL
+ALLOWED_ORIGINS.append(
+    "https://cuddly-space-waffle-4j4gg75j69pj2jxgw-3000.app.github.dev"
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if has_wildcard else ALLOWED_ORIGINS,
-    allow_credentials=not has_wildcard,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE",
+                   "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # ============================================================================
