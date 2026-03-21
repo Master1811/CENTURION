@@ -6,6 +6,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { setUserContext, clearUserContext, addBreadcrumb } from '@/lib/sentry';
+import logger from '@/lib/logger';
+
+const log = logger.scope('auth');
 
 // Create the context
 const AuthContext = createContext(null);
@@ -61,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         }
       } else if (response.status === 401) {
         // Token is invalid or expired - sign out user to force re-authentication
-        console.warn('[Auth] 401 received from profile endpoint - signing out');
+        log.warn('401 from profile endpoint — signing out');
         addBreadcrumb('Profile fetch returned 401 - forcing sign out', 'auth', 'warning');
         
         // Clear local state
@@ -73,7 +76,7 @@ export const AuthProvider = ({ children }) => {
           try {
             await supabase.auth.signOut();
           } catch (signOutError) {
-            console.error('[Auth] Error during sign out:', signOutError);
+            log.error('Error during forced sign out', {}, signOutError);
           }
         }
         setUser(null);
@@ -81,11 +84,11 @@ export const AuthProvider = ({ children }) => {
         clearUserContext();
       } else {
         // Other errors (5xx, etc.) - log but don't sign out
-        console.error('[Auth] Profile fetch failed with status:', response.status);
+        log.error('Profile fetch failed', { status: response.status });
         addBreadcrumb(`Profile fetch failed: ${response.status}`, 'auth', 'error');
       }
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
+      log.error('Profile fetch network error', {}, error);
       addBreadcrumb('Profile fetch network error', 'auth', 'error', { error: error.message });
     }
   }, []);
@@ -106,14 +109,14 @@ export const AuthProvider = ({ children }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          log.error('Error getting session', {}, error);
         } else if (session) {
           setSession(session);
           setUser(session.user);
           await fetchUserData(session.access_token);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        log.error('Auth initialization error', {}, error);
       } finally {
         setLoading(false);
       }
@@ -124,7 +127,7 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        log.info('Auth state changed', { event });
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -155,7 +158,7 @@ export const AuthProvider = ({ children }) => {
   const signInWithMagicLink = async (email) => {
     if (!isSupabaseConfigured()) {
       // Mock sign-in for development
-      console.log('Mock magic link sent to:', email);
+      log.debug('Mock magic link sent', { email: '[REDACTED]' });
       return { error: null };
     }
 
@@ -172,7 +175,7 @@ export const AuthProvider = ({ children }) => {
 
       return { error };
     } catch (error) {
-      console.error('Magic link error:', error);
+      log.error('Magic link request failed', {}, error);
       return { error };
     }
   };
@@ -184,7 +187,7 @@ export const AuthProvider = ({ children }) => {
    */
   const signInWithGoogle = async () => {
     if (!isSupabaseConfigured()) {
-      console.log('Mock Google OAuth - Supabase not configured');
+      log.debug('Mock Google OAuth — Supabase not configured');
       return { error: new Error('Supabase not configured') };
     }
 
@@ -201,13 +204,13 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (error) {
-        console.error('Google OAuth error:', error);
+        log.error('Google OAuth error', {}, error);
         return { error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Google OAuth error:', error);
+      log.error('Google OAuth unexpected error', {}, error);
       return { error };
     }
   };
@@ -235,7 +238,7 @@ export const AuthProvider = ({ children }) => {
       setProfile(null);
       setSubscription(null);
     } catch (error) {
-      console.error('Sign out error:', error);
+      log.error('Sign out error', {}, error);
     }
   };
 
