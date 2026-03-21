@@ -180,10 +180,20 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 if FRONTEND_URL:
     ALLOWED_ORIGINS.append(FRONTEND_URL)
 
+# Add CORS_ORIGINS from env (comma-separated)
+CORS_ORIGINS_ENV = os.getenv("CORS_ORIGINS", "")
+for origin in CORS_ORIGINS_ENV.split(","):
+    origin = origin.strip()
+    if origin and origin != "*" and origin not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(origin)
+
+# If wildcard is present, use it for broad access
+has_wildcard = "*" in CORS_ORIGINS_ENV
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if has_wildcard else ALLOWED_ORIGINS,
+    allow_credentials=not has_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )

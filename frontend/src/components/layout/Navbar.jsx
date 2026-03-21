@@ -1,68 +1,30 @@
-// Navbar component - Unified navigation with adaptive light/dark theming
-// Same structure everywhere, style adapts to page context
+// Navbar - Premium floating navigation with adaptive dark/light theming
+// Always a centered floating pill with glassmorphism
+// Dark pages: frosted dark glass | Light pages: frosted white glass
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent, LogOut, User } from 'lucide-react';
+import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent, LogOut, User, LayoutDashboard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { useAuth } from '@/context/AuthContext';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { storeAuthIntent } from '@/lib/auth/intent';
 
-// ─── Tools Navigation Items ─────────────────────────────────────────────────────
+// Tools navigation items
 const toolsItems = [
-  { 
-    label: copy.tools.hundredCr.name, 
-    description: copy.tools.hundredCr.description,
-    href: '/tools/100cr-calculator',
-    icon: Calculator 
-  },
-  { 
-    label: copy.tools.arr.name, 
-    description: copy.tools.arr.description,
-    href: '/tools/arr-calculator',
-    icon: TrendingUp 
-  },
-  { 
-    label: copy.tools.runway.name, 
-    description: copy.tools.runway.description,
-    href: '/tools/runway-calculator',
-    icon: Clock 
-  },
-  { 
-    label: copy.tools.revenueGrowth.name, 
-    description: copy.tools.revenueGrowth.description,
-    href: '/tools/growth-calculator',
-    icon: Percent 
-  },
+  { label: copy.tools.hundredCr.name, description: copy.tools.hundredCr.description, href: '/tools/100cr-calculator', icon: Calculator },
+  { label: copy.tools.arr.name, description: copy.tools.arr.description, href: '/tools/arr-calculator', icon: TrendingUp },
+  { label: copy.tools.runway.name, description: copy.tools.runway.description, href: '/tools/runway-calculator', icon: Clock },
+  { label: copy.tools.revenueGrowth.name, description: copy.tools.revenueGrowth.description, href: '/tools/growth-calculator', icon: Percent },
 ];
 
-// ─── Theme Configuration ─────────────────────────────────────────────────────────
-// Determines which pages use light vs dark navbar
-const getNavTheme = (pathname) => {
-  // Dark theme pages (landing hero, specific marketing pages)
-  const darkPages = ['/'];
-  
-  // Pages that start with these paths should be dark
-  const darkPrefixes = ['/preview'];
-  
-  // Check if current path matches dark pages
-  if (darkPages.includes(pathname)) {
-    return 'dark';
-  }
-  
-  // Check for dark prefixes
-  for (const prefix of darkPrefixes) {
-    if (pathname.startsWith(prefix)) {
-      return 'dark';
-    }
-  }
-  
-  // Tools pages, pricing, dashboard - all use light theme
-  // This creates a cohesive app experience with light surfaces
-  return 'light';
+// Which pages use dark theme
+const isDarkPage = (pathname) => {
+  if (pathname === '/') return true;
+  if (pathname.startsWith('/preview')) return true;
+  return false;
 };
 
 export const Navbar = ({ forceTheme }) => {
@@ -74,48 +36,45 @@ export const Navbar = ({ forceTheme }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalHeadline, setAuthModalHeadline] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const toolsRef = useRef(null);
+  const userRef = useRef(null);
 
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, signOut, loading } = useAuth();
-  
-  // Determine theme based on page or forced override
-  const theme = forceTheme || getNavTheme(location.pathname);
-  const isDark = theme === 'dark';
-  const isLanding = location.pathname === '/';
 
+  const isDark = forceTheme === 'dark' || (!forceTheme && isDarkPage(location.pathname));
+
+  // Scroll handling
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      const y = window.scrollY;
+      // Hide on scroll down, show on scroll up
+      if (y > lastScrollY && y > 120) {
         setHidden(true);
         setToolsOpen(false);
+        setUserMenuOpen(false);
       } else {
         setHidden(false);
       }
-      
-      setScrolled(currentScrollY > 60);
-      setLastScrollY(currentScrollY);
+      setScrolled(y > 40);
+      setLastScrollY(y);
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns on outside click
   useEffect(() => {
-    const handleClickOutside = () => {
-      setToolsOpen(false);
-      setUserMenuOpen(false);
+    const handleClick = (e) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target)) setToolsOpen(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setUserMenuOpen(false);
     };
-    if (toolsOpen || userMenuOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [toolsOpen, userMenuOpen]);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
-  // Check for auth required redirect
+  // Auth required redirect
   useEffect(() => {
     if (location.state?.authRequired && !isAuthenticated && !loading) {
       setAuthModalOpen(true);
@@ -125,9 +84,7 @@ export const Navbar = ({ forceTheme }) => {
   // Listen for centurion:open-auth event
   useEffect(() => {
     const handler = (e) => {
-      if (e.detail?.headline) {
-        setAuthModalHeadline(e.detail.headline);
-      }
+      if (e.detail?.headline) setAuthModalHeadline(e.detail.headline);
       setAuthModalOpen(true);
     };
     window.addEventListener('centurion:open-auth', handler);
@@ -144,200 +101,155 @@ export const Navbar = ({ forceTheme }) => {
     if (isAuthenticated) {
       navigate('/dashboard');
     } else {
-      storeAuthIntent({
-        intent: 'signin',
-        redirectTo: '/dashboard',
-      });
+      storeAuthIntent({ intent: 'signin', redirectTo: '/dashboard' });
       setAuthModalOpen(true);
     }
   };
 
-  // ─── Theme-based styles ─────────────────────────────────────────────────────────
-  const styles = {
-    nav: {
-      dark: cn(
-        isLanding
-          ? 'top-0 left-0 right-0 w-full h-[72px] px-6 md:px-12 rounded-none border-0 bg-transparent'
-          : 'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full',
-        !isLanding && 'bg-[rgba(5,10,16,0.85)] backdrop-blur-xl border border-[rgba(0,191,255,0.12)]',
-        !isLanding && scrolled && 'shadow-[0_8px_32px_rgba(0,191,255,0.12)]',
-        !isLanding && !scrolled && 'shadow-[0_4px_16px_rgba(0,191,255,0.08)]'
-      ),
-      light: cn(
-        'top-4 left-1/2 -translate-x-1/2 w-auto max-w-[95vw] h-[56px] px-2 rounded-full',
-        'bg-white/90 backdrop-blur-xl border border-[rgba(0,0,0,0.06)]',
-        scrolled
-          ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]'
-          : 'shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
-      ),
-    },
-    logo: {
-      dark: 'text-white',
-      light: 'text-[#09090B]',
-    },
-    logoSub: {
-      dark: 'text-white/70',
-      light: 'text-[#71717A]',
-    },
-    link: {
-      dark: 'text-white/70 hover:text-white hover:bg-white/10',
-      light: 'text-[#52525B] hover:text-[#09090B] hover:bg-[rgba(0,0,0,0.04)]',
-    },
-    linkActive: {
-      dark: 'text-white bg-white/10',
-      light: 'text-[#09090B] bg-[rgba(0,0,0,0.04)]',
-    },
-    dropdown: {
-      dark: 'bg-[rgba(5,15,24,0.95)] backdrop-blur-xl border border-[rgba(0,191,255,0.15)] shadow-[0_16px_48px_rgba(0,191,255,0.08),0_4px_16px_rgba(0,0,0,0.3)]',
-      light: 'bg-white/95 backdrop-blur-xl border border-[rgba(0,0,0,0.06)] shadow-[0_16px_48px_rgba(0,0,0,0.10)]',
-    },
-    dropdownItem: {
-      dark: 'hover:bg-white/10',
-      light: 'hover:bg-[rgba(0,0,0,0.03)]',
-    },
-    dropdownText: {
-      dark: 'text-white/90',
-      light: 'text-[#09090B]',
-    },
-    dropdownSubtext: {
-      dark: 'text-white/60',
-      light: 'text-[#71717A]',
-    },
-    dropdownIcon: {
-      dark: 'bg-white/10',
-      light: 'bg-[rgba(0,191,255,0.08)]',
-    },
-    dropdownIconColor: {
-      dark: 'text-white/90',
-      light: 'text-[#0099CC]',
-    },
-    cta: {
-      dark: 'bg-white text-[#09090B] hover:bg-white/90',
-      light: 'bg-[#09090B] text-white hover:bg-[#18181B]',
-    },
-    userBtn: {
-      dark: 'bg-white/10 text-white/90 border border-white/20 hover:bg-white/20',
-      light: 'bg-[rgba(0,0,0,0.04)] text-[#09090B] border border-[rgba(0,0,0,0.08)] hover:bg-[rgba(0,0,0,0.08)]',
-    },
-  };
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <>
+      {/* Navbar */}
       <motion.nav
-        initial={{ y: 0 }}
-        animate={{ y: hidden ? -100 : 0 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ y: 0, opacity: 1 }}
+        animate={{
+          y: hidden ? -100 : 0,
+          opacity: hidden ? 0 : 1,
+        }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          'fixed z-50 transition-all duration-300',
-          'flex items-center',
-          isLanding ? 'justify-between' : 'justify-center gap-1',
-          styles.nav[theme]
+          'fixed top-12 inset-x-0 mx-auto z-50',
+          'flex items-center justify-between',
+          'h-12 md:h-14 px-2 rounded-2xl',
+          'transition-all duration-500 ease-out',
+          // Width
+          'w-[calc(100%-1.5rem)] md:w-[calc(100%-2rem)] max-w-[880px]',
+          // Dark theme glass
+          isDark && [
+            'border',
+            scrolled
+              ? 'bg-[rgba(5,10,16,0.82)] backdrop-blur-2xl border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0px_0px_1px_rgba(0,191,255,0.05)]'
+              : 'bg-[rgba(5,10,16,0.55)] backdrop-blur-xl border-[rgba(255,255,255,0.06)] shadow-[0_4px_20px_rgba(0,0,0,0.25)]',
+          ],
+          // Light theme glass
+          !isDark && [
+            'border',
+            scrolled
+              ? 'bg-[rgba(255,255,255,0.88)] backdrop-blur-2xl border-[rgba(0,0,0,0.06)] shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)]'
+              : 'bg-[rgba(255,255,255,0.78)] backdrop-blur-xl border-[rgba(0,0,0,0.04)] shadow-[0_2px_16px_rgba(0,0,0,0.05)]',
+          ],
         )}
         data-testid="navbar"
-        data-theme={theme}
+        data-theme={isDark ? 'dark' : 'light'}
       >
         {/* Logo */}
-        <Link 
-          to="/" 
-          className="flex items-center gap-1 px-4 shrink-0"
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 pl-3 pr-2 shrink-0 group"
           data-testid="navbar-logo"
         >
-          <span className={cn("font-heading font-bold", styles.logo[theme])}>
+          <span className={cn(
+            'font-bold text-[15px] tracking-tight transition-colors duration-200',
+            isDark ? 'text-white' : 'text-[#09090B]'
+          )}>
             100Cr
           </span>
-          <span className={cn("font-heading font-medium", styles.logoSub[theme])}>
+          <span className={cn(
+            'font-medium text-[15px] tracking-tight transition-colors duration-200',
+            isDark ? 'text-white/50' : 'text-[#A1A1AA]'
+          )}>
             Engine
           </span>
         </Link>
 
-        {/* Desktop Links */}
-        <div className={cn("hidden md:flex items-center", isLanding && "flex-1 justify-center")}>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
           {/* Tools Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={toolsRef}>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setToolsOpen(!toolsOpen);
-              }}
+              onClick={() => setToolsOpen(!toolsOpen)}
               className={cn(
-                'flex items-center gap-1.5 px-4 py-2 rounded-full',
-                'text-sm font-medium',
-                'transition-colors duration-150',
-                toolsOpen || location.pathname.includes('/tools')
-                  ? styles.linkActive[theme]
-                  : styles.link[theme]
+                'flex items-center gap-1 px-3 py-1.5 rounded-lg',
+                'text-[13px] font-medium tracking-wide',
+                'transition-all duration-200',
+                isDark
+                  ? toolsOpen || location.pathname.includes('/tools')
+                    ? 'text-white bg-white/10'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                  : toolsOpen || location.pathname.includes('/tools')
+                    ? 'text-[#09090B] bg-black/[0.05]'
+                    : 'text-[#71717A] hover:text-[#09090B] hover:bg-black/[0.03]',
               )}
               data-testid="tools-dropdown-trigger"
             >
               {copy.tools.dropdown}
-              <ChevronDown 
+              <ChevronDown
                 className={cn(
-                  'w-4 h-4 transition-transform duration-200',
+                  'w-3.5 h-3.5 transition-transform duration-200',
                   toolsOpen && 'rotate-180'
-                )} 
-                strokeWidth={1.5} 
+                )}
+                strokeWidth={2}
               />
             </button>
 
             <AnimatePresence>
               {toolsOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{
-                    duration: 0.25,
-                    ease: [0.22, 1, 0.36, 1]
-                  }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className={cn(
                     'absolute top-full left-0 mt-2',
-                    'w-72 p-2',
-                    'rounded-2xl',
-                    styles.dropdown[theme]
+                    'w-64 p-1.5 rounded-xl',
+                    isDark
+                      ? 'bg-[rgba(8,16,24,0.96)] backdrop-blur-2xl border border-white/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
+                      : 'bg-white/[0.97] backdrop-blur-2xl border border-black/[0.06] shadow-[0_16px_48px_rgba(0,0,0,0.12)]',
                   )}
-                  onClick={(e) => e.stopPropagation()}
                   data-testid="tools-dropdown-menu"
                 >
-                  {toolsItems.map((item, index) => {
+                  {toolsItems.map((item, i) => {
                     const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
                     return (
-                      <motion.div
+                      <Link
                         key={item.href}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{
-                          duration: 0.2,
-                          delay: index * 0.05,
-                          ease: [0.22, 1, 0.36, 1]
-                        }}
+                        to={item.href}
+                        onClick={() => setToolsOpen(false)}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-lg',
+                          'transition-all duration-150 group/item',
+                          isDark
+                            ? isActive ? 'bg-white/10' : 'hover:bg-white/[0.06]'
+                            : isActive ? 'bg-[#00BFFF]/[0.06]' : 'hover:bg-black/[0.03]',
+                        )}
+                        data-testid={`tool-link-${item.href.split('/').pop()}`}
                       >
-                        <Link
-                          to={item.href}
-                          onClick={() => setToolsOpen(false)}
-                          className={cn(
-                            'flex items-start gap-3 p-3 rounded-xl',
-                            'transition-all duration-200',
-                            styles.dropdownItem[theme],
-                            location.pathname === item.href && (isDark ? 'bg-white/10' : 'bg-[rgba(0,191,255,0.06)]')
-                          )}
-                          data-testid={`tool-link-${item.href.split('/').pop()}`}
-                        >
-                          <div className={cn('p-2 rounded-lg', styles.dropdownIcon[theme])}>
-                            <Icon
-                              className={cn('w-4 h-4', styles.dropdownIconColor[theme])}
-                              strokeWidth={1.5}
-                            />
-                          </div>
-                          <div>
-                            <p className={cn('text-sm font-medium mt-0.5', styles.dropdownText[theme])}>
-                              {item.label}
-                            </p>
-                            <p className={cn('text-xs mt-0.5', styles.dropdownSubtext[theme])}>
-                              {item.description}
-                            </p>
-                          </div>
-                        </Link>
-                      </motion.div>
+                        <div className={cn(
+                          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                          'transition-colors duration-150',
+                          isDark ? 'bg-white/[0.06]' : 'bg-[#00BFFF]/[0.06]',
+                        )}>
+                          <Icon className={cn(
+                            'w-4 h-4',
+                            isDark ? 'text-white/70' : 'text-[#0099CC]'
+                          )} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={cn(
+                            'text-[13px] font-medium',
+                            isDark ? 'text-white/90' : 'text-[#09090B]'
+                          )}>{item.label}</p>
+                          <p className={cn(
+                            'text-[11px] mt-0.5 truncate',
+                            isDark ? 'text-white/40' : 'text-[#A1A1AA]'
+                          )}>{item.description}</p>
+                        </div>
+                      </Link>
                     );
                   })}
                 </motion.div>
@@ -345,142 +257,161 @@ export const Navbar = ({ forceTheme }) => {
             </AnimatePresence>
           </div>
 
+          {/* Benchmarks */}
           <Link
             to="/tools/100cr-calculator#benchmarks"
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors rounded-full',
-              styles.link[theme]
+              'px-3 py-1.5 rounded-lg',
+              'text-[13px] font-medium tracking-wide',
+              'transition-all duration-200',
+              isDark
+                ? 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                : 'text-[#71717A] hover:text-[#09090B] hover:bg-black/[0.03]',
             )}
           >
             {copy.nav.benchmarks}
           </Link>
 
+          {/* Pricing */}
           <Link
             to="/pricing"
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors rounded-full',
-              styles.link[theme]
+              'px-3 py-1.5 rounded-lg',
+              'text-[13px] font-medium tracking-wide',
+              'transition-all duration-200',
+              isDark
+                ? location.pathname === '/pricing' ? 'text-white bg-white/10' : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                : location.pathname === '/pricing' ? 'text-[#09090B] bg-black/[0.05]' : 'text-[#71717A] hover:text-[#09090B] hover:bg-black/[0.03]',
             )}
           >
             {copy.nav.pricing}
           </Link>
         </div>
 
-        {/* Desktop CTA / User Menu */}
-        {isAuthenticated ? (
-          <div className="hidden md:block relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setUserMenuOpen(!userMenuOpen);
-              }}
-              className={cn(
-                'flex items-center gap-2',
-                'h-10 px-4 ml-2 rounded-full',
-                'text-sm font-medium',
-                'transition-all duration-200',
-                styles.userBtn[theme]
-              )}
-              data-testid="user-menu-trigger"
-            >
-              <User className="w-4 h-4" strokeWidth={1.5} />
-              <span className="max-w-[120px] truncate">{user?.email?.split('@')[0] || 'Account'}</span>
-              <ChevronDown className={cn('w-4 h-4 transition-transform', userMenuOpen && 'rotate-180')} strokeWidth={1.5} />
-            </button>
+        {/* Desktop Right Section */}
+        <div className="hidden md:flex items-center gap-1.5 pr-1.5">
+          {isAuthenticated ? (
+            <div className="relative" ref={userRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className={cn(
+                  'flex items-center gap-2 h-9 px-3 rounded-xl',
+                  'text-[13px] font-medium',
+                  'transition-all duration-200',
+                  isDark
+                    ? 'text-white/80 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.12] hover:border-white/[0.12]'
+                    : 'text-[#52525B] bg-black/[0.03] border border-black/[0.04] hover:bg-black/[0.06] hover:border-black/[0.08]',
+                )}
+                data-testid="user-menu-trigger"
+              >
+                <div className={cn(
+                  'w-5 h-5 rounded-full flex items-center justify-center',
+                  isDark ? 'bg-white/10' : 'bg-[#00BFFF]/10',
+                )}>
+                  <User className="w-3 h-3" strokeWidth={2} />
+                </div>
+                <span className="max-w-[100px] truncate">{user?.email?.split('@')[0] || 'Account'}</span>
+                <ChevronDown className={cn(
+                  'w-3.5 h-3.5 transition-transform duration-200',
+                  userMenuOpen && 'rotate-180'
+                )} strokeWidth={2} />
+              </button>
 
-            <AnimatePresence>
-              {userMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className={cn(
-                    'absolute top-full right-0 mt-2',
-                    'w-56 p-2',
-                    'rounded-2xl',
-                    styles.dropdown[theme]
-                  )}
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid="user-menu-dropdown"
-                >
-                  <div className={cn(
-                    'px-3 py-2 mb-2',
-                    isDark ? 'border-b border-white/10' : 'border-b border-[rgba(0,0,0,0.06)]'
-                  )}>
-                    <p className={cn('text-sm font-medium truncate', styles.dropdownText[theme])}>
-                      {user?.email}
-                    </p>
-                    <p className={cn('text-xs', styles.dropdownSubtext[theme])}>
-                      Founder Plan
-                    </p>
-                  </div>
-                  
-                  <Link
-                    to="/dashboard"
-                    onClick={() => setUserMenuOpen(false)}
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                    transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm',
-                      styles.dropdownSubtext[theme],
-                      styles.dropdownItem[theme]
+                      'absolute top-full right-0 mt-2',
+                      'w-52 p-1.5 rounded-xl',
+                      isDark
+                        ? 'bg-[rgba(8,16,24,0.96)] backdrop-blur-2xl border border-white/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
+                        : 'bg-white/[0.97] backdrop-blur-2xl border border-black/[0.06] shadow-[0_16px_48px_rgba(0,0,0,0.12)]',
                     )}
-                    data-testid="user-menu-dashboard"
+                    data-testid="user-menu-dropdown"
                   >
-                    <TrendingUp className="w-4 h-4" strokeWidth={1.5} />
-                    Dashboard
-                  </Link>
-                  
-                  <Link
-                    to="/dashboard/settings"
-                    onClick={() => setUserMenuOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm',
-                      styles.dropdownSubtext[theme],
-                      styles.dropdownItem[theme]
-                    )}
-                  >
-                    <User className="w-4 h-4" strokeWidth={1.5} />
-                    Settings
-                  </Link>
-                  
-                  <button
-                    onClick={handleSignOut}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
-                      'text-sm text-red-600',
-                      'hover:bg-red-50 transition-colors'
-                    )}
-                    data-testid="user-menu-signout"
-                  >
-                    <LogOut className="w-4 h-4" strokeWidth={1.5} />
-                    Sign Out
-                  </button>
-                </motion.div>
+                    {/* User info header */}
+                    <div className={cn(
+                      'px-3 py-2 mb-1 rounded-lg',
+                      isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]',
+                    )}>
+                      <p className={cn(
+                        'text-[13px] font-medium truncate',
+                        isDark ? 'text-white/90' : 'text-[#09090B]',
+                      )}>{user?.email}</p>
+                      <p className={cn(
+                        'text-[11px] mt-0.5',
+                        isDark ? 'text-white/40' : 'text-[#A1A1AA]',
+                      )}>Founder Plan</p>
+                    </div>
+
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px]',
+                        isDark ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' : 'text-[#52525B] hover:text-[#09090B] hover:bg-black/[0.03]',
+                      )}
+                      data-testid="user-menu-dashboard"
+                    >
+                      <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} />
+                      Dashboard
+                    </Link>
+
+                    <Link
+                      to="/dashboard/settings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px]',
+                        isDark ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' : 'text-[#52525B] hover:text-[#09090B] hover:bg-black/[0.03]',
+                      )}
+                    >
+                      <Settings className="w-4 h-4" strokeWidth={1.5} />
+                      Settings
+                    </Link>
+
+                    <div className={cn('my-1 h-px', isDark ? 'bg-white/[0.06]' : 'bg-black/[0.04]')} />
+
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-red-500 hover:bg-red-500/[0.06] transition-colors"
+                      data-testid="user-menu-signout"
+                    >
+                      <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                      Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <button
+              onClick={handleCTAClick}
+              className={cn(
+                'h-9 px-5 rounded-xl',
+                'text-[13px] font-semibold tracking-wide',
+                'transition-all duration-200',
+                'border-none outline-none',
+                isDark
+                  ? 'bg-white text-[#09090B] hover:bg-white/90 shadow-[0_2px_8px_rgba(255,255,255,0.1)]'
+                  : 'bg-[#09090B] text-white hover:bg-[#18181B] shadow-[0_2px_8px_rgba(0,0,0,0.15)]',
               )}
-            </AnimatePresence>
-          </div>
-        ) : (
-          <button
-            onClick={handleCTAClick}
-            className={cn(
-              'hidden md:flex items-center gap-2',
-              'h-10 px-5 ml-2 rounded-full',
-              'text-sm font-medium border-none',
-              'transition-all duration-200',
-              styles.cta[theme]
-            )}
-            data-testid="navbar-cta"
-          >
-            {copy.nav.ctaButton}
-          </button>
-        )}
+              data-testid="navbar-cta"
+            >
+              {copy.nav.ctaButton}
+            </button>
+          )}
+        </div>
 
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className={cn(
-            "md:hidden p-3 rounded-lg transition-colors",
-            isDark ? "text-white/90 hover:bg-white/10" : "text-[#09090B] hover:bg-[rgba(0,0,0,0.04)]"
+            'md:hidden flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-colors',
+            isDark ? 'text-white/80 hover:bg-white/[0.08]' : 'text-[#52525B] hover:bg-black/[0.04]',
           )}
           data-testid="mobile-menu-toggle"
           aria-label="Toggle menu"
@@ -493,104 +424,130 @@ export const Navbar = ({ forceTheme }) => {
         </button>
       </motion.nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className={cn(
-              'fixed top-[80px] left-4 right-4 z-40',
-              'p-3 rounded-2xl',
-              'md:hidden',
-              styles.dropdown[theme]
-            )}
-            data-testid="mobile-menu"
-          >
-            <p className={cn('type-label px-3 py-2', styles.dropdownSubtext[theme])}>
-              {copy.tools.dropdown}
-            </p>
-            <div className="space-y-1 mb-3">
-              {toolsItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors",
-                      styles.dropdownItem[theme]
-                    )}
-                  >
-                    <Icon className={cn('w-4 h-4', styles.dropdownSubtext[theme])} strokeWidth={1.5} />
-                    <span className={cn('text-sm', styles.dropdownSubtext[theme])}>
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-            
-            <div className={cn(
-              'pt-3 space-y-1',
-              isDark ? 'border-t border-white/10' : 'border-t border-[rgba(0,0,0,0.06)]'
-            )}>
-              <Link
-                to="/pricing"
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  'block px-3 py-3 text-sm rounded-xl transition-colors',
-                  styles.dropdownSubtext[theme],
-                  styles.dropdownItem[theme]
-                )}
-              >
-                {copy.nav.pricing}
-              </Link>
-            </div>
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
 
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                if (isAuthenticated) {
-                  navigate('/dashboard');
-                } else {
-                  storeAuthIntent({
-                    intent: 'signin',
-                    redirectTo: '/dashboard',
-                  });
-                  setAuthModalOpen(true);
-                }
-              }}
+            {/* Menu Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                'mt-3 w-full h-11 rounded-full',
-                'text-sm font-medium',
-                'transition-colors',
-                styles.cta[theme]
+                'fixed top-[108px] left-4 right-4 z-50',
+                'p-2 rounded-2xl',
+                'md:hidden',
+                isDark
+                  ? 'bg-[rgba(8,16,24,0.96)] backdrop-blur-2xl border border-white/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.5)]'
+                  : 'bg-white/[0.97] backdrop-blur-2xl border border-black/[0.06] shadow-[0_16px_48px_rgba(0,0,0,0.12)]',
               )}
+              data-testid="mobile-menu"
             >
-              {isAuthenticated ? copy.nav.dashboard : copy.nav.ctaButton}
-            </button>
-            
-            {isAuthenticated && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleSignOut();
-                }}
-                className={cn(
-                  'mt-2 w-full h-11 rounded-full',
-                  'bg-transparent text-red-600 text-sm font-medium border border-red-200',
-                  'hover:bg-red-50',
-                  'transition-colors'
+              {/* Tools Section */}
+              <p className={cn(
+                'px-3 pt-2 pb-1 text-[11px] font-semibold tracking-widest uppercase',
+                isDark ? 'text-white/30' : 'text-[#A1A1AA]',
+              )}>
+                {copy.tools.dropdown}
+              </p>
+              <div className="space-y-0.5 mb-2">
+                {toolsItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors',
+                        isDark
+                          ? isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/[0.06]'
+                          : isActive ? 'bg-[#00BFFF]/[0.06] text-[#09090B]' : 'text-[#71717A] hover:bg-black/[0.03]',
+                      )}
+                    >
+                      <Icon className={cn('w-4 h-4', isDark ? 'text-white/50' : 'text-[#A1A1AA]')} strokeWidth={1.5} />
+                      <span className="text-[13px] font-medium">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className={cn('h-px mx-2', isDark ? 'bg-white/[0.06]' : 'bg-black/[0.04]')} />
+
+              {/* Other Links */}
+              <div className="py-1.5 space-y-0.5">
+                <Link
+                  to="/tools/100cr-calculator#benchmarks"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'block px-3 py-2.5 text-[13px] font-medium rounded-xl transition-colors',
+                    isDark ? 'text-white/60 hover:bg-white/[0.06]' : 'text-[#71717A] hover:bg-black/[0.03]',
+                  )}
+                >
+                  {copy.nav.benchmarks}
+                </Link>
+                <Link
+                  to="/pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'block px-3 py-2.5 text-[13px] font-medium rounded-xl transition-colors',
+                    isDark ? 'text-white/60 hover:bg-white/[0.06]' : 'text-[#71717A] hover:bg-black/[0.03]',
+                  )}
+                >
+                  {copy.nav.pricing}
+                </Link>
+              </div>
+
+              <div className={cn('h-px mx-2', isDark ? 'bg-white/[0.06]' : 'bg-black/[0.04]')} />
+
+              {/* CTA */}
+              <div className="p-2 pt-1.5 space-y-2">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (isAuthenticated) {
+                      navigate('/dashboard');
+                    } else {
+                      storeAuthIntent({ intent: 'signin', redirectTo: '/dashboard' });
+                      setAuthModalOpen(true);
+                    }
+                  }}
+                  className={cn(
+                    'w-full h-10 rounded-xl',
+                    'text-[13px] font-semibold tracking-wide',
+                    'transition-all duration-200',
+                    isDark
+                      ? 'bg-white text-[#09090B] hover:bg-white/90'
+                      : 'bg-[#09090B] text-white hover:bg-[#18181B]',
+                  )}
+                  data-testid="mobile-cta"
+                >
+                  {isAuthenticated ? copy.nav.dashboard : copy.nav.ctaButton}
+                </button>
+
+                {isAuthenticated && (
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); handleSignOut(); }}
+                    className="w-full h-10 rounded-xl text-[13px] font-medium text-red-500 bg-red-500/[0.06] hover:bg-red-500/[0.1] transition-colors"
+                  >
+                    Sign Out
+                  </button>
                 )}
-              >
-                Sign Out
-              </button>
-            )}
-          </motion.div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
