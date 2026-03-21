@@ -1,0 +1,634 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   100Cr Engine - Premium Design System
+   A cohesive, high-end visual language aligned with the landing page hero
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Core Palette ──────────────────────────────────────────────────────────── */
+  
+  /* Light Mode Surfaces (Default) */
+  --ds-bg-primary: #FAFAFA;
+  --ds-bg-secondary: #FFFFFF;
+  --ds-bg-tertiary: #F4F4F5;
+  --ds-bg-elevated: #FFFFFF;
+  
+  /* Dark Mode Surfaces */
+  --ds-bg-dark: #050A10;
+  --ds-bg-dark-secondary: #0A0F14;
+  --ds-bg-dark-tertiary: #0F1419;
+  --ds-bg-dark-elevated: rgba(5, 15, 24, 0.85);
+  
+  /* Brand Cyan Accent Scale */
+  --ds-cyan-50: #E6F9FF;
+  --ds-cyan-100: #CCF4FF;
+  --ds-cyan-200: #99E8FF;
+  --ds-cyan-300: #66DCFF;
+  --ds-cyan-400: #33D0FF;
+  --ds-cyan-500: #00BFFF;  /* Primary brand cyan */
+  --ds-cyan-600: #0099CC;
+  --ds-cyan-700: #007399;
+  --ds-cyan-800: #004D66;
+  --ds-cyan-900: #002633;
+  
+  /* Semantic Colors */
+  --ds-success: #22C55E;
+  --ds-success-light: rgba(34, 197, 94, 0.12);
+  --ds-warning: #F59E0B;
+  --ds-warning-light: rgba(245, 158, 11, 0.12);
+  --ds-error: #EF4444;
+  --ds-error-light: rgba(239, 68, 68, 0.12);
+  --ds-info: #00BFFF;
+  --ds-info-light: rgba(0, 191, 255, 0.08);
+  
+  /* Text Colors - Light Mode */
+  --ds-text-primary: #09090B;
+  --ds-text-secondary: #52525B;
+  --ds-text-tertiary: #71717A;
+  --ds-text-muted: #A1A1AA;
+  --ds-text-disabled: #D4D4D8;
+  
+  /* Text Colors - Dark Mode */
+  --ds-text-primary-dark: rgba(255, 255, 255, 0.95);
+  --ds-text-secondary-dark: rgba(255, 255, 255, 0.70);
+  --ds-text-tertiary-dark: rgba(255, 255, 255, 0.50);
+  --ds-text-muted-dark: rgba(255, 255, 255, 0.35);
+  
+  /* Borders - Light Mode */
+  --ds-border-light: rgba(0, 0, 0, 0.06);
+  --ds-border-medium: rgba(0, 0, 0, 0.10);
+  --ds-border-strong: rgba(0, 0, 0, 0.16);
+  --ds-border-focus: rgba(0, 191, 255, 0.50);
+  
+  /* Borders - Dark Mode */
+  --ds-border-light-dark: rgba(255, 255, 255, 0.06);
+  --ds-border-medium-dark: rgba(255, 255, 255, 0.12);
+  --ds-border-cyan: rgba(0, 191, 255, 0.20);
+  --ds-border-cyan-strong: rgba(0, 191, 255, 0.35);
+  
+  /* ─── Typography Scale ─────────────────────────────────────────────────────── */
+  
+  /* Display & Hero */
+  --ds-font-display: clamp(48px, 6vw, 72px);
+  --ds-font-hero: clamp(36px, 4.5vw, 56px);
+  --ds-font-h1: clamp(32px, 3.5vw, 44px);
+  --ds-font-h2: clamp(24px, 2.5vw, 32px);
+  --ds-font-h3: clamp(20px, 2vw, 24px);
+  --ds-font-h4: 18px;
+  --ds-font-h5: 16px;
+  
+  /* Body & UI */
+  --ds-font-body-lg: 18px;
+  --ds-font-body: 16px;
+  --ds-font-body-sm: 14px;
+  --ds-font-caption: 13px;
+  --ds-font-label: 12px;
+  --ds-font-overline: 11px;
+  
+  /* Line Heights */
+  --ds-leading-tight: 1.1;
+  --ds-leading-snug: 1.25;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.65;
+  --ds-leading-loose: 1.8;
+  
+  /* Letter Spacing */
+  --ds-tracking-tighter: -0.04em;
+  --ds-tracking-tight: -0.02em;
+  --ds-tracking-normal: 0;
+  --ds-tracking-wide: 0.02em;
+  --ds-tracking-wider: 0.06em;
+  --ds-tracking-widest: 0.12em;
+  
+  /* Font Families */
+  --ds-font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ds-font-serif: 'Georgia', 'Times New Roman', serif;
+  --ds-font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  
+  /* ─── Spacing Scale ────────────────────────────────────────────────────────── */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+  --ds-space-16: 64px;
+  --ds-space-20: 80px;
+  --ds-space-24: 96px;
+  
+  /* ─── Border Radius ────────────────────────────────────────────────────────── */
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 10px;
+  --ds-radius-lg: 14px;
+  --ds-radius-xl: 18px;
+  --ds-radius-2xl: 24px;
+  --ds-radius-3xl: 32px;
+  --ds-radius-full: 9999px;
+  
+  /* ─── Shadows ──────────────────────────────────────────────────────────────── */
+  
+  /* Light Mode Shadows */
+  --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --ds-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  --ds-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --ds-shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.06), 0 24px 56px rgba(0, 0, 0, 0.10);
+  
+  /* Elevated Card Shadow (Premium) */
+  --ds-shadow-card: 
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 12px 28px rgba(0, 0, 0, 0.05);
+  --ds-shadow-card-hover: 
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 8px 16px rgba(0, 0, 0, 0.06),
+    0 20px 48px rgba(0, 0, 0, 0.08);
+  
+  /* Cyan Glow (for accent elements) */
+  --ds-shadow-cyan-sm: 0 0 12px rgba(0, 191, 255, 0.15);
+  --ds-shadow-cyan-md: 0 0 24px rgba(0, 191, 255, 0.20);
+  --ds-shadow-cyan-lg: 0 4px 40px rgba(0, 191, 255, 0.25);
+  
+  /* Focus Ring */
+  --ds-focus-ring: 0 0 0 3px rgba(0, 191, 255, 0.25);
+  --ds-focus-ring-strong: 0 0 0 4px rgba(0, 191, 255, 0.35);
+  
+  /* ─── Motion ───────────────────────────────────────────────────────────────── */
+  
+  /* Easing Curves */
+  --ds-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ds-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ds-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ds-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --ds-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Durations */
+  --ds-duration-instant: 50ms;
+  --ds-duration-fast: 100ms;
+  --ds-duration-normal: 200ms;
+  --ds-duration-slow: 300ms;
+  --ds-duration-slower: 500ms;
+  --ds-duration-slowest: 700ms;
+  
+  /* ─── Z-Index Scale ────────────────────────────────────────────────────────── */
+  --ds-z-below: -1;
+  --ds-z-base: 0;
+  --ds-z-raised: 10;
+  --ds-z-dropdown: 100;
+  --ds-z-sticky: 200;
+  --ds-z-fixed: 300;
+  --ds-z-modal-backdrop: 400;
+  --ds-z-modal: 500;
+  --ds-z-popover: 600;
+  --ds-z-tooltip: 700;
+  --ds-z-max: 9999;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Component Classes
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Premium Light Card ─────────────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-light);
+  border-radius: var(--ds-radius-xl);
+  box-shadow: var(--ds-shadow-card);
+  transition: 
+    box-shadow var(--ds-duration-slow) var(--ds-ease-smooth),
+    transform var(--ds-duration-slow) var(--ds-ease-smooth),
+    border-color var(--ds-duration-normal) var(--ds-ease-default);
+}
+
+.ds-card:hover {
+  box-shadow: var(--ds-shadow-card-hover);
+  border-color: var(--ds-border-medium);
+  transform: translateY(-2px);
+}
+
+.ds-card-flat {
+  background: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-light);
+  border-radius: var(--ds-radius-xl);
+  transition: border-color var(--ds-duration-normal) var(--ds-ease-default);
+}
+
+.ds-card-flat:hover {
+  border-color: var(--ds-border-medium);
+}
+
+/* ─── Cyan Accent Card ───────────────────────────────────────────────────────── */
+.ds-card-accent {
+  background: var(--ds-bg-secondary);
+  border: 1px solid rgba(0, 191, 255, 0.15);
+  border-radius: var(--ds-radius-xl);
+  box-shadow: var(--ds-shadow-card), var(--ds-shadow-cyan-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-card-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 191, 255, 0.40) 30%,
+    rgba(0, 191, 255, 0.60) 50%,
+    rgba(0, 191, 255, 0.40) 70%,
+    transparent 100%
+  );
+}
+
+.ds-card-accent:hover {
+  border-color: rgba(0, 191, 255, 0.25);
+  box-shadow: var(--ds-shadow-card-hover), var(--ds-shadow-cyan-md);
+}
+
+/* ─── Glass Card (Light Mode) ────────────────────────────────────────────────── */
+.ds-glass {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  border-radius: var(--ds-radius-xl);
+  box-shadow: 
+    var(--ds-shadow-md),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* ─── Glass Card (Dark Mode) ─────────────────────────────────────────────────── */
+.ds-glass-dark {
+  background: rgba(5, 15, 24, 0.85);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(0, 191, 255, 0.15);
+  border-radius: var(--ds-radius-xl);
+  box-shadow: 
+    0 0 0 1px rgba(0, 191, 255, 0.05),
+    0 20px 56px rgba(0, 0, 0, 0.50);
+  position: relative;
+}
+
+.ds-glass-dark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 191, 255, 0.20) 0%,
+    rgba(0, 191, 255, 0.05) 50%,
+    rgba(0, 191, 255, 0.10) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ─── Premium Button ─────────────────────────────────────────────────────────── */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  font-family: var(--ds-font-sans);
+  font-weight: 600;
+  font-size: var(--ds-font-body-sm);
+  line-height: 1;
+  border-radius: var(--ds-radius-lg);
+  padding: var(--ds-space-3) var(--ds-space-5);
+  height: 44px;
+  cursor: pointer;
+  user-select: none;
+  transition: 
+    background var(--ds-duration-fast) var(--ds-ease-default),
+    box-shadow var(--ds-duration-normal) var(--ds-ease-smooth),
+    transform var(--ds-duration-fast) var(--ds-ease-spring);
+}
+
+.ds-btn:active {
+  transform: scale(0.98);
+}
+
+.ds-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+/* Primary - Solid Black */
+.ds-btn-primary {
+  background: var(--ds-text-primary);
+  color: white;
+  border: none;
+}
+
+.ds-btn-primary:hover {
+  background: #18181B;
+  box-shadow: var(--ds-shadow-md);
+}
+
+/* Secondary - Outline */
+.ds-btn-secondary {
+  background: transparent;
+  color: var(--ds-text-primary);
+  border: 1px solid var(--ds-border-medium);
+}
+
+.ds-btn-secondary:hover {
+  background: var(--ds-bg-tertiary);
+  border-color: var(--ds-border-strong);
+}
+
+/* Cyan Accent */
+.ds-btn-cyan {
+  background: linear-gradient(135deg, #00BFFF 0%, #0099CC 100%);
+  color: var(--ds-bg-dark);
+  border: none;
+  box-shadow: var(--ds-shadow-cyan-sm);
+}
+
+.ds-btn-cyan:hover {
+  box-shadow: var(--ds-shadow-cyan-md), var(--ds-shadow-md);
+}
+
+/* Ghost */
+.ds-btn-ghost {
+  background: transparent;
+  color: var(--ds-text-secondary);
+  border: none;
+}
+
+.ds-btn-ghost:hover {
+  background: var(--ds-bg-tertiary);
+  color: var(--ds-text-primary);
+}
+
+/* ─── Input Fields ───────────────────────────────────────────────────────────── */
+.ds-input {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-body-sm);
+  line-height: 1.5;
+  color: var(--ds-text-primary);
+  background: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-light);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  height: 44px;
+  width: 100%;
+  transition: 
+    border-color var(--ds-duration-fast) var(--ds-ease-default),
+    box-shadow var(--ds-duration-fast) var(--ds-ease-default);
+}
+
+.ds-input::placeholder {
+  color: var(--ds-text-muted);
+}
+
+.ds-input:hover {
+  border-color: var(--ds-border-medium);
+}
+
+.ds-input:focus {
+  outline: none;
+  border-color: var(--ds-cyan-500);
+  box-shadow: var(--ds-focus-ring);
+}
+
+/* ─── Badges/Pills ───────────────────────────────────────────────────────────── */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-label);
+  font-weight: 600;
+  line-height: 1;
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border-radius: var(--ds-radius-full);
+}
+
+.ds-badge-default {
+  background: var(--ds-bg-tertiary);
+  color: var(--ds-text-secondary);
+}
+
+.ds-badge-cyan {
+  background: var(--ds-info-light);
+  color: var(--ds-cyan-600);
+  border: 1px solid rgba(0, 191, 255, 0.20);
+}
+
+.ds-badge-success {
+  background: var(--ds-success-light);
+  color: #16A34A;
+}
+
+.ds-badge-warning {
+  background: var(--ds-warning-light);
+  color: #D97706;
+}
+
+/* ─── Typography Classes ─────────────────────────────────────────────────────── */
+.ds-display {
+  font-family: var(--ds-font-serif);
+  font-size: var(--ds-font-display);
+  font-weight: 700;
+  line-height: var(--ds-leading-tight);
+  letter-spacing: var(--ds-tracking-tighter);
+}
+
+.ds-h1 {
+  font-family: var(--ds-font-serif);
+  font-size: var(--ds-font-h1);
+  font-weight: 700;
+  line-height: var(--ds-leading-snug);
+  letter-spacing: var(--ds-tracking-tight);
+}
+
+.ds-h2 {
+  font-family: var(--ds-font-serif);
+  font-size: var(--ds-font-h2);
+  font-weight: 700;
+  line-height: var(--ds-leading-snug);
+  letter-spacing: var(--ds-tracking-tight);
+}
+
+.ds-h3 {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-h3);
+  font-weight: 600;
+  line-height: var(--ds-leading-snug);
+}
+
+.ds-h4 {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-h4);
+  font-weight: 600;
+  line-height: var(--ds-leading-normal);
+}
+
+.ds-body {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-body);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-text-secondary);
+}
+
+.ds-body-sm {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-body-sm);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-text-secondary);
+}
+
+.ds-caption {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-caption);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-tertiary);
+}
+
+.ds-label {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-label);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--ds-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ds-text-tertiary);
+}
+
+.ds-overline {
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-font-overline);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--ds-tracking-widest);
+  text-transform: uppercase;
+}
+
+.ds-mono {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Cyan Text Accent ───────────────────────────────────────────────────────── */
+.ds-text-cyan {
+  color: var(--ds-cyan-500);
+}
+
+.ds-text-cyan-gradient {
+  background: linear-gradient(135deg, #00C8E8 0%, #00BFFF 50%, #0099CC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Layout Utilities ───────────────────────────────────────────────────────── */
+.ds-container {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--ds-space-6);
+  padding-right: var(--ds-space-6);
+}
+
+@media (min-width: 768px) {
+  .ds-container {
+    padding-left: var(--ds-space-8);
+    padding-right: var(--ds-space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  .ds-container {
+    padding-left: var(--ds-space-12);
+    padding-right: var(--ds-space-12);
+  }
+}
+
+.ds-section {
+  padding-top: var(--ds-space-16);
+  padding-bottom: var(--ds-space-16);
+}
+
+@media (min-width: 768px) {
+  .ds-section {
+    padding-top: var(--ds-space-20);
+    padding-bottom: var(--ds-space-20);
+  }
+}
+
+/* ─── Skeleton Loader ────────────────────────────────────────────────────────── */
+.ds-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ds-bg-tertiary) 0%,
+    var(--ds-bg-secondary) 50%,
+    var(--ds-bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: ds-skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--ds-radius-md);
+}
+
+@keyframes ds-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Focus Accessibility ────────────────────────────────────────────────────── */
+.ds-focus-visible:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+/* Keyboard focus only (not mouse) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ds-cyan-500);
+  outline-offset: 2px;
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .ds-card:hover,
+  .ds-btn:active {
+    transform: none !important;
+  }
+}
+
+/* ─── Mobile Touch Targets ───────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  .ds-btn,
+  .ds-input,
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

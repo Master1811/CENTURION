@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 @import './styles/tokens.css';
+@import './styles/design-system.css';
 
 /* Base styles */
 body {
