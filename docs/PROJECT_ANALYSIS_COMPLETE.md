@@ -984,7 +984,7 @@ CORS_ORIGINS=http://localhost:3000,https://...
 ADMIN_EMAILS=mastertmh841@gmail.com
 
 # Features
-FRONTEND_URL=https://support-hub-v1.preview.emergentagent.com
+FRONTEND_URL=https://beta-audit-report.preview.emergentagent.com
 SCHEDULER_ENABLED=true
 
 # External Services (pending configuration)
@@ -999,7 +999,7 @@ SENTRY_DSN=
 ### A8.2 Frontend Environment Variables
 
 ```env
-REACT_APP_BACKEND_URL=https://support-hub-v1.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://beta-audit-report.preview.emergentagent.com
 REACT_APP_SUPABASE_URL=https://xxx.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=eyJ...
 REACT_APP_ADMIN_EMAILS=mastertmh841@gmail.com
