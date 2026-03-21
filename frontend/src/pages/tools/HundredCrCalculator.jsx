@@ -312,6 +312,18 @@ export const HundredCrCalculator = () => {
     [mrr, growthRate]
   );
 
+  // Guard: ensure projection has milestones
+  if (!projection || !projection.milestones || projection.milestones.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-white/50 text-sm mb-4">Unable to generate projection</p>
+          <p className="text-white/30 text-xs">Please check your inputs</p>
+        </div>
+      </div>
+    );
+  }
+
   const chartData = useMemo(() => {
     const benchmark = getBenchmarkData(selectedStage);
     return generateChartData({ currentMRR: mrr, growthRate }, benchmark.median);
