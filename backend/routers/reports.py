@@ -133,10 +133,10 @@ async def get_dashboard_overview(user: Dict[str, Any] = Depends(require_paid_sub
     checkins = await supabase_service.get_checkins(user_id, limit=3)
     
     # Calculate current metrics
-    current_mrr = checkins[0]['actual_revenue'] if checkins else (profile.get('current_mrr', 0) if profile else 0)
+    current_mrr = checkins[0]['actual_revenue'] if checkins else ((profile.get('current_mrr') or 0) if profile else 0)
     
     # Calculate growth rate from recent check-ins
-    growth_rate = profile.get('growth_rate', 0.08) if profile else 0.08
+    growth_rate = (profile.get('growth_rate') or 0.08) if profile else 0.08
     if len(checkins) >= 2:
         current = checkins[0].get('actual_revenue', 0)
         previous = checkins[1].get('actual_revenue', 0)
@@ -218,7 +218,7 @@ async def get_revenue_intelligence(user: Dict[str, Any] = Depends(require_paid_s
     revenue_data = []
     if checkins:
         base_revenue = checkins[-1]['actual_revenue']  # Oldest check-in
-        base_growth = profile.get('growth_rate', 0.08) if profile else 0.08
+        base_growth = (profile.get('growth_rate') or 0.08) if profile else 0.08
         
         for i, checkin in enumerate(reversed(checkins)):
             months_elapsed = i
@@ -293,7 +293,7 @@ async def submit_checkin(
     
     # Get baseline for deviation calculation
     profile = await supabase_service.get_profile(user_id)
-    previous_mrr = profile.get('current_mrr', checkin.actual_revenue) if profile else checkin.actual_revenue
+    previous_mrr = (profile.get('current_mrr') or checkin.actual_revenue) if profile else checkin.actual_revenue
     projected_revenue = previous_mrr
     
     deviation_pct = None

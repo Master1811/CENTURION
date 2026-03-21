@@ -48,9 +48,46 @@ from services.rate_limiter import rate_limiter
 from services.supabase import supabase_service
 from services.ai_cost_control import ai_cost_controller
 
+# ============================================================================
+# AI CONFIGURATION
+# ============================================================================
+
+import os
+from anthropic import Anthropic
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+AI_ENABLED = bool(ANTHROPIC_API_KEY and ANTHROPIC_API_KEY != "sk-ant-xxxxxxxxxxxx")
+
+if AI_ENABLED:
+    anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+else:
+    anthropic_client = None
+    print("[AI] ANTHROPIC_API_KEY not set or placeholder — AI features disabled, returning mock responses")
+
 logger = logging.getLogger("100cr_engine.ai")
 
 router = APIRouter(prefix="/ai", tags=["AI Coach"])
+
+
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+
+async def require_ai(user: Dict[str, Any] = Depends(require_paid_subscription)):
+    """
+    Dependency that checks AI is configured.
+    Returns mock response hint if not.
+    """
+    if not AI_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "message": "AI features not configured",
+                "mock": True,
+                "question": "What is the single biggest action you can take today?",
+            }
+        )
+    return user
 
 
 # ============================================================================
@@ -130,7 +167,7 @@ async def get_ai_usage(user: Dict[str, Any] = Depends(require_paid_subscription)
 @router.post("/board-report", response_model=BoardReportResponse)
 async def generate_board_report(
     request: BoardReportRequest,
-    user: Dict[str, Any] = Depends(require_paid_subscription)
+    user: Dict[str, Any] = Depends(require_ai)
 ):
     """
     Generate an AI-powered monthly board report.
@@ -200,7 +237,7 @@ async def generate_board_report(
 @router.post("/strategy-brief", response_model=StrategyBriefResponse)
 async def generate_strategy_brief(
     request: StrategyBriefRequest,
-    user: Dict[str, Any] = Depends(require_paid_subscription)
+    user: Dict[str, Any] = Depends(require_ai)
 ):
     """
     Generate a quarterly growth strategy brief.
@@ -266,7 +303,7 @@ async def generate_strategy_brief(
 
 
 @router.get("/daily-pulse", response_model=DailyPulseResponse)
-async def get_daily_pulse(user: Dict[str, Any] = Depends(require_paid_subscription)):
+async def get_daily_pulse(user: Dict[str, Any] = Depends(require_ai)):
     """
     Get AI-generated daily pulse insights.
     
@@ -309,7 +346,7 @@ async def get_daily_pulse(user: Dict[str, Any] = Depends(require_paid_subscripti
 
 
 @router.get("/weekly-question", response_model=WeeklyQuestionResponse)
-async def get_weekly_question(user: Dict[str, Any] = Depends(require_paid_subscription)):
+async def get_weekly_question(user: Dict[str, Any] = Depends(require_ai)):
     """
     Get a weekly strategic reflection question.
     
@@ -347,7 +384,7 @@ async def get_weekly_question(user: Dict[str, Any] = Depends(require_paid_subscr
 @router.post("/deviation", response_model=DeviationAnalysisResponse)
 async def analyze_deviation(
     request: DeviationAnalysisRequest,
-    user: Dict[str, Any] = Depends(require_paid_subscription)
+    user: Dict[str, Any] = Depends(require_ai)
 ):
     """
     Analyze why actual revenue deviated from projection.

@@ -70,6 +70,7 @@ export const CommandCentre = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dailyPulse, setDailyPulse] = useState(null);
   const { isOpen: showUpgrade, modalProps, showUpgradeModal, hideUpgradeModal } = useUpgradeModal();
 
   const loadData = useCallback(async () => {
@@ -122,6 +123,53 @@ export const CommandCentre = () => {
     }
   }, [profile]);
 
+  // Fetch daily pulse
+  useEffect(() => {
+    const fetchDailyPulse = async () => {
+      try {
+        const token = getAccessToken();
+        if (!token) return;
+        
+        const res = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/ai/daily-pulse`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (res.status === 503) {
+          // AI not configured — use fallback question
+          const data = await res.json();
+          setDailyPulse({
+            greeting: "Good morning! Here's your startup pulse for today.",
+            content: data.detail?.question ??
+              "What is the single biggest action you can take today?",
+            mock: true,
+            generated_at: new Date().toISOString()
+          });
+          return;
+        }
+        
+        if (!res.ok) {
+          // Don't crash — just show nothing
+          console.warn('[PULSE] Daily pulse unavailable:', res.status);
+          return;
+        }
+        
+        const data = await res.json();
+        setDailyPulse(data);
+      } catch (err) {
+        // Network error or CORS — don't crash the page
+        console.warn('[PULSE] Daily pulse fetch failed:', err.message);
+        // setDailyPulse(null) — component renders without it
+      }
+    };
+
+    fetchDailyPulse();
+  }, [getAccessToken]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadData();
@@ -145,6 +193,34 @@ export const CommandCentre = () => {
   // Tour state
   const { isOpen: tourOpen, endTour, resetTour } = useTour('dashboard');
 
+  // ── NULL GUARD ──────────────────────────────────────
+  // Add this AFTER all hooks, BEFORE any other logic
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-white/40 text-sm">
+          Loading...
+        </p>
+      </div>
+    );
+  }
+
+  if (!profile.current_mrr) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <p className="text-white/50 text-sm">
+          Complete your onboarding to see your revenue dashboard.
+        </p>
+        <a
+          href="/dashboard/onboarding"
+          className="px-5 py-2 rounded-xl text-sm font-medium bg-white/10 text-white hover:bg-white/20"
+        >
+          Complete setup →
+        </a>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -153,7 +229,36 @@ export const CommandCentre = () => {
     );
   }
 
-  const displayData = data || fallbackData;
+  // Use fallback data, but ensure all nested properties are valid
+  const displayData = data ? {
+    ...fallbackData,
+    ...data,
+    nextMilestone: data.nextMilestone || fallbackData.nextMilestone,
+    healthSignals: data.healthSignals || fallbackData.healthSignals,
+    actionQueue: data.actionQueue || fallbackData.actionQueue,
+    currentMRR: data.currentMRR || fallbackData.currentMRR,
+    growthRate: data.growthRate || fallbackData.growthRate,
+    healthScore: data.healthScore || fallbackData.healthScore,
+    streak: data.streak ?? fallbackData.streak,
+    aiPriority: data.aiPriority || fallbackData.aiPriority,
+  } : fallbackData;
+
+  // Additional guard: if API returned data but nextMilestone is missing/invalid, show onboarding
+  if (!displayData.nextMilestone || typeof displayData.nextMilestone !== 'object' || !displayData.nextMilestone.label) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4" data-testid="command-centre">
+        <p className="text-white/50 text-sm">
+          Complete your onboarding to see your revenue dashboard.
+        </p>
+        <button
+          onClick={() => setShowOnboarding(true)}
+          className="px-5 py-2 rounded-xl text-sm font-medium bg-white/10 text-white hover:bg-white/20"
+        >
+          Complete setup →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="command-centre">
@@ -235,12 +340,12 @@ export const CommandCentre = () => {
                   {copy.dashboard.commandCentre.milestoneCountdown}
                 </p>
                 <p className="text-3xl font-bold text-white font-mono tabular-nums">
-                  {displayData.nextMilestone.label}
+                  {displayData.nextMilestone?.label ?? '—'}
                 </p>
               </div>
               <div className="text-right">
                 <p className="font-mono text-2xl font-semibold text-white tabular-nums">
-                  {displayData.nextMilestone.monthsAway}
+                  {displayData.nextMilestone?.monthsAway ?? '—'}
                 </p>
                 <p className="text-xs text-white/50">months away</p>
               </div>
@@ -249,17 +354,17 @@ export const CommandCentre = () => {
               <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((displayData.currentMRR * 12) / displayData.nextMilestone.value * 100, 100)}%` }}
+                  animate={{ width: `${Math.min((displayData.currentMRR * 12) / (displayData.nextMilestone?.value || CRORE) * 100, 100)}%` }}
                   transition={{ duration: 1, delay: 0.3 }}
                   className="h-full bg-white rounded-full"
                 />
               </div>
               <span className="text-sm text-white/70 font-mono tabular-nums">
-                {Math.round((displayData.currentMRR * 12) / displayData.nextMilestone.value * 100)}%
+                {Math.round((displayData.currentMRR * 12) / (displayData.nextMilestone?.value || CRORE) * 100)}%
               </span>
             </div>
             <p className="text-sm text-white/60 mt-4">
-              Currently at {formatCrore(displayData.currentMRR * 12)} ARR → Target {formatCrore(displayData.nextMilestone.value)}
+              Currently at {formatCrore(displayData.currentMRR * 12)} ARR → Target {formatCrore(displayData.nextMilestone?.value || CRORE)}
             </p>
           </CenturionCardContent>
         </CenturionCard>
@@ -289,19 +394,19 @@ export const CommandCentre = () => {
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={displayData.healthSignals.growth} />
+                  <HealthSignal status={displayData.healthSignals?.growth ?? 'good'} />
                   <span className="text-[#52525B]">Growth</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={displayData.healthSignals.retention} />
+                  <HealthSignal status={displayData.healthSignals?.retention ?? 'good'} />
                   <span className="text-[#52525B]">Retention</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={displayData.healthSignals.runway} />
+                  <HealthSignal status={displayData.healthSignals?.runway ?? 'good'} />
                   <span className="text-[#52525B]">Runway</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <HealthSignal status={displayData.healthSignals.engagement} />
+                  <HealthSignal status={displayData.healthSignals?.engagement ?? 'good'} />
                   <span className="text-[#52525B]">Check-ins</span>
                 </div>
               </div>
@@ -328,6 +433,27 @@ export const CommandCentre = () => {
           </div>
         </CenturionCardContent>
       </CenturionCard>
+
+      {/* Daily Pulse */}
+      {dailyPulse && (
+        <CenturionCard className="border-l-4 border-l-blue-400">
+          <CenturionCardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-2 rounded-lg bg-blue-50">
+                <Target className="w-5 h-5 text-blue-600" strokeWidth={1.5} />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-[#A1A1AA] mb-2">
+                  Daily Pulse
+                </p>
+                <p className="text-sm text-[#09090B] leading-relaxed">
+                  {dailyPulse?.question ?? 'Daily insight unavailable'}
+                </p>
+              </div>
+            </div>
+          </CenturionCardContent>
+        </CenturionCard>
+      )}
 
       {/* Bottom Row */}
       <div className="grid md:grid-cols-2 gap-4" data-tour="metrics">
