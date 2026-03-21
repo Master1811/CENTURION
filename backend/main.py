@@ -58,12 +58,17 @@ init_sentry()
 # LOGGING CONFIGURATION
 # ============================================================================
 
+_env = os.environ.get('ENVIRONMENT', 'development')
+_default_level = 'DEBUG' if _env == 'development' else 'INFO'
+_log_level = getattr(logging, os.environ.get('LOG_LEVEL', _default_level).upper(), logging.INFO)
+
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    level=_log_level,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
 )
 logger = logging.getLogger("100cr_engine")
+logger.info(f"Log level: {logging.getLevelName(_log_level)} (environment={_env})")
 
 # ============================================================================
 # IMPORTS FROM MODULES

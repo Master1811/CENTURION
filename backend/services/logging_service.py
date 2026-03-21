@@ -30,9 +30,15 @@ import hashlib
 # CONFIGURATION
 # ============================================================================
 
-LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
-ENABLE_STRUCTURED_LOGS = os.environ.get('ENABLE_STRUCTURED_LOGS', 'true').lower() == 'true'
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+# Default: DEBUG in development, INFO in production
+_default_log_level = 'DEBUG' if ENVIRONMENT == 'development' else 'INFO'
+LOG_LEVEL = os.environ.get('LOG_LEVEL', _default_log_level).upper()
+# Structured JSON logs: always on in prod, configurable in dev
+ENABLE_STRUCTURED_LOGS = os.environ.get(
+    'ENABLE_STRUCTURED_LOGS',
+    'false' if ENVIRONMENT == 'development' else 'true'
+).lower() == 'true'
 
 # Sensitive field patterns to mask
 SENSITIVE_FIELDS = {
@@ -394,6 +400,7 @@ payment_logger = StructuredLogger("payments")
 ai_logger = StructuredLogger("ai")
 admin_logger = StructuredLogger("admin")
 db_logger = StructuredLogger("database")
+subscription_logger = StructuredLogger("subscription")
 
 # Global metrics collector
 metrics = MetricsCollector()
@@ -416,16 +423,21 @@ def log_auth_event(
     error: Optional[Exception] = None,
     **kwargs
 ):
-    """Log authentication-related events."""
-    level = "info" if success else "warning"
-    getattr(auth_logger, level)(
-        f"Auth event: {event}",
-        user_id=user_id,
-        auth_method=method,
-        success=success,
-        error=error,
-        **kwargs
-    )
+    """
+    Log authentication-related events.
+
+    Routing:
+      success=True           → INFO
+      success=False, no err  → WARNING  (e.g. wrong plan, expired)
+      success=False, err set → ERROR    (e.g. JWT decode failure)
+    """
+    metadata = dict(user_id=user_id, auth_method=method, success=success, **kwargs)
+    if success:
+        auth_logger.info(f"Auth: {event}", **metadata)
+    elif error:
+        auth_logger.error(f"Auth failed: {event}", error=error, **metadata)
+    else:
+        auth_logger.warning(f"Auth denied: {event}", **metadata)
 
 
 def log_api_request(
@@ -526,7 +538,91 @@ def log_ai_usage(
         duration_ms=duration_ms,
         **kwargs
     )
-    
+
     metrics.record_latency(f"ai.{feature}", duration_ms)
     metrics.increment_counter(f"ai.{feature}.calls")
     metrics.increment_counter("ai.total_tokens", input_tokens + output_tokens)
+
+
+def log_subscription_event(
+    event: str,
+    user_id: Optional[str] = None,
+    plan: Optional[str] = None,
+    status: Optional[str] = None,
+    billing: Optional[str] = None,
+    success: bool = True,
+    error: Optional[Exception] = None,
+    **kwargs
+):
+    """
+    Log subscription lifecycle events (create, update, expire, cancel).
+
+    Examples:
+        log_subscription_event("created", user_id=uid, plan="founder", billing="annual")
+        log_subscription_event("expired", user_id=uid, plan="founder", success=False)
+    """
+    metadata = dict(user_id=user_id, plan=plan, status=status, billing=billing, **kwargs)
+    if success:
+        subscription_logger.info(f"Subscription {event}", **metadata)
+    elif error:
+        subscription_logger.error(f"Subscription {event} failed", error=error, **metadata)
+    else:
+        subscription_logger.warning(f"Subscription {event}", **metadata)
+
+    metrics.increment_counter(f"subscription.{event}")
+
+
+def log_feature_gate_check(
+    feature: str,
+    user_id: Optional[str] = None,
+    plan: Optional[str] = None,
+    allowed: bool = True,
+    reason: Optional[str] = None,
+    **kwargs
+):
+    """
+    Log feature-gate / access-control decisions.
+
+    Examples:
+        log_feature_gate_check("dashboard", user_id=uid, plan="founder", allowed=True)
+        log_feature_gate_check("ai_coach", user_id=uid, plan="free", allowed=False, reason="upgrade_required")
+    """
+    metadata = dict(user_id=user_id, plan=plan, allowed=allowed, reason=reason, **kwargs)
+    if allowed:
+        auth_logger.debug(f"Gate allowed: {feature}", **metadata)
+    else:
+        auth_logger.warning(f"Gate denied: {feature}", **metadata)
+
+    metrics.increment_counter(f"gate.{'allowed' if allowed else 'denied'}.{feature}")
+
+
+def log_db_event(
+    operation: str,
+    table: str,
+    user_id: Optional[str] = None,
+    rows_affected: int = 0,
+    duration_ms: Optional[float] = None,
+    success: bool = True,
+    error: Optional[Exception] = None,
+    **kwargs
+):
+    """
+    Log database operations for traceability.
+
+    Examples:
+        log_db_event("upsert", "subscriptions", user_id=uid, rows_affected=1, duration_ms=12.4)
+        log_db_event("select", "profiles", user_id=uid, success=False, error=e)
+    """
+    metadata = dict(
+        table=table, user_id=user_id,
+        rows_affected=rows_affected, duration_ms=duration_ms, **kwargs
+    )
+    if success:
+        db_logger.debug(f"DB {operation} on {table}", **metadata)
+    elif error:
+        db_logger.error(f"DB {operation} failed on {table}", error=error, **metadata)
+    else:
+        db_logger.warning(f"DB {operation} warning on {table}", **metadata)
+
+    if duration_ms:
+        metrics.record_latency(f"db.{table}.{operation}", duration_ms)
