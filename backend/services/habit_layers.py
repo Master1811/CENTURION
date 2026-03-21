@@ -39,13 +39,13 @@ def _base_email(content: str, preheader: str = "") -> str:
 
     <div style="max-width:560px;margin:0 auto;padding:18px;">
       <div style="background:#ffffff;border-radius:14px;overflow:hidden;">
-        <div style="background:#09090B;padding:18px 20px;color:#B8962E;font-family:Arial,Helvetica,sans-serif;font-weight:800;letter-spacing:0.06em;">
+        <div style="background:#09090B;padding:18px 20px;color:#B8962E;font-family:Georgia,'Times New Roman',serif;font-weight:800;letter-spacing:0.06em;">
           CENTURION
         </div>
-        <div style="padding:18px 20px;color:#111827;font-family:Arial,Helvetica,sans-serif;">
+        <div style="padding:18px 20px;color:#111827;font-family:Georgia,'Times New Roman',serif;">
           {content}
         </div>
-        <div style="padding:16px 20px;background:#F9FAFB;border-top:1px solid #E5E7EB;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6B7280;">
+        <div style="padding:16px 20px;background:#F9FAFB;border-top:1px solid #E5E7EB;font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#6B7280;">
           <a href="{APP_URL + '/dashboard/settings'}" style="color:#111827;text-decoration:underline;">
             Manage email preferences
           </a>
