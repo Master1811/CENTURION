@@ -63,7 +63,7 @@ const HealthSignal = ({ status }) => (
 );
 
 export const CommandCentre = () => {
-  const { getAccessToken, profile, isSaaS, isAgency } = useAuth();
+  const { getAccessToken, profile, refreshProfile, isSaaS, isAgency } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -211,18 +211,18 @@ export const CommandCentre = () => {
     );
   }
 
-  if (!profile.current_mrr) {
+  if (!profile.current_mrr && !profile.onboarding_completed) {
     return (
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <p className="text-white/50 text-sm">
           Complete your onboarding to see your revenue dashboard.
         </p>
-        <a
-          href="/dashboard/onboarding"
+        <button
+          onClick={() => setShowOnboarding(true)}
           className="px-5 py-2 rounded-xl text-sm font-medium bg-white/10 text-white hover:bg-white/20"
         >
           Complete setup →
-        </a>
+        </button>
       </div>
     );
   }
@@ -241,38 +241,44 @@ export const CommandCentre = () => {
     ...data,
     nextMilestone: data.nextMilestone || fallbackData.nextMilestone,
     healthSignals: data.healthSignals || fallbackData.healthSignals,
-    actionQueue: data.actionQueue || fallbackData.actionQueue,
+    actionQueue: Array.isArray(data.actionQueue)
+      ? data.actionQueue
+      : fallbackData.actionQueue,
     currentMRR: data.currentMRR || fallbackData.currentMRR,
     growthRate: data.growthRate || fallbackData.growthRate,
     healthScore: data.healthScore || fallbackData.healthScore,
     streak: data.streak ?? fallbackData.streak,
     aiPriority: data.aiPriority || fallbackData.aiPriority,
+    companyName: data.companyName
+      || profile?.company_name
+      || fallbackData.companyName,
   } : fallbackData;
 
-  // Additional guard: if API returned data but nextMilestone is missing/invalid, show onboarding
-  if (!displayData.nextMilestone || typeof displayData.nextMilestone !== 'object' || !displayData.nextMilestone.label) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4" data-testid="command-centre">
-        <p className="text-white/50 text-sm">
-          Complete your onboarding to see your revenue dashboard.
-        </p>
-        <button
-          onClick={() => setShowOnboarding(true)}
-          className="px-5 py-2 rounded-xl text-sm font-medium bg-white/10 text-white hover:bg-white/20"
-        >
-          Complete setup →
-        </button>
-      </div>
-    );
-  }
+  // Do not block render for missing milestone.
+  // The fallbackData already has a valid nextMilestone.
+  // If both API and fallback fail, use a safe default.
+  const safeMilestone = displayData.nextMilestone
+    || fallbackData.nextMilestone
+    || {
+        label: '₹1 Crore',
+        value: 10000000,
+        monthsAway: 24,
+        date: null,
+      };
 
   return (
     <div className="space-y-6" data-testid="command-centre">
       {/* Onboarding Modal */}
       {showOnboarding && (
         <OnboardingModal
-          onComplete={() => setShowOnboarding(false)}
-          personaOnly={!needsOnboarding && needsPersonaSelection}
+          onComplete={() => {
+            setShowOnboarding(false)
+            refreshProfile()
+          }}
+          personaOnly={
+            Boolean(profile?.onboarding_completed) &&
+            !profile?.business_model
+          }
         />
       )}
 
@@ -350,12 +356,12 @@ export const CommandCentre = () => {
                   {isSaaS ? 'Next Milestone' : 'Cash Runway'}
                 </p>
                 <p className="text-3xl font-bold text-white font-mono tabular-nums">
-                  {displayData.nextMilestone?.label ?? '—'}
+                  {safeMilestone?.label ?? '—'}
                 </p>
               </div>
               <div className="text-right">
                 <p className="font-mono text-2xl font-semibold text-white tabular-nums">
-                  {displayData.nextMilestone?.monthsAway ?? '—'}
+                  {safeMilestone?.monthsAway ?? '—'}
                 </p>
                 <p className="text-xs text-white/50">months away</p>
               </div>
@@ -364,17 +370,17 @@ export const CommandCentre = () => {
               <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((displayData.currentMRR * 12) / (displayData.nextMilestone?.value || CRORE) * 100, 100)}%` }}
+                  animate={{ width: `${Math.min((displayData.currentMRR * 12) / (safeMilestone?.value || CRORE) * 100, 100)}%` }}
                   transition={{ duration: 1, delay: 0.3 }}
                   className="h-full bg-white rounded-full"
                 />
               </div>
               <span className="text-sm text-white/70 font-mono tabular-nums">
-                {Math.round((displayData.currentMRR * 12) / (displayData.nextMilestone?.value || CRORE) * 100)}%
+                {Math.round((displayData.currentMRR * 12) / (safeMilestone?.value || CRORE) * 100)}%
               </span>
             </div>
             <p className="text-sm text-white/60 mt-4">
-              Currently at {formatCrore(displayData.currentMRR * 12)} ARR → Target {formatCrore(displayData.nextMilestone?.value || CRORE)}
+              Currently at {formatCrore(displayData.currentMRR * 12)} ARR → Target {formatCrore(safeMilestone?.value || CRORE)}
             </p>
           </CenturionCardContent>
         </CenturionCard>

@@ -100,11 +100,19 @@ def get_next_milestone(
     growth_rate: float
 ) -> Dict[str, Any]:
     """Get the next milestone and time to reach it."""
+    if not current_mrr or current_mrr <= 0:
+        return {
+            'label': '₹1 Crore',
+            'value': 10_000_000,
+            'months_away': None,
+            'date': None,
+        }
+
     projection = predict_trajectory(ProjectionInputs(
         currentMRR=current_mrr or 200000,
         growthRate=growth_rate or 0.08
     ))
-    
+
     for m in projection.milestones:
         if not m.reached and m.monthsToReach:
             return {
@@ -113,8 +121,13 @@ def get_next_milestone(
                 'date': m.date,
                 'months_away': m.monthsToReach
             }
-    
-    return None
+
+    return {
+        'label': '₹1 Crore',
+        'value': 10_000_000,
+        'months_away': None,
+        'date': None,
+    }
 
 
 # ============================================================================

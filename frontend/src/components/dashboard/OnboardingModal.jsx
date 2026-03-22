@@ -88,8 +88,9 @@ export function OnboardingModal({ onComplete, personaOnly = false }) {
 
   const handlePersonaOnlySubmit = async (model) => {
     try {
+      setLoading(true)
       const token = getAccessToken()
-      await fetch(
+      const res = await fetch(
         `${process.env.REACT_APP_BACKEND_URL}/api/user/profile`,
         {
           method: 'PUT',
@@ -100,10 +101,14 @@ export function OnboardingModal({ onComplete, personaOnly = false }) {
           body: JSON.stringify({ business_model: model }),
         }
       )
+      if (!res.ok) throw new Error('Update failed')
       await refreshProfile()
       onComplete()
     } catch (err) {
-      console.error('Persona update failed:', err)
+      console.error('[ONBOARDING] Persona save failed:', err)
+      setError('Failed to save. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
