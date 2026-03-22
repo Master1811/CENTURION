@@ -323,7 +323,23 @@ async def get_daily_pulse(user: Dict[str, Any] = Depends(require_ai)):
         user_id, 'daily_pulse'
     )
 
-    context = await context_builder.build(user_id, user.get('email', ''))
+    try:
+        context = await context_builder.build(user_id, user.get('email', ''))
+    except Exception as e:
+        # Return graceful fallback when user profile is incomplete
+        logging.warning(f"Context build failed for user {user_id}: {str(e)}")
+        from datetime import datetime
+        return DailyPulseResponse(
+            greeting="Hello there! 👋",
+            content=(
+                "It looks like we're still setting up your profile. "
+                "Once you complete onboarding, we'll provide personalized insights. "
+                "For now, here's a universal truth: Focus on your most important revenue lever today."
+            ),
+            highlights=["Profile setup in progress"],
+            action="Complete your onboarding profile",
+            generated_at=datetime.utcnow().isoformat()
+        )
 
     # Generate pulse - PASS MODEL TO AI SERVICE
     pulse, usage = await ai_service.generate_daily_pulse(
@@ -361,7 +377,23 @@ async def get_weekly_question(user: Dict[str, Any] = Depends(require_ai)):
         user_id, 'weekly_question'
     )
 
-    context = await context_builder.build(user_id, user.get('email', ''))
+    try:
+        context = await context_builder.build(user_id, user.get('email', ''))
+    except Exception as e:
+        logging.warning(f"Context build failed for {user_id}: {e}")
+        from datetime import datetime
+        return WeeklyQuestionResponse(
+            question=(
+                "What is the one constraint that, "
+                "if removed, would most accelerate "
+                "your revenue growth this quarter?"
+            ),
+            hint=(
+                "Think about people, process, "
+                "or product bottlenecks."
+            ),
+            generated_at=datetime.utcnow().isoformat(),
+        )
 
     # Generate question - PASS MODEL TO AI SERVICE
     question, usage = await ai_service.generate_weekly_question(

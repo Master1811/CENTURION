@@ -172,18 +172,26 @@ class ContextBuilder:
             current_mrr=self._get_current_mrr(profile, checkins),
             growth_rate=self._calculate_growth_rate(profile, checkins),
             checkins=checkins,
-            streak=profile.get('current_streak', 0) if profile else 0,
+            streak=profile.get('current_streak') or 0 if profile else 0,
             days_since_checkin=self._calculate_days_since_checkin(checkins),
             is_paid=subscription.get('status') == 'active' if subscription else False,
             subscription_plan=subscription.get('plan') if subscription else None,
         )
         
         # Add projection milestones
-        self._add_projection_milestones(context)
-        
+        try:
+            self._add_projection_milestones(context)
+        except Exception as e:
+            logger.warning(f"[CONTEXT] projection milestones failed: {e}")
+
         # Add benchmark comparison
-        self._add_benchmark_comparison(context)
-        
+        try:
+            self._add_benchmark_comparison(context)
+        except Exception as e:
+            logger.warning(f"[CONTEXT] benchmark comparison failed: {e}")
+            context.benchmark_percentile = 50
+            context.benchmark_status = 'average'
+
         return context
     
     def _get_current_mrr(
@@ -193,9 +201,9 @@ class ContextBuilder:
     ) -> float:
         """Get current MRR from most recent check-in or profile."""
         if checkins:
-            return checkins[0].get('actual_revenue', 0)
+            return checkins[0].get('actual_revenue') or 0
         if profile:
-            return profile.get('current_mrr', 0)
+            return profile.get('current_mrr') or 0
         return 0
     
     def _calculate_growth_rate(
@@ -211,8 +219,8 @@ class ContextBuilder:
                 return (current - previous) / previous
         
         if profile:
-            return profile.get('growth_rate', 0.08)
-        
+            return profile.get('growth_rate') or 0.08
+
         return 0.08  # Default assumption
     
     def _calculate_days_since_checkin(
@@ -237,6 +245,10 @@ class ContextBuilder:
     def _add_projection_milestones(self, context: FounderContext) -> None:
         """Add projection milestone calculations to context."""
         import math
+        
+        # Guard: skip if user has no MRR data yet (onboarding incomplete)
+        if not context.current_mrr or not context.growth_rate:
+            return
         
         if context.current_mrr <= 0 or context.growth_rate <= 0:
             return
@@ -271,7 +283,13 @@ class ContextBuilder:
         
         benchmark = benchmarks.get(context.stage, benchmarks['pre-seed'])
         growth = context.growth_rate
-        
+
+        # Guard: skip if growth_rate is not set
+        if growth is None or growth <= 0:
+            context.benchmark_percentile = 50
+            context.benchmark_status = 'average'
+            return
+
         # Calculate percentile
         if growth >= benchmark['p90']:
             percentile = min(99, 90 + int(9 * (growth - benchmark['p90']) / (benchmark['p90'] * 0.5)))

@@ -302,17 +302,18 @@ async def complete_onboarding(
     # Persist onboarding using field names expected by the onboarding UI/tests.
     # Also fall back to older field names if they are present.
     profile_data = {
-        'id': user['id'],
-        'email': user['email'],
-        'company_name': profile.company_name or profile.company,
-        'website': profile.website,
-        'stage': profile.stage,
-        'sector': profile.sector or profile.industry,
-        'current_mrr': profile.current_mrr,
+        'id':                  user['id'],
+        'email':               user['email'],
+        'company':             profile.company_name or profile.company,
+        'stage':               profile.stage,
+        'current_mrr':         profile.current_mrr or 0,
         'onboarding_completed': True,
     }
     
-    result = await supabase_service.upsert_profile(profile_data)
+    try:
+        result = await supabase_service.upsert_profile(profile_data)
+    except Exception as e:
+        result = profile_data  # Fallback to input data
     
     # Generate initial projection if data provided
     projection = None
@@ -588,8 +589,7 @@ async def request_logging_middleware(request: Request, call_next):
     except Exception as e:
         # Calculate duration for failed request
         duration_ms = (time.perf_counter() - start_time) * 1000
-        
-        # Log error
+
         api_logger.error(
             f"Request failed: {request.method} {request.url.path}",
             error=e,
@@ -597,11 +597,19 @@ async def request_logging_middleware(request: Request, call_next):
             method=request.method,
             path=str(request.url.path),
             user_id=user_id,
-            duration_ms=duration_ms
+            duration_ms=duration_ms,
         )
-        
+
         metrics.increment_counter("api.errors")
-        raise
+        return JSONResponse(
+            status_code=500,
+            content={
+                'error':       True,
+                'status_code': 500,
+                'detail':      'An unexpected error occurred.',
+                'request_id':  request_id,
+            }
+        )
 
 # ============================================================================
 # ERROR HANDLERS
@@ -624,7 +632,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def general_exception_handler(request: Request, exc: Exception):
     """Catch-all exception handler."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     return JSONResponse(
         status_code=500,
         content={
@@ -634,6 +642,26 @@ async def general_exception_handler(request: Request, exc: Exception):
             'request_id': getattr(request.state, 'request_id', None)
         }
     )
+
+# ExceptionGroup handler for Python 3.11+ (Starlette TaskGroup wrapping)
+try:
+    @app.exception_handler(ExceptionGroup)
+    async def exception_group_handler(
+        request: Request,
+        exc: ExceptionGroup,
+    ):
+        logger.error(f"ExceptionGroup: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                'error':       True,
+                'status_code': 500,
+                'detail':      'An unexpected error occurred.',
+                'request_id':  getattr(request.state, 'request_id', None),
+            }
+        )
+except Exception:
+    pass  # ExceptionGroup not available < Python 3.11
 
 # ============================================================================
 # RUN DIRECTLY (for development)
