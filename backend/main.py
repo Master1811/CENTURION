@@ -184,10 +184,12 @@ frontend_url = os.getenv("FRONTEND_URL", "")
 if frontend_url:
     ALLOWED_ORIGINS.append(frontend_url)
 
-# Hardcode the current Codespace URL
-ALLOWED_ORIGINS.append(
-    "https://cuddly-space-waffle-4j4gg75j69pj2jxgw-3000.app.github.dev"
-)
+# Support comma-separated list of additional origins (e.g. Codespace URLs)
+additional = os.getenv("ADDITIONAL_CORS_ORIGINS", "")
+if additional:
+    ALLOWED_ORIGINS.extend(
+        [u.strip() for u in additional.split(",") if u.strip()]
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -302,11 +304,15 @@ async def complete_onboarding(
     # Persist onboarding using field names expected by the onboarding UI/tests.
     # Also fall back to older field names if they are present.
     profile_data = {
-        'id':                  user['id'],
-        'email':               user['email'],
-        'company':             profile.company_name or profile.company,
-        'stage':               profile.stage,
-        'current_mrr':         profile.current_mrr or 0,
+        'id':                   user['id'],
+        'email':                user['email'],
+        'company':              profile.company_name or profile.company,
+        'company_name':         profile.company_name or profile.company,
+        'stage':                profile.stage,
+        'sector':               profile.sector or profile.industry,
+        'current_mrr':          profile.current_mrr or 0,
+        'growth_rate':          profile.growth_rate or 0.08,
+        'business_model':       profile.business_model,
         'onboarding_completed': True,
     }
     
