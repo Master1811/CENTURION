@@ -222,17 +222,21 @@ export const AuthProvider = ({ children }) => {
     // Clear Sentry user context
     clearUserContext();
     addBreadcrumb('User signed out', 'auth', 'info');
-    
+
     if (!isSupabaseConfigured()) {
       setUser(null);
       setSession(null);
       setProfile(null);
       setSubscription(null);
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('centurion_gate_dismissed');
       return;
     }
 
     try {
       await supabase.auth.signOut();
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('centurion_gate_dismissed');
       setUser(null);
       setSession(null);
       setProfile(null);
@@ -265,6 +269,12 @@ export const AuthProvider = ({ children }) => {
 
     return Boolean(isActivePaid);
   };
+
+  // Computed: Persona / business model
+  const businessModel = profile?.business_model ?? null;
+  const isSaaS    = businessModel === 'saas';
+  const isAgency  = businessModel === 'agency';
+  const hasPersona = businessModel !== null;
 
   // Computed: Beta user check (active status AND not expired)
   const isBetaUser = Boolean(
@@ -319,6 +329,12 @@ export const AuthProvider = ({ children }) => {
     hasPaidSubscription: paidSubscription,
     canAccessDashboard,
     isPaid: paidSubscription,
+
+    // Computed - persona
+    businessModel,
+    isSaaS,
+    isAgency,
+    hasPersona,
   };
 
   return (

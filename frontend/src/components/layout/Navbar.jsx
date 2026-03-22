@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent, LogOut, User, LayoutDashboard, Settings } from 'lucide-react';
+import { Menu, X, ChevronDown, Calculator, TrendingUp, Clock, Percent, FileText, LogOut, User, LayoutDashboard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copy } from '@/lib/copy';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +18,7 @@ const toolsItems = [
   { label: copy.tools.arr.name, description: copy.tools.arr.description, href: '/tools/arr-calculator', icon: TrendingUp },
   { label: copy.tools.runway.name, description: copy.tools.runway.description, href: '/tools/runway-calculator', icon: Clock },
   { label: copy.tools.revenueGrowth.name, description: copy.tools.revenueGrowth.description, href: '/tools/growth-calculator', icon: Percent },
+  { label: 'Invoice Health Calculator', description: 'See your collections risk score instantly', href: '/tools/invoice-health-calculator', icon: FileText },
 ];
 
 // Which pages use dark theme

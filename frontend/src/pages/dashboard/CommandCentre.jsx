@@ -63,7 +63,7 @@ const HealthSignal = ({ status }) => (
 );
 
 export const CommandCentre = () => {
-  const { getAccessToken, profile } = useAuth();
+  const { getAccessToken, profile, isSaaS, isAgency } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -111,18 +111,23 @@ export const CommandCentre = () => {
     loadData();
   }, [loadData]);
 
+  // Hoisted — used in both the effect and JSX
+  const needsOnboarding = Boolean(
+    !profile?.company_name ||
+    !profile?.onboarding_completed
+  );
+  const needsPersonaSelection = Boolean(
+    profile && !profile.business_model
+  );
+  const shouldShowOnboarding = needsOnboarding || needsPersonaSelection;
+
   // Check if user needs onboarding
   useEffect(() => {
     if (!profile) return;
-    // Show onboarding if company is not set and onboarding has not been completed
-    const needsOnboarding = (
-      !profile.company_name &&
-      !profile.onboarding_completed
-    );
-    if (needsOnboarding) {
+    if (shouldShowOnboarding) {
       setShowOnboarding(true);
     }
-  }, [profile]);
+  }, [profile, shouldShowOnboarding]);
 
   // Fetch daily pulse
   useEffect(() => {
@@ -267,6 +272,7 @@ export const CommandCentre = () => {
       {showOnboarding && (
         <OnboardingModal
           onComplete={() => setShowOnboarding(false)}
+          personaOnly={!needsOnboarding && needsPersonaSelection}
         />
       )}
 
@@ -274,7 +280,7 @@ export const CommandCentre = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title text-[#09090B] mb-1">
-            {copy.dashboard.commandCentre.title}
+            {isSaaS ? 'Command Centre' : 'Business Overview'}
           </h1>
           <p className="type-body text-[#52525B]">
             {copy.dashboard.commandCentre.subtitle}
@@ -322,7 +328,7 @@ export const CommandCentre = () => {
             data-testid="checkin-button"
           >
             <Plus className="w-4 h-4" strokeWidth={1.5} />
-            Monthly Check-in
+            {isSaaS ? 'Monthly Check-in' : 'Update Cash Position'}
           </motion.button>
         </div>
       </div>
@@ -341,7 +347,7 @@ export const CommandCentre = () => {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <p className="text-xs uppercase tracking-wider text-white/50 mb-1">
-                  {copy.dashboard.commandCentre.milestoneCountdown}
+                  {isSaaS ? 'Next Milestone' : 'Cash Runway'}
                 </p>
                 <p className="text-3xl font-bold text-white font-mono tabular-nums">
                   {displayData.nextMilestone?.label ?? '—'}
@@ -428,7 +434,7 @@ export const CommandCentre = () => {
             </div>
             <div>
               <p className="text-xs uppercase tracking-wider text-[#A1A1AA] mb-2">
-                {copy.dashboard.commandCentre.aiPriority}
+                {isSaaS ? 'AI Growth Priority' : 'AI Collections Priority'}
               </p>
               <p className="text-sm text-[#09090B] leading-relaxed">
                 {displayData.aiPriority}
@@ -531,7 +537,7 @@ export const CommandCentre = () => {
             <CenturionCardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#71717A] mb-1">Current MRR</p>
+                  <p className="text-xs text-[#71717A] mb-1">{isSaaS ? 'Current MRR' : 'Monthly Revenue'}</p>
                   <p className="font-mono text-xl font-bold text-[#09090B] tabular-nums">
                     {formatCrore(displayData.currentMRR)}
                   </p>

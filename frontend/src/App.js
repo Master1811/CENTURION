@@ -14,6 +14,7 @@ import HundredCrCalculator from "@/pages/tools/HundredCrCalculator";
 import ARRCalculator from "@/pages/tools/ARRCalculator";
 import RunwayCalculator from "@/pages/tools/RunwayCalculator";
 import GrowthCalculator from "@/pages/tools/GrowthCalculator";
+import InvoiceHealthCalculator from "@/pages/tools/InvoiceHealthCalculator";
 import PricingPage from "@/pages/PricingPage";
 import AuthCallback from "@/pages/AuthCallback";
 import CheckoutPage from "@/pages/CheckoutPage";
@@ -34,6 +35,9 @@ import GoalArchitecture from "@/pages/dashboard/GoalArchitecture";
 import InvestorRelations from "@/pages/dashboard/InvestorRelations";
 import Connectors from "@/pages/dashboard/Connectors";
 import Settings from "@/pages/dashboard/Settings";
+import CashFlowRadar from "@/pages/dashboard/CashFlowRadar";
+import ARAgingDashboard from "@/pages/dashboard/ARAgingDashboard";
+import Collections from "@/pages/dashboard/Collections";
 
 // Preview Pages (for screenshots - no auth)
 import {
@@ -65,6 +69,7 @@ function AnimatedRoutes() {
         <Route path="/tools/arr-calculator" element={<PageTransition><ARRCalculator /></PageTransition>} />
         <Route path="/tools/runway-calculator" element={<PageTransition><RunwayCalculator /></PageTransition>} />
         <Route path="/tools/growth-calculator" element={<PageTransition><GrowthCalculator /></PageTransition>} />
+        <Route path="/tools/invoice-health-calculator" element={<PageTransition><InvoiceHealthCalculator /></PageTransition>} />
         
         {/* Preview routes (for screenshots - no auth) */}
         <Route path="/preview/command-centre" element={<PreviewCommandCentre />} />
@@ -92,6 +97,9 @@ function AnimatedRoutes() {
           <Route path="investors" element={<InvestorRelations />} />
           <Route path="connectors" element={<Connectors />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="cashflow" element={<CashFlowRadar />} />
+          <Route path="ar-aging" element={<ARAgingDashboard />} />
+          <Route path="collections" element={<Collections />} />
         </Route>
 
         {/* Checkout (Protected) */}

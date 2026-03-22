@@ -1,12 +1,17 @@
 // OnboardingModal Component
 // ==========================
-// 3-step onboarding flow for new users
-// Collects company info, stage/sector, and current MRR
+// 4-step onboarding flow for new users
+// Step 0: Persona (SaaS vs Agency)
+// Step 1: Company name + website
+// Step 2: Stage + sector
+// Step 3: Current MRR
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { TrendingUp, Briefcase } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { submitOnboarding } from '@/lib/api/dashboard'
+import { cn } from '@/lib/utils'
 
 const STAGES = [
   { value: 'pre-seed', label: 'Pre-seed' },
@@ -41,9 +46,10 @@ const stepVariants = {
   },
 }
 
-export function OnboardingModal({ onComplete }) {
+export function OnboardingModal({ onComplete, personaOnly = false }) {
   const { getAccessToken, refreshProfile } = useAuth()
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0)
+  const [businessModel, setBusinessModel] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [data, setData] = useState({
@@ -68,6 +74,7 @@ export function OnboardingModal({ onComplete }) {
         stage: data.stage,
         sector: data.sector,
         current_mrr: data.current_mrr,
+        business_model: businessModel,
       })
       await refreshProfile()
       onComplete()
@@ -76,6 +83,36 @@ export function OnboardingModal({ onComplete }) {
         'Something went wrong. Please try again.'
       )
       setLoading(false)
+    }
+  }
+
+  const handlePersonaOnlySubmit = async (model) => {
+    try {
+      const token = getAccessToken()
+      await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/user/profile`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ business_model: model }),
+        }
+      )
+      await refreshProfile()
+      onComplete()
+    } catch (err) {
+      console.error('Persona update failed:', err)
+    }
+  }
+
+  const handlePersonaSelect = (model) => {
+    setBusinessModel(model)
+    if (personaOnly) {
+      handlePersonaOnlySubmit(model)
+    } else {
+      setStep(1)
     }
   }
 
@@ -89,7 +126,7 @@ export function OnboardingModal({ onComplete }) {
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="glass-modal w-full max-w-md overflow-hidden"
       >
-        {/* Progress bar */}
+        {/* Progress bar — 3 segments for steps 1-3 */}
         <div className="flex">
           {[1, 2, 3].map(s => (
             <div
@@ -106,6 +143,71 @@ export function OnboardingModal({ onComplete }) {
 
         <div className="p-8">
           <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="step0"
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
+                <p className="text-xs font-medium uppercase tracking-widest text-zinc-400 mb-1">
+                  Let's personalise your experience
+                </p>
+                <h2 className="font-heading text-xl font-bold text-[#09090B] mb-1">
+                  What best describes your business?
+                </h2>
+
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  <button
+                    onClick={() => handlePersonaSelect('saas')}
+                    className={cn(
+                      'flex flex-col items-center gap-3',
+                      'p-6 rounded-2xl border-2 text-left',
+                      'transition-all duration-200',
+                      businessModel === 'saas'
+                        ? 'border-[#09090B] bg-[#09090B] text-white'
+                        : 'border-[#E4E4E7] hover:border-[#09090B]'
+                    )}
+                  >
+                    <TrendingUp className="w-8 h-8" />
+                    <div>
+                      <p className="font-semibold text-sm">
+                        SaaS / Tech Startup
+                      </p>
+                      <p className="text-xs opacity-70 mt-1">
+                        I track MRR, ARR, and growth milestones.
+                        I report to investors.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handlePersonaSelect('agency')}
+                    className={cn(
+                      'flex flex-col items-center gap-3',
+                      'p-6 rounded-2xl border-2 text-left',
+                      'transition-all duration-200',
+                      businessModel === 'agency'
+                        ? 'border-[#09090B] bg-[#09090B] text-white'
+                        : 'border-[#E4E4E7] hover:border-[#09090B]'
+                    )}
+                  >
+                    <Briefcase className="w-8 h-8" />
+                    <div>
+                      <p className="font-semibold text-sm">
+                        Agency / Business
+                      </p>
+                      <p className="text-xs opacity-70 mt-1">
+                        I manage client invoices, cash flow,
+                        and collections.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -299,4 +401,3 @@ export function OnboardingModal({ onComplete }) {
 }
 
 export default OnboardingModal
-
