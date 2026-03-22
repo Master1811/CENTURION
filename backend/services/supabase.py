@@ -478,7 +478,76 @@ class SupabaseService:
         
         response = self._client.table('ai_usage_log').select('id', count='exact').eq('user_id', user_id).eq('feature', feature).gte('created_at', start.isoformat()).execute()
         return response.count or 0
-    
+
+    async def get_monthly_ai_spend(
+        self,
+        user_id: str,
+    ) -> float:
+        """
+        Returns total AI spend in INR for the
+        current calendar month for a user.
+        Queries ai_usage_log table.
+        Returns 0.0 if no records found.
+        """
+        if not self.is_configured:
+            return 0.0
+
+        try:
+            now = datetime.now(timezone.utc)
+            month_start = now.replace(
+                day=1, hour=0, minute=0,
+                second=0, microsecond=0,
+            ).isoformat()
+
+            result = self._client\
+                .table('ai_usage_log')\
+                .select('cost_inr')\
+                .eq('user_id', user_id)\
+                .gte('created_at', month_start)\
+                .execute()
+
+            if not result.data:
+                return 0.0
+
+            total = sum(
+                float(row.get('cost_inr') or 0)
+                for row in result.data
+            )
+            return round(total, 4)
+        except Exception as e:
+            logger.warning(f"get_monthly_ai_spend failed: {e}")
+            return 0.0
+
+    async def record_ai_transaction(
+        self,
+        record: dict,
+    ) -> None:
+        """
+        Records one AI API call to ai_usage_log.
+        record dict must have:
+          user_id, feature, model,
+          input_tokens, output_tokens, cost_inr
+        """
+        if not self.is_configured:
+            return
+
+        try:
+            payload = {
+                'user_id':       record.get('user_id'),
+                'feature':       record.get('feature'),
+                'model':         record.get('model'),
+                'input_tokens':  record.get('input_tokens', 0),
+                'output_tokens': record.get('output_tokens', 0),
+                'cost_inr':      record.get('cost_inr', 0),
+                'created_at':    datetime.now(timezone.utc).isoformat(),
+            }
+            self._client\
+                .table('ai_usage_log')\
+                .insert(payload)\
+                .execute()
+        except Exception as e:
+            logger.warning(f"record_ai_transaction failed: {e}")
+
     # =========================================================================
     # BENCHMARK CONTRIBUTIONS TABLE
     # =========================================================================

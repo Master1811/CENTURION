@@ -58,8 +58,8 @@ class RateLimitConfig:
         'investor_narrator': {'limit': 2,   'window': 'month'},
         'what_if_story':     {'limit': 20,  'window': 'month'},
         'checkin_interpret': {'limit': 3,   'window': 'month'},
-        'daily_pulse':       {'limit': -1,  'window': 'none'},   # Unlimited
-        'weekly_question':   {'limit': -1,  'window': 'none'},   # Unlimited
+        'daily_pulse':       {'limit': 60,  'window': 'day'},
+        'weekly_question':   {'limit': 7,   'window': 'day'},
     }
     
     # Connector limits (paid users only)
