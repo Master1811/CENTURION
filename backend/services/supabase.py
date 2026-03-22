@@ -134,6 +134,22 @@ class SupabaseService:
         response = self._client.table('profiles').upsert(profile_data).execute()
         return response.data[0] if response.data else profile_data
     
+    async def update_business_model(
+        self,
+        user_id: str,
+        business_model: str,
+    ) -> dict:
+        if business_model not in ('saas', 'agency'):
+            raise ValueError(
+                f"Invalid: {business_model}"
+            )
+        result = self._client\
+            .table('profiles')\
+            .update({'business_model': business_model})\
+            .eq('id', user_id)\
+            .execute()
+        return result.data
+
     async def update_profile(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update specific fields on a user profile.
