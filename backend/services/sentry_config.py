@@ -85,11 +85,15 @@ def before_send_transaction(event, hint):
 def init_sentry():
     """
     Initialize Sentry SDK with proper configuration.
-    
+
     Should be called before creating the FastAPI app.
     """
     if not SENTRY_DSN:
-        logger.warning("SENTRY_DSN not configured - Sentry disabled")
+        logger.warning(
+            "SENTRY_DSN not configured — no error alerting active. "
+            "Set SENTRY_DSN to enable alerts. "
+            "Get a free DSN at https://sentry.io (takes ~5 min; gives instant Slack/email on every 500 error)."
+        )
         return False
     
     try:
