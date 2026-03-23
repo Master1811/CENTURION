@@ -54,6 +54,7 @@ from services.ai_cost_control import ai_cost_controller
 
 import os
 from anthropic import Anthropic
+import services.kill_switches as ks
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 AI_ENABLED = bool(ANTHROPIC_API_KEY and ANTHROPIC_API_KEY != "sk-ant-xxxxxxxxxxxx")
@@ -75,9 +76,13 @@ router = APIRouter(prefix="/ai", tags=["AI Coach"])
 
 async def require_ai(user: Dict[str, Any] = Depends(require_paid_subscription)):
     """
-    Dependency that checks AI is configured.
-    Returns mock response hint if not.
+    Dependency that checks AI is configured and kill switches are off.
     """
+    if ks.AI_KILL_SWITCH:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI features are temporarily disabled. Please try again later.",
+        )
     if not AI_ENABLED:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -88,6 +93,18 @@ async def require_ai(user: Dict[str, Any] = Depends(require_paid_subscription)):
             }
         )
     return user
+
+
+def require_ai_feature(feature: str):
+    """Dependency factory that also checks a per-feature kill switch."""
+    async def _dep(user: Dict[str, Any] = Depends(require_ai)):
+        if ks.FEATURE_KILL_SWITCHES.get(feature):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"The {feature.replace('_', ' ')} feature is temporarily disabled.",
+            )
+        return user
+    return _dep
 
 
 # ============================================================================

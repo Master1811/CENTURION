@@ -95,6 +95,7 @@ from services.scheduler import (
     get_scheduler,
 )
 from services.validation import sanitize_text
+import services.kill_switches as ks
 from models import (
     UserProfile,
     MagicLinkRequest,
@@ -299,6 +300,11 @@ async def complete_onboarding(
     user: Dict[str, Any] = Depends(require_auth)
 ):
     """Complete user onboarding."""
+    if ks.SIGNUPS_DISABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=ks.SIGNUPS_DISABLED_MESSAGE,
+        )
     from routers.engine import predict_trajectory
     
     # Persist onboarding using field names expected by the onboarding UI/tests.
@@ -523,6 +529,21 @@ app.include_router(
 # ============================================================================
 # MIDDLEWARE
 # ============================================================================
+
+@app.middleware("http")
+async def maintenance_mode_middleware(request: Request, call_next):
+    """Return 503 for all non-admin paths when maintenance mode is active."""
+    if ks.MAINTENANCE_MODE and not request.url.path.startswith("/api/admin"):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": True,
+                "maintenance": True,
+                "message": ks.MAINTENANCE_MESSAGE,
+            },
+        )
+    return await call_next(request)
+
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):

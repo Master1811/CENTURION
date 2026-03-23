@@ -403,28 +403,45 @@ async def require_auth(
 ) -> Dict[str, Any]:
     """
     FastAPI dependency that requires valid authentication.
-    
+
     Use this for protected endpoints that should reject unauthenticated requests.
-    
-    Example:
-        @router.get("/profile")
-        async def get_profile(user: Dict = Depends(require_auth)):
-            return {"user_id": user['id']}
-    
+
     Returns:
         User info dict
-        
+
     Raises:
         HTTPException: 401 if not authenticated
+        HTTPException: 403 if account is disabled
     """
     payload = await verify_jwt_token(credentials.credentials)
-    
-    return {
+
+    user = {
         'id': payload.get('sub'),
         'email': payload.get('email'),
         'role': payload.get('role'),
         'metadata': payload.get('user_metadata', {})
     }
+
+    # Check if the account has been disabled by an admin
+    if supabase_service.is_configured:
+        try:
+            profile = supabase_service._client \
+                .table('profiles') \
+                .select('disabled') \
+                .eq('id', user['id']) \
+                .single() \
+                .execute()
+            if profile.data and profile.data.get('disabled'):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account has been disabled. Contact support."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Do not block auth if the check itself fails
+
+    return user
 
 
 async def require_paid_subscription(
