@@ -71,9 +71,9 @@ def calculate_revenue_at_month(current_mrr: float, growth_rate: float, months: i
     Returns:
         Projected monthly revenue at the specified month
     """
-    if current_mrr <= 0 or growth_rate < 0:
-        return current_mrr
-    return current_mrr * math.pow(1 + growth_rate, months)
+    if (current_mrr or 0) <= 0 or growth_rate < 0:
+        return current_mrr or 0
+    return (current_mrr or 0) * math.pow(1 + growth_rate, months)
 
 
 def find_milestone_month(
@@ -127,7 +127,7 @@ def predict_trajectory(inputs: ProjectionInputs) -> ProjectionResult:
     3. Returns structured result for visualization
     """
     now = datetime.now(timezone.utc)
-    current_arr = inputs.currentMRR * 12
+    current_arr = (inputs.currentMRR or 0) * 12
     
     # Calculate all milestone dates
     milestones = []

@@ -113,7 +113,7 @@ export const CommandCentre = () => {
 
   // Hoisted — used in both the effect and JSX
   const needsOnboarding = Boolean(
-    !profile?.company_name ||
+    !profile?.company ||
     !profile?.onboarding_completed
   );
   const needsPersonaSelection = Boolean(
@@ -199,6 +199,25 @@ export const CommandCentre = () => {
   // Tour state
   const { isOpen: tourOpen, endTour, resetTour } = useTour('dashboard');
 
+  // ── ONBOARDING MODAL ─────────────────────────────────────
+  // MUST be before any early returns or modal never shows.
+  // if (!profile) returns early and modal JSX is never reached.
+  if (showOnboarding) {
+    return (
+      <OnboardingModal
+        onComplete={() => {
+          setShowOnboarding(false)
+          refreshProfile()
+        }}
+        personaOnly={
+          Boolean(profile?.onboarding_completed) &&
+          !profile?.business_model
+        }
+      />
+    )
+  }
+  // ─────────────────────────────────────────────────────────
+
   // ── NULL GUARD ──────────────────────────────────────
   // Add this AFTER all hooks, BEFORE any other logic
   if (!profile) {
@@ -269,18 +288,7 @@ export const CommandCentre = () => {
   return (
     <div className="space-y-6" data-testid="command-centre">
       {/* Onboarding Modal */}
-      {showOnboarding && (
-        <OnboardingModal
-          onComplete={() => {
-            setShowOnboarding(false)
-            refreshProfile()
-          }}
-          personaOnly={
-            Boolean(profile?.onboarding_completed) &&
-            !profile?.business_model
-          }
-        />
-      )}
+      {/* MOVED TO EARLY RETURN ABOVE - MODAL NOW SHOWS BEFORE ANY EARLY RETURNS */}
 
       {/* Header with Sync Indicator */}
       <div className="flex items-center justify-between">

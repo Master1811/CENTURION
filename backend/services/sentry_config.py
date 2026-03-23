@@ -101,15 +101,24 @@ def init_sentry():
         
         sentry_sdk.init(
             dsn=SENTRY_DSN,
-            
+
             # Environment and release tracking
             environment=ENVIRONMENT,
             release=f"centurion-backend@{RELEASE_VERSION}",
-            
-            # Performance monitoring
+
+            # Privacy — request headers, IP, user context
+            send_default_pii=SEND_DEFAULT_PII,
+
+            # Logging integration — sends logs as Sentry events
+            # enable_logs=True,
+
+            # Tracing
             traces_sample_rate=TRACES_SAMPLE_RATE,
-            profiles_sample_rate=PROFILES_SAMPLE_RATE,
-            
+
+            # Profiling
+            # profile_session_sample_rate=PROFILES_SAMPLE_RATE,
+            # profile_lifecycle="trace",
+
             # Integrations
             integrations=[
                 FastApiIntegration(
@@ -126,17 +135,16 @@ def init_sentry():
                 ),
                 AsyncioIntegration(),
             ],
-            
-            # Privacy and security
-            send_default_pii=SEND_DEFAULT_PII,
+
+            # Filters
             before_send=before_send,
             before_send_transaction=before_send_transaction,
-            
+
             # Additional options
             attach_stacktrace=True,
             include_local_variables=ENVIRONMENT == 'development',
             max_breadcrumbs=50,
-            
+
             # Ignore common benign errors
             ignore_errors=[
                 KeyboardInterrupt,

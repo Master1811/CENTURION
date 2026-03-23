@@ -41,6 +41,7 @@ class UserProfile(BaseModel):
     growth_rate: Optional[float] = Field(None, ge=-1, le=2.0)
     industry: Optional[str] = Field(None, max_length=50, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
     sector: Optional[Literal['B2B SaaS', 'D2C', 'EdTech', 'FinTech', 'HealthTech', 'Other']] = None
+    business_model: Optional[str] = Field(None, max_length=50, pattern=r"^[A-Za-z0-9\s\-&\.,'()]+$")
     team_size: Optional[int] = Field(None, ge=1)
     phone: Optional[str] = Field(None, max_length=20, pattern=r"^[0-9+\-\s]{7,20}$")
     timezone: Optional[str] = Field(None, max_length=50, pattern=r"^[A-Za-z0-9_+\-/]{1,50}$")
