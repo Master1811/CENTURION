@@ -1,8 +1,20 @@
 # 100Cr Engine — Comprehensive Technical Guide
 
-**Last Updated:** March 22, 2026
-**Version:** 5.0.0 — Hybrid Architecture (SaaS + Agency Persona Routing)
+**Last Updated:** March 24, 2026
+**Version:** 5.1.0 — Hybrid Architecture (SaaS + Agency Persona Routing)
 **Status:** Production Ready
+
+---
+
+## Related Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Next.js 15 Production Migration Guide](./NEXTJS_15_PRODUCTION_MIGRATION_GUIDE.md) | Complete migration guide to Next.js 15 with App Router |
+| [Next.js 15 Migration Checklist](./NEXTJS_15_MIGRATION_CHECKLIST.md) | Step-by-step implementation checklist |
+| [Beta Launch Checklist](./BETA_LAUNCH_CHECKLIST.md) | Beta waitlist and launch strategy |
+| [Project Summary Guide](./PROJECT_SUMMARY_GUIDE.md) | Executive overview of the platform |
+| [Local Setup Guide](./local_setup_guide.md) | Developer setup instructions |
 
 ---
 
@@ -26,6 +38,7 @@
 16. [Habit Engine](#16-habit-engine)
 17. [Environment Configuration](#17-environment-configuration)
 18. [Known Issues & Fixes](#18-known-issues--fixes)
+19. [Next.js 15 Migration](#19-nextjs-15-migration)
 
 ---
 
@@ -1329,7 +1342,90 @@ ORDER BY created_at DESC;
 
 ---
 
+## 19. Next.js 15 Migration
+
+### 19.1 Migration Overview
+
+The 100Cr Engine is migrating from CRA + React Router to Next.js 15 with App Router. This migration brings:
+
+- **Performance**: React Server Components, streaming, Turbopack
+- **Security**: Middleware-based auth, server-only code isolation
+- **AI Capabilities**: Server Actions for AI streaming responses
+- **SEO**: Built-in metadata API, automatic sitemap generation
+
+### 19.2 Key Architecture Changes
+
+| Aspect | Current (CRA) | Target (Next.js 15) |
+|--------|---------------|---------------------|
+| Router | react-router-dom v6 | Next.js App Router |
+| Bundler | Webpack via CRA | Turbopack (dev) |
+| SSR | None (client-only) | Hybrid (RSC + Client) |
+| Auth | Client-side only | Middleware + Server |
+| API Calls | Client fetch only | Server + Client |
+
+### 19.3 Directory Structure (Next.js)
+
+```
+frontend-next/src/
+├── app/
+│   ├── (public)/          # Public routes (landing, pricing, tools)
+│   ├── (auth)/            # Auth routes (callback, checkout)
+│   ├── (protected)/       # Dashboard & admin routes
+│   ├── layout.tsx         # Root layout
+│   ├── globals.css        # Global styles
+│   └── providers.tsx      # Client providers
+├── components/            # Migrated components
+├── lib/
+│   ├── api/              # Server + Client API clients
+│   └── supabase/         # Supabase SSR clients
+├── context/              # Auth context
+├── hooks/                # React Query hooks
+└── middleware.ts         # Auth middleware
+```
+
+### 19.4 Frontend ↔ Backend Integration
+
+The backend remains unchanged. Frontend API integration uses:
+
+| Context | API Client | Usage |
+|---------|------------|-------|
+| Server Component | `serverFetch()` | Initial data loading |
+| Client Component | `clientFetch()` | User interactions |
+| Server Action | `serverFetch()` | Form submissions, AI generation |
+
+### 19.5 Migration Documents
+
+For complete migration instructions, see:
+
+1. **[NEXTJS_15_PRODUCTION_MIGRATION_GUIDE.md](./NEXTJS_15_PRODUCTION_MIGRATION_GUIDE.md)**
+   - Complete technical guide
+   - Phase-by-phase implementation plan
+   - Frontend-backend integration map
+   - Security hardening
+   - Performance optimizations
+
+2. **[NEXTJS_15_MIGRATION_CHECKLIST.md](./NEXTJS_15_MIGRATION_CHECKLIST.md)**
+   - Day-by-day task breakdown
+   - Verification checkpoints
+   - API integration testing checklist
+   - Deployment procedures
+
+### 19.6 Migration Timeline
+
+| Phase | Duration | Focus |
+|-------|----------|-------|
+| A | Day 1 | Project setup, styles |
+| B | Day 1-2 | Auth foundation |
+| C | Day 2-3 | API layer |
+| D | Day 3-5 | Public routes |
+| E | Day 5-7 | Dashboard routes |
+| F | Day 7-8 | Admin & payments |
+| G | Day 8-9 | AI features |
+| H | Day 9-10 | Testing & deployment |
+
+---
+
 **End of Comprehensive Guide**
 
-*Last updated: March 22, 2026*
-*Version: 5.0.0 — Hybrid Architecture*
+*Last updated: March 24, 2026*
+*Version: 5.1.0 — Hybrid Architecture + Next.js 15 Migration*
