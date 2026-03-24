@@ -37,6 +37,11 @@ let webpackConfig = {
       '@': path.resolve(__dirname, 'src'),
     },
     configure: (webpackConfig) => {
+      // Remove ForkTsCheckerWebpackPlugin — JS-only project; the plugin's nested
+      // ajv-keywords@3 crashes under the hoisted ajv@8 required by schema-utils@3.
+      webpackConfig.plugins = webpackConfig.plugins.filter(
+        (p) => p.constructor.name !== 'ForkTsCheckerWebpackPlugin'
+      );
 
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {
