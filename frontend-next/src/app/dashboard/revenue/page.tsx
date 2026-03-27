@@ -52,7 +52,7 @@ export default function RevenueIntelligencePage() {
       await submitCheckIn.mutateAsync({
         month: checkInMonth,
         actual_revenue: checkInRevenue,
-        notes: checkInNotes,
+        note: checkInNotes,
       });
       toast.success('Check-in submitted successfully!');
       setCheckInNotes('');
@@ -234,7 +234,7 @@ export default function RevenueIntelligencePage() {
                 <div key={checkin.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
                   <div>
                     <p className="text-white font-medium">{checkin.month}</p>
-                    {checkin.notes && <p className="text-sm text-white/50">{checkin.notes}</p>}
+                    {checkin.note && <p className="text-sm text-white/50">{checkin.note}</p>}
                   </div>
                   <p className="text-cyan-400 font-semibold tabular-nums">
                     {formatCurrency(checkin.actual_revenue, true)}
@@ -248,6 +248,8 @@ export default function RevenueIntelligencePage() {
     </div>
   );
 }
+
+
 
 
 

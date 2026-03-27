@@ -157,14 +157,14 @@ export async function fetchRevenueIntelligence(): Promise<RevenueIntelligence> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function submitCheckIn(data: CheckInSubmission): Promise<{ success: boolean; streak_count: number }> {
-  return clientFetch('/api/checkin', {
+  return clientFetch('/api/dashboard/checkin', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function fetchCheckIns(): Promise<{ checkins: CheckIn[] }> {
-  return clientFetch<{ checkins: CheckIn[] }>('/api/checkins');
+  return clientFetch<{ checkins: CheckIn[] }>('/api/dashboard/checkins');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { CreditCard, Shield, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { CreditCard, Shield, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCreateRazorpayOrder } from '@/hooks/useApi';
 import { CenturionCard, CenturionCardContent } from '@/components/ui/CenturionCard';
@@ -181,4 +180,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
 

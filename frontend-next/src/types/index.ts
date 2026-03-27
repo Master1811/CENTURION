@@ -66,14 +66,16 @@ export interface CheckIn {
   user_id: string;
   month: string; // YYYY-MM format
   actual_revenue: number;
-  notes?: string;
+  note?: string;
+  source?: string;
   created_at: string;
 }
 
 export interface CheckInSubmission {
   month: string;
   actual_revenue: number;
-  notes?: string;
+  note?: string;
+  source?: string;
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -196,12 +198,19 @@ export interface BenchmarkComparison {
 // ── AI Features ────────────────────────────────────────────────────────────
 
 export interface DailyPulse {
-  question: string;
-  context?: string;
+  greeting: string;
+  content: string;
+  highlights?: string[];
+  action?: string;
+  generated_at: string;
+  // Legacy field for backward compatibility
+  question?: string;
 }
 
 export interface WeeklyQuestion {
   question: string;
+  hint: string;
+  generated_at: string;
 }
 
 export interface BoardReport {
@@ -221,14 +230,18 @@ export interface DeviationAnalysis {
 }
 
 export interface AIUsageStats {
-  monthlySpend: number;
-  monthlyLimit: number;
-  features: {
-    dailyPulse: { used: number; limit: number };
-    weeklyQuestion: { used: number; limit: number };
-    boardReport: { used: number; limit: number };
-    strategyBrief: { used: number; limit: number };
-  };
+  board_reports_used: number;
+  board_reports_limit: number;
+  strategy_briefs_used: number;
+  strategy_briefs_limit: number;
+  daily_pulses_used: number;
+  daily_pulses_limit: number;
+  period: string;
+  reset_at: string;
+  // Optional cost tracking fields
+  budget_inr?: number;
+  spent_inr?: number;
+  remaining_inr?: number;
 }
 
 // ── Connectors ─────────────────────────────────────────────────────────────

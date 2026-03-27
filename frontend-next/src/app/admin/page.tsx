@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   Users,
   TrendingUp,
@@ -19,47 +18,47 @@ import { CenturionCard, CenturionCardHeader, CenturionCardTitle, CenturionCardCo
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
 
+// Mock admin stats (would be fetched from API in production)
+const MOCK_ADMIN_STATS = {
+  totalUsers: 127,
+  activeUsers: 89,
+  paidUsers: 23,
+  betaUsers: 50,
+  totalMRR: 92000,
+  waitlistCount: 342,
+};
+
 // Admin-only page
 export default function AdminPage() {
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    activeUsers: 0,
-    paidUsers: 0,
-    betaUsers: 0,
-    totalMRR: 0,
-    waitlistCount: 0,
-  });
-  const [isAdmin, setIsAdmin] = useState(false);
+  const statsInitialized = useRef(false);
+  const [stats, setStats] = useState(MOCK_ADMIN_STATS);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
-
-    // Check if admin
+  // Check if admin using useMemo
+  const isAdmin = useMemo(() => {
     const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
       .split(',')
       .map(e => e.trim().toLowerCase())
       .filter(Boolean);
 
-    if (user?.email && adminEmails.includes(user.email.toLowerCase())) {
-      setIsAdmin(true);
-      // Fetch admin stats here
-      setStats({
-        totalUsers: 127,
-        activeUsers: 89,
-        paidUsers: 23,
-        betaUsers: 50,
-        totalMRR: 92000,
-        waitlistCount: 342,
-      });
-    } else if (!loading && isAuthenticated) {
-      router.push('/dashboard');
+    return user?.email ? adminEmails.includes(user.email.toLowerCase()) : false;
+  }, [user?.email]);
+
+  // Handle redirects
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      router.push('/');
+      return;
     }
-  }, [user, isAuthenticated, loading, router]);
+
+    if (!isAdmin) {
+      router.push('/dashboard');
+      return;
+    }
+  }, [loading, isAuthenticated, isAdmin, router]);
 
   if (loading || !isAdmin) {
     return (
@@ -209,4 +208,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+
+
 

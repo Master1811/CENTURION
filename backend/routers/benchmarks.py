@@ -189,23 +189,27 @@ async def get_benchmarks(stage: Literal['pre-seed', 'seed', 'series-a', 'series-
     )
 
 
+class CompareRequest(BaseModel):
+    """Request model for benchmark comparison."""
+    growth_rate: float
+    stage: Literal['pre-seed', 'seed', 'series-a', 'series-b']
+
+
 @router.post("/compare", response_model=BenchmarkComparison)
-async def compare_benchmark(
-    growth_rate: float = Query(..., ge=-1, le=2.0, description="Monthly growth rate as decimal"),
-    stage: Literal['pre-seed', 'seed', 'series-a', 'series-b'] = Query(..., description="Funding stage")
-):
+async def compare_benchmark(request: CompareRequest):
     """
     Compare a growth rate against benchmarks for a stage.
     
     Returns percentile ranking and personalized insight.
     
     Args:
-        growth_rate: Monthly growth rate (0.08 = 8%)
-        stage: Funding stage for comparison
-        
+        request: JSON body with growth_rate (0.08 = 8%) and stage
+
     Returns:
         Comparison result with percentile and insight
     """
+    growth_rate = request.growth_rate
+    stage = request.stage
     if stage not in INDIA_SAAS_BENCHMARKS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -44,12 +44,11 @@ export function Navbar() {
   const userRef  = useRef<HTMLDivElement>(null);
 
   const isDark = isDarkPage(pathname);
-
-  // Don't show navbar on dashboard pages (they have their own sidebar)
-  if (pathname?.startsWith('/dashboard')) return null;
+  const isDashboardPage = pathname?.startsWith('/dashboard');
 
   // Scroll handling
   useEffect(() => {
+    if (isDashboardPage) return;
     const handleScroll = () => {
       const y = window.scrollY;
       if (y > lastScrollY && y > 120) {
@@ -64,29 +63,34 @@ export function Navbar() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, isDashboardPage]);
 
   // Close dropdowns on outside click
   useEffect(() => {
+    if (isDashboardPage) return;
     const handleClick = (e: MouseEvent) => {
       if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
       if (userRef.current  && !userRef.current.contains(e.target as Node))  setUserMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  }, [isDashboardPage]);
 
   // Listen for centurion:open-auth event
   useEffect(() => {
+    if (isDashboardPage) return;
     const handler = () => setAuthModalOpen(true);
     window.addEventListener('centurion:open-auth', handler);
     return () => window.removeEventListener('centurion:open-auth', handler);
-  }, []);
+  }, [isDashboardPage]);
 
   // Close mobile menu on navigation
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  // Don't show navbar on dashboard pages (they have their own sidebar)
+  if (isDashboardPage) return null;
 
   const handleSignOut = async () => {
     await signOut();

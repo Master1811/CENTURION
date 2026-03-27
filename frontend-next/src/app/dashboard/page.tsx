@@ -173,7 +173,7 @@ export default function CommandCentrePage() {
               <div>
                 <p className="text-sm text-white/60">AI Insight</p>
                 <p className="text-sm text-white mt-2 line-clamp-2">
-                  {dailyPulse?.question || 'What is the single biggest action you can take today?'}
+                  {dailyPulse?.content || dailyPulse?.question || 'What is the single biggest action you can take today?'}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-cyan-500/10">

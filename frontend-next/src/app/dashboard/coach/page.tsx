@@ -62,19 +62,19 @@ export default function AICoachPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
             <p className="text-xs text-white/50">Daily Pulse</p>
-            <p className="text-lg font-bold text-white">{aiUsage.features?.dailyPulse?.used || 0}/{aiUsage.features?.dailyPulse?.limit || 1}</p>
-          </div>
-          <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-            <p className="text-xs text-white/50">Weekly Questions</p>
-            <p className="text-lg font-bold text-white">{aiUsage.features?.weeklyQuestion?.used || 0}/{aiUsage.features?.weeklyQuestion?.limit || 1}</p>
+            <p className="text-lg font-bold text-white">{aiUsage.daily_pulses_used || 0}/{aiUsage.daily_pulses_limit || 30}</p>
           </div>
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
             <p className="text-xs text-white/50">Board Reports</p>
-            <p className="text-lg font-bold text-white">{aiUsage.features?.boardReport?.used || 0}/{aiUsage.features?.boardReport?.limit || 2}</p>
+            <p className="text-lg font-bold text-white">{aiUsage.board_reports_used || 0}/{aiUsage.board_reports_limit || 2}</p>
           </div>
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
             <p className="text-xs text-white/50">Strategy Briefs</p>
-            <p className="text-lg font-bold text-white">{aiUsage.features?.strategyBrief?.used || 0}/{aiUsage.features?.strategyBrief?.limit || 4}</p>
+            <p className="text-lg font-bold text-white">{aiUsage.strategy_briefs_used || 0}/{aiUsage.strategy_briefs_limit || 1}</p>
+          </div>
+          <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+            <p className="text-xs text-white/50">AI Budget</p>
+            <p className="text-lg font-bold text-white">₹{aiUsage.remaining_inr?.toFixed(0) || 25}/{aiUsage.budget_inr || 25}</p>
           </div>
         </div>
       )}
@@ -95,9 +95,21 @@ export default function AICoachPage() {
               </div>
             ) : (
               <div className="space-y-4">
+                {dailyPulse?.greeting && (
+                  <p className="text-sm text-cyan-400">{dailyPulse.greeting}</p>
+                )}
                 <p className="text-lg text-white">
-                  {dailyPulse?.question || "What's the single most important thing you need to accomplish today to move your business forward?"}
+                  {dailyPulse?.content || dailyPulse?.question || "What's the single most important thing you need to accomplish today to move your business forward?"}
                 </p>
+                {dailyPulse?.highlights && dailyPulse.highlights.length > 0 && (
+                  <ul className="space-y-1 text-sm text-white/70">
+                    {dailyPulse.highlights.map((h, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="text-cyan-400">•</span> {h}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <textarea
                   value={userResponse}
                   onChange={(e) => setUserResponse(e.target.value)}
@@ -213,4 +225,6 @@ export default function AICoachPage() {
     </div>
   );
 }
+
+
 
